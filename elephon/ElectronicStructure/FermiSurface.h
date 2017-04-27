@@ -35,19 +35,26 @@ public:
 
 	void triangulate_Fermi_surface(
 			std::vector<size_t> const& kgrid,
+			size_t nbnd,
 			std::vector<double> const& energies,
 			size_t numTargetPoints);
 
-	size_t get_npts() const;
+	size_t get_npts_total() const;
 
 	void get_pt(size_t i, std::vector<double> & p) const;
 
 	void get_pt_weight(size_t i, double & pw) const;
+
+	void get_fermi_velos(size_t i, std::vector<double> & vf) const;
 private:
 
 	std::vector<double> kfPoints_;
 
 	std::vector<double> kfWeights_;
+
+	//contains for a band index the index i of the first k point belonging to this bands or -1
+	//if there are none.
+	std::vector<int> bandsMap_;
 };
 
 } /* namespace ElectronicStructure */
