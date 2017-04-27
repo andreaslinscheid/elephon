@@ -59,9 +59,9 @@ void FermiSurface::triangulate_Fermi_surface(
 	grid->SetSpacing(1.0/float(kgrid[0]),1.0/float(kgrid[1]),1.0/float(kgrid[2]));
 
 	size_t dimGrid = kgrid[0]*kgrid[1]*kgrid[2];
-	//Set data onto grid
 	for ( size_t ib = 0 ; ib < nbnd; ib++)
 	{
+		//Set data onto grid
 		vtkSmartPointer<vtkFloatArray> floatArray =
 			  vtkSmartPointer<vtkFloatArray>::New();
 		floatArray->SetNumberOfValues(energies.size());
@@ -118,7 +118,7 @@ void FermiSurface::triangulate_Fermi_surface(
 		kfWeights_.insert(std::end(kfWeights_), std::begin(kfWeightsBand), std::end(kfWeightsBand));
 
 		std::vector<double> points(decimator->GetOutput()->GetNumberOfPoints()*3);
-		for ( size_t i = 0 ; i < decimator->GetOutput()->GetNumberOfPoints(); ++i )
+		for ( int i = 0 ; i < decimator->GetOutput()->GetNumberOfPoints(); ++i )
 			decimator->GetOutput()->GetPoint(i,&points[3*i]);
 
 		kfPoints_.insert(std::end(kfPoints_), std::begin(points), std::end(points));
