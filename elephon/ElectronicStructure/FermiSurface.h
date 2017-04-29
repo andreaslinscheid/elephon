@@ -34,7 +34,7 @@ public:
 	FermiSurface();
 
 	void triangulate_Fermi_surface(
-			std::vector<size_t> const& kgrid,
+			std::vector<size_t> kgrid,
 			size_t nbnd,
 			std::vector<double> const& energies,
 			size_t numTargetPoints);
@@ -45,12 +45,24 @@ public:
 
 	void get_pt_weight(size_t i, double & pw) const;
 
-	void get_fermi_velos(size_t i, std::vector<double> & vf) const;
+	void get_fermi_veloc(size_t i, std::vector<double> & vf) const;
+
+	/**
+	 * Trilinear interpolation of the energy gradient onto previously computed Fermi vectors.
+	 *
+	 * Must be called AFTER triangulate_Fermi_surface()
+	 */
+	void compute_fermi_velocities(
+			std::vector<double> const& energyGradientField);
 private:
+
+	std::vector<size_t> kgrid_;
 
 	std::vector<double> kfPoints_;
 
 	std::vector<double> kfWeights_;
+
+	std::vector<double> kfVeloc_;
 
 	//contains for a band index the index i of the first k point belonging to this bands or -1
 	//if there are none.

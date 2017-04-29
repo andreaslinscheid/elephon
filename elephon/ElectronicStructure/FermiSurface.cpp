@@ -29,6 +29,8 @@
 #include "vtkDecimatePro.h"
 #include "vtkMath.h"
 #include <cmath>
+#include <assert.h>
+#include "Algorithms/TrilinearInterpolation.h"
 
 namespace elephon
 {
@@ -41,24 +43,49 @@ FermiSurface::FermiSurface()
 }
 
 void FermiSurface::triangulate_Fermi_surface(
-		std::vector<size_t> const& kgrid,
+		std::vector<size_t> kgrid,
 		size_t nbnd,
 		std::vector<double> const& energies,
 		size_t numTargetPoints)
 {
-	if ( kgrid.size() != 3 )
+	kgrid_ = std::move(kgrid);
+	if ( kgrid_.size() != 3 )
 		throw std::logic_error("Can only triangulate 3D Fermi surfaces!");
-	if ( kgrid[0]*kgrid[1]*kgrid[2]*nbnd != energies.size() )
+	if ( kgrid_[0]*kgrid_[1]*kgrid_[2]*nbnd != energies.size() )
 		throw std::logic_error("Grid energy data size mismatch!");
 
 	//Define the grid
 	vtkSmartPointer<vtkStructuredPoints> grid =
 			vtkSmartPointer<vtkStructuredPoints>::New();
 	grid->SetOrigin(0,0,0);
-	grid->SetDimensions(kgrid[0],kgrid[1],kgrid[2]);
-	grid->SetSpacing(1.0/float(kgrid[0]),1.0/float(kgrid[1]),1.0/float(kgrid[2]));
+	grid->SetDimensions(kgrid_[0],kgrid_[1],kgrid_[2]);
+	grid->SetSpacing(1.0/float(kgrid_[0]),1.0/float(kgrid_[1]),1.0/float(kgrid_[2]));
 
-	size_t dimGrid = kgrid[0]*kgrid[1]*kgrid[2];
+	//Define a kpoint with implicit ordering to construct a fast index table
+	struct kpoint
+	{
+		kpoint(double x, double y, double z,size_t i) : x_(x),y_(y),z_(z),index_(i) {};
+
+		bool operator> (kpoint const & kp) const
+		{
+			const double accuracy = 10e-8;
+			auto cmp = [&] (double x, double y) { return std::fabs(x - y) > accuracy; };
+			if ( cmp(x_,kp.x_) )
+				return x_ < kp.x_;
+			if ( cmp(y_,kp.y_) )
+				return y_ < kp.y_;
+			if ( cmp(z_,kp.z_) )
+				return z_ < kp.z_;
+			return false;
+		}
+
+		double x_,y_,z_;
+		size_t index_;
+	};
+
+	//Loop the bands and compute the points, weights and gradient
+	size_t dimGrid = kgrid_[0]*kgrid_[1]*kgrid_[2];
+	bandsMap_ = std::vector<int>( nbnd, -1 );
 	for ( size_t ib = 0 ; ib < nbnd; ib++)
 	{
 		//Set data onto grid
@@ -84,7 +111,7 @@ void FermiSurface::triangulate_Fermi_surface(
 		mc->Update();
 		marched->DeepCopy(mc->GetOutput());
 
-		// Decimation to reduce the number of triangles to roughly the numer set on input
+		// Decimation to reduce the number of triangles to roughly the number set on input
 		vtkSmartPointer<vtkDecimatePro> decimator =
 				vtkDecimatePro::New();
 		decimator->SetInputData(marched);
@@ -96,6 +123,8 @@ void FermiSurface::triangulate_Fermi_surface(
 		vtkSmartPointer<vtkIdList> pointIdsCell =
 			  vtkSmartPointer<vtkIdList>::New();
 
+		//compute the area of each rectangle and attribute 1/3 to each corner point.
+		//Thus each point accumulates weight from rectangles it is part of.
 		std::vector<double> kfWeightsBand(decimator->GetOutput()->GetNumberOfPoints(), 0.0);
 		for(vtkIdType i = 0; i < decimator->GetOutput()->GetNumberOfCells(); i++)
 		{
@@ -122,7 +151,9 @@ void FermiSurface::triangulate_Fermi_surface(
 			decimator->GetOutput()->GetPoint(i,&points[3*i]);
 
 		kfPoints_.insert(std::end(kfPoints_), std::begin(points), std::end(points));
+		bandsMap_[ib] = kfWeights_.size();
 	}
+
 }
 
 size_t FermiSurface::get_npts_total() const
@@ -140,6 +171,28 @@ void FermiSurface::get_pt(size_t i, std::vector<double> & p) const
 void FermiSurface::get_pt_weight(size_t i, double & pw) const
 {
 	pw = kfWeights_[i];
+}
+
+void FermiSurface::compute_fermi_velocities(
+		std::vector<double> const& energyGradientField)
+{
+	assert( energyGradientField.size() == bandsMap_.size()*kgrid_[0]*kgrid_[1]*kgrid_[2] );
+	size_t nbnd = bandsMap_.size();
+
+	//fetch the grid points that are required for a linear interpolation
+	elephon::Algorithms::TrilinearInterpolation triLin( kgrid_ );
+	std::vector<size_t> queryIndices;
+	triLin.data_query( kfPoints_, queryIndices );
+
+	//copy the relevant data
+	std::vector<double> requestedData(queryIndices.size()*nbnd) ;
+	auto itB = energyGradientField.begin();
+	for (size_t i = 0 ; i < queryIndices.size(); ++i )
+		std::copy(itB+queryIndices[i]*nbnd,itB+(queryIndices[i]+1)*nbnd,
+				requestedData.begin()+i*nbnd);
+
+	//interpolate
+	triLin.interpolate( nbnd, requestedData, kfVeloc_);
 }
 
 } /* namespace ElectronicStructure */

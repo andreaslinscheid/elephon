@@ -52,9 +52,10 @@ find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework REQUIRE
 find_package(VTK 6.0 REQUIRED NO_MODULE)
 include(${VTK_USE_FILE})
 
-
+#HACK (!!!) - ${subdirlist} appears twice to resolve cross dependencies of symbols
+# the linker should stop searching once it hits the first, so this should work without causing harm ..
 target_link_libraries(elephon PUBLIC
-  ${Boost_LIBRARIES} ${subdirlist} ${VTK_LIBRARIES} 
+  ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} 
 )
 
 include(CTest)
@@ -67,7 +68,8 @@ foreach(testSrc ${sources_test})
         add_executable(${testName} ${testSrc})
 
         #link to Boost libraries AND your targets and dependencies
-        target_link_libraries(${testName} ${Boost_LIBRARIES} ${subdirlist} ${VTK_LIBRARIES})
+	#HACK see before - ${subdirlist} appears twice
+        target_link_libraries(${testName} ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} )
 
         #I like to move testing binaries into a test/bin directory
         set_target_properties(${testName} PROPERTIES 
