@@ -41,6 +41,10 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 	assert( nBnd*nkx*nky*nkz == (buffer.size()/sizeof(double)-4) );
 	std::vector<double> energies(data_view[4],data_view[4]+nBnd*nkx*nky*nkz);
 
+	std::vector<double> latticeMatrix = {   7.050131 , 0.000000 , 0.000000 ,
+											0.000000 , 7.050131 , 0.000000 ,
+											0.000000 , 0.000000 , 11.45919 };
+
 	size_t targetNumPoints = 2000;
 	elephon::ElectronicStructure::FermiSurface fs;
 	fs.triangulate_Fermi_surface(
@@ -49,5 +53,6 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 			energies,
 			targetNumPoints);
 
-	BOOST_CHECK( fs.get_npts_total() == 2000 );
+	//Allow 5% diviation from the requested number of points
+	BOOST_CHECK( double(abs(fs.get_npts_total()-targetNumPoints)) < double(targetNumPoints)*0.05 );
 }

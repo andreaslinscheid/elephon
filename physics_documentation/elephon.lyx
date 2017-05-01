@@ -1149,6 +1149,94 @@ reference "eq:AlphaSquaredF"
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Standard
+For compuing the gradient field
+\begin_inset Formula $\nabla\varepsilon_{\boldsymbol{k}i}$
+\end_inset
+
+ we use the Fourier transform
+\begin_inset Formula 
+\begin{eqnarray}
+\varepsilon_{\boldsymbol{k}i} & = & \sum_{\boldsymbol{R}}H_{i}(\boldsymbol{R}){\rm e}^{-{\rm i}\boldsymbol{R}\cdot\boldsymbol{k}}\\
+\nabla_{\boldsymbol{k}}\varepsilon_{\boldsymbol{k}i} & = & \sum_{\boldsymbol{R}}H_{i}(\boldsymbol{R}){\rm i}\boldsymbol{R}{\rm e}^{-{\rm i}\boldsymbol{R}\cdot\boldsymbol{k}}
+\end{eqnarray}
+
+\end_inset
+
+Here we need to be careful with units.
+ Note that 
+\begin_inset Formula $\boldsymbol{R}\cdot\boldsymbol{G}=2\pi$
+\end_inset
+
+ so 
+\begin_inset Formula $\boldsymbol{k}$
+\end_inset
+
+ is in units of 
+\begin_inset Formula $2\pi/a_{{\rm lat}}$
+\end_inset
+
+ if the length scale of 
+\begin_inset Formula $\boldsymbol{R}$
+\end_inset
+
+ is representen in units of 
+\begin_inset Formula $a_{{\rm lat}}$
+\end_inset
+
+.
+ Moreover, we have defined 
+\begin_inset Formula $\boldsymbol{k}=B^{-1}\cdot\tilde{\boldsymbol{k}}$
+\end_inset
+
+ so that in the code we can keep grids always from 
+\begin_inset Formula $[0,1[$
+\end_inset
+
+.
+ If we want to compute physical properties we need to restore the units
+ of 
+\begin_inset Formula $2\pi/a_{{\rm lat}}$
+\end_inset
+
+ that we need to replace 
+\begin_inset Formula $\nabla_{\boldsymbol{k}}\sim\nabla_{\tilde{\boldsymbol{k}}}$
+\end_inset
+
+ where
+\begin_inset Formula 
+\begin{equation}
+\tilde{\boldsymbol{k}}=B\cdot\boldsymbol{k}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $B=A^{-1}$
+\end_inset
+
+ and 
+\begin_inset Formula $A$
+\end_inset
+
+ is the lattice matrix.
+ Thus 
+\begin_inset Formula $B$
+\end_inset
+
+ forms the lattice matrix of the reciprocal space.
+ Thus
+\begin_inset Formula 
+\begin{eqnarray}
+\nabla_{\tilde{\boldsymbol{k}}}\varepsilon_{\tilde{\boldsymbol{k}}i} & = & \nabla_{\tilde{\boldsymbol{k}}}\varepsilon_{\tilde{\boldsymbol{k}}i}=\sum_{\boldsymbol{R}}H_{i}(\boldsymbol{R})\nabla_{\tilde{\boldsymbol{k}}}{\rm e}^{-2\pi{\rm i}(A\cdot\boldsymbol{R})\cdot\tilde{\boldsymbol{k}}}\\
+ & \sim & -2\pi\sum_{\boldsymbol{R}}{\rm i}(A\cdot\boldsymbol{R})H_{i}(\boldsymbol{R}){\rm e}^{-{\rm i}\boldsymbol{R}\cdot\boldsymbol{k}}
+\end{eqnarray}
+
+\end_inset
+
+where we have restored the simple notation in the last step.
 \begin_inset ERT
 status open
 

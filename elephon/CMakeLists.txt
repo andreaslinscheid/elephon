@@ -55,7 +55,7 @@ include(${VTK_USE_FILE})
 #HACK (!!!) - ${subdirlist} appears twice to resolve cross dependencies of symbols
 # the linker should stop searching once it hits the first, so this should work without causing harm ..
 target_link_libraries(elephon PUBLIC
-  ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} 
+  ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} "-lfftw3"
 )
 
 include(CTest)
@@ -69,7 +69,7 @@ foreach(testSrc ${sources_test})
 
         #link to Boost libraries AND your targets and dependencies
 	#HACK see before - ${subdirlist} appears twice
-        target_link_libraries(${testName} ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} )
+        target_link_libraries(${testName} ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} "-lfftw3" )
 
         #I like to move testing binaries into a test/bin directory
         set_target_properties(${testName} PROPERTIES 
