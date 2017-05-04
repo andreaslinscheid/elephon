@@ -37,7 +37,8 @@ public:
 			std::vector<size_t> kgrid,
 			size_t nbnd,
 			std::vector<double> const& energies,
-			size_t numTargetPoints);
+			size_t numTargetPoints,
+			double energyVal = 0);
 
 	size_t get_npts_total() const;
 
@@ -45,15 +46,11 @@ public:
 
 	void get_pt_weight(size_t i, double & pw) const;
 
-	void get_fermi_veloc(size_t i, std::vector<double> & vf) const;
+	std::vector<double> const& get_Fermi_vectors() const;
 
-	/**
-	 * Trilinear interpolation of the energy gradient onto previously computed Fermi vectors.
-	 *
-	 * Must be called AFTER triangulate_Fermi_surface()
-	 */
-	void compute_fermi_velocities(
-			std::vector<double> const& energyGradientField);
+	std::vector<double> get_Fermi_vectors_for_band(size_t ib) const;
+
+	std::vector<double> get_Fermi_weights_for_band(size_t ib) const;
 private:
 
 	std::vector<size_t> kgrid_;
@@ -62,11 +59,11 @@ private:
 
 	std::vector<double> kfWeights_;
 
-	std::vector<double> kfVeloc_;
-
 	//contains for a band index the index i of the first k point belonging to this bands or -1
 	//if there are none.
 	std::vector<int> bandsMap_;
+
+	void band_index_range(size_t ib, size_t &start, size_t &end) const;
 };
 
 } /* namespace ElectronicStructure */

@@ -48,14 +48,14 @@ target_include_directories(elephon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -Wall")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
-find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework REQUIRED)
+find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework filesystem system REQUIRED)
 find_package(VTK 6.0 REQUIRED NO_MODULE)
 include(${VTK_USE_FILE})
 
 #HACK (!!!) - ${subdirlist} appears twice to resolve cross dependencies of symbols
 # the linker should stop searching once it hits the first, so this should work without causing harm ..
 target_link_libraries(elephon PUBLIC
-  ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} "-lfftw3"
+  ${subdirlist} ${subdirlist} ${Boost_LIBRARIES} ${VTK_LIBRARIES} "-lfftw3"
 )
 
 include(CTest)
@@ -69,7 +69,7 @@ foreach(testSrc ${sources_test})
 
         #link to Boost libraries AND your targets and dependencies
 	#HACK see before - ${subdirlist} appears twice
-        target_link_libraries(${testName} ${Boost_LIBRARIES} ${VTK_LIBRARIES} ${subdirlist} ${subdirlist} "-lfftw3" )
+        target_link_libraries(${testName} ${subdirlist} ${subdirlist} ${Boost_LIBRARIES} ${VTK_LIBRARIES} "-lfftw3" )
 
         #I like to move testing binaries into a test/bin directory
         set_target_properties(${testName} PROPERTIES 

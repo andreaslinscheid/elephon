@@ -39,11 +39,14 @@ public:
 			std::vector<double> const& dataOnGrid);
 
 	void copy_data(std::vector<size_t> const& conseqGridIndices,
+			std::vector<size_t> bands,
 			std::vector<double> & dataAtIndices) const;
 
 	std::vector<double> const& get_data() const;
 private:
 	std::vector<size_t> grid_;
+
+	size_t nBlockData_ = 0;
 
 	std::vector<double> gradientDataOnGrid_;
 

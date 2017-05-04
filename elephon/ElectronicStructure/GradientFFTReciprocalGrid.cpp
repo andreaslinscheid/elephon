@@ -40,9 +40,10 @@ void GradientFFTReciprocalGrid::compute_gradient(
 		std::vector<double> const& dataOnGrid)
 {
 	grid_ = std::move( grid );
+	nBlockData_ = nDataBlock;
 	size_t gridnum = grid_[0]*grid_[1]*grid_[2];
 	assert(latticeMatrix.size()==9);
-	assert(dataOnGrid.size() == gridnum*nDataBlock);
+	assert(dataOnGrid.size() == gridnum*nBlockData_);
 
 	//Plan the FFT:
 	//We provide fftw3 the data for many DFTs laid out as each one band (and all 3 directions) for the grid.
@@ -59,7 +60,7 @@ void GradientFFTReciprocalGrid::compute_gradient(
 	int dblock = gridnum;
 	int * inembed =NULL;
 	int * onembed = NULL;
-	int howmany = static_cast<int>( nDataBlock );
+	int howmany = static_cast<int>( nBlockData_ );
 	int idist = dblock;
 	int odist = dblock;
 	int istride = 1;
@@ -72,7 +73,7 @@ void GradientFFTReciprocalGrid::compute_gradient(
 			1,FFTW_ESTIMATE);
 
 	//We multiply i R in Cartesian coordinates and transform back to obtain the gradient
-	howmany = static_cast<int>( nDataBlock*3 );
+	howmany = static_cast<int>( nBlockData_*3 );
 
 	fftw_complex * FFTBufferRtoK = fftw_alloc_complex( dataOnGrid.size()*3 );
 	auto fftw3PlanFwdRtoK = fftw_plan_many_dft(
@@ -82,9 +83,9 @@ void GradientFFTReciprocalGrid::compute_gradient(
 			-1,FFTW_ESTIMATE);
 
 	for ( size_t ig = 0 ; ig < gridnum; ig++)
-		for ( size_t id = 0 ; id < nDataBlock; id++)
+		for ( size_t id = 0 ; id < nBlockData_; id++)
 			reinterpret_cast<std::complex<double>*>(FFTBuffer)[id*gridnum+ig]
-					= std::complex<double>(dataOnGrid[ig*nDataBlock+id]);
+					= std::complex<double>(dataOnGrid[ig*nBlockData_+id]);
 
 	fftw_execute( fftw3PlanBkwdKtoR );
 
@@ -136,15 +137,14 @@ void GradientFFTReciprocalGrid::compute_gradient(
 			RCartesianVectors[ig*3+i] = 0 ;
 			for ( size_t j = 0 ; j < 3 ; j++)
 			{
-				double xi = double(indexTouple[j]);
-				RCartesianVectors[ig*3+i] += xi*latticeMatrix[i*3+j];
+				double xj = double(indexTouple[j]);
+				RCartesianVectors[ig*3+i] += xj*latticeMatrix[i*3+j];
 			}
 		}
-//std::cout << RCartesianVectors[ig*3+0] << '\t' <<RCartesianVectors[ig*3+1] << '\t'<<RCartesianVectors[ig*3+2] << std::endl;
 	};
 
 	for ( size_t ig = 0 ; ig < gridnum; ig++)
-		for ( size_t id = 0 ; id < nDataBlock; id++)
+		for ( size_t id = 0 ; id < nBlockData_; id++)
 			for (size_t ix = 0 ; ix < 3 ; ix++)
 				reinterpret_cast<std::complex<double>*>(FFTBufferRtoK)[(id*3+ix)*gridnum+ig]
                   = -2.0*M_PI*std::complex<double>(0,RCartesianVectors[ig*3+ix])*
@@ -152,18 +152,20 @@ void GradientFFTReciprocalGrid::compute_gradient(
 
 	fftw_execute( fftw3PlanFwdRtoK );
 
-	gradientDataOnGrid_ = std::vector< double >( gridnum*nDataBlock*3 );
+	gradientDataOnGrid_ = std::vector< double >( gridnum*nBlockData_*3 );
 
 	double imagCheck = 0;
 	for ( size_t ig = 0 ; ig < gridnum; ig++)
-		for ( size_t id = 0 ; id < nDataBlock; id++)
+		for ( size_t id = 0 ; id < nBlockData_; id++)
 			for ( size_t ix = 0 ; ix < 3; ix++)
 			{
-				gradientDataOnGrid_[(ig*nDataBlock+id)*3+ix] =
-						std::real(reinterpret_cast<std::complex<double>*>(FFTBufferRtoK)[(id*3+ix)*gridnum+ig])
+				gradientDataOnGrid_[(ig*nBlockData_+id)*3+ix] =
+						std::real(reinterpret_cast<std::complex<double>*>(
+								FFTBufferRtoK)[(id*3+ix)*gridnum+ig])
 						/double(gridnum);//normalization
 				imagCheck +=
-						std::imag(reinterpret_cast<std::complex<double>*>(FFTBufferRtoK)[(id*3+ix)*gridnum+ig]);
+						std::imag(reinterpret_cast<std::complex<double>*>(
+								FFTBufferRtoK)[(id*3+ix)*gridnum+ig]);
 			}
 	assert(imagCheck/double(gridnum) < 1e-6);
 
@@ -176,9 +178,19 @@ void GradientFFTReciprocalGrid::compute_gradient(
 }
 
 void GradientFFTReciprocalGrid::copy_data(std::vector<size_t> const& conseqGridIndices,
+		std::vector<size_t> bands,
 		std::vector<double> & dataAtIndices) const
 {
-
+	if ( dataAtIndices.size() != conseqGridIndices.size()*bands.size()*3 )
+		dataAtIndices = std::vector<double>(conseqGridIndices.size()*bands.size()*3 );
+	for (size_t i = 0 ; i < conseqGridIndices.size(); ++i )
+		for ( size_t id = 0 ; id < bands.size(); id++)
+		{
+			size_t iband = bands[id];
+			assert( iband < nBlockData_ );
+			for ( size_t ix = 0 ; ix < 3; ix++)
+				dataAtIndices[(i*bands.size()+id)*3+ix] = gradientDataOnGrid_[ (conseqGridIndices[i]*nBlockData_+iband)*3+ix ];
+		}
 }
 
 std::vector<double> const& GradientFFTReciprocalGrid::get_data() const

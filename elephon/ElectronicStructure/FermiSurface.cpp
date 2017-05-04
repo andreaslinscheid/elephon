@@ -20,17 +20,17 @@
 #include <ElectronicStructure/FermiSurface.h>
 #include <algorithm>
 #include "vtkSmartPointer.h"
-#include "vtkStructuredPoints.h"
+#include "vtkImageData.h"
 #include "vtkMarchingCubes.h"
 #include "vtkIdList.h"
 #include "vtkTriangle.h"
 #include "vtkPointData.h"
+#include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
 #include "vtkDecimatePro.h"
 #include "vtkMath.h"
 #include <cmath>
 #include <assert.h>
-#include "Algorithms/TrilinearInterpolation.h"
 
 namespace elephon
 {
@@ -46,7 +46,8 @@ void FermiSurface::triangulate_Fermi_surface(
 		std::vector<size_t> kgrid,
 		size_t nbnd,
 		std::vector<double> const& energies,
-		size_t numTargetPoints)
+		size_t numTargetPoints,
+		double energyVal)
 {
 	kgrid_ = std::move(kgrid);
 	if ( kgrid_.size() != 3 )
@@ -54,68 +55,72 @@ void FermiSurface::triangulate_Fermi_surface(
 	if ( kgrid_[0]*kgrid_[1]*kgrid_[2]*nbnd != energies.size() )
 		throw std::logic_error("Grid energy data size mismatch!");
 
+	auto SurfaceGrid = kgrid_;
+	for (auto &ki : SurfaceGrid )
+		ki++;
+
 	//Define the grid
-	vtkSmartPointer<vtkStructuredPoints> grid =
-			vtkSmartPointer<vtkStructuredPoints>::New();
+	//We need to extend the grid to the first periodic point so that the surfaces will be correctly computed
+	vtkSmartPointer<vtkImageData> grid =
+			vtkSmartPointer<vtkImageData>::New();
 	grid->SetOrigin(0,0,0);
-	grid->SetDimensions(kgrid_[0],kgrid_[1],kgrid_[2]);
+	grid->SetDimensions(SurfaceGrid[0],SurfaceGrid[1],SurfaceGrid[2]);
 	grid->SetSpacing(1.0/float(kgrid_[0]),1.0/float(kgrid_[1]),1.0/float(kgrid_[2]));
 
-	//Define a kpoint with implicit ordering to construct a fast index table
-	struct kpoint
-	{
-		kpoint(double x, double y, double z,size_t i) : x_(x),y_(y),z_(z),index_(i) {};
-
-		bool operator> (kpoint const & kp) const
-		{
-			const double accuracy = 10e-8;
-			auto cmp = [&] (double x, double y) { return std::fabs(x - y) > accuracy; };
-			if ( cmp(x_,kp.x_) )
-				return x_ < kp.x_;
-			if ( cmp(y_,kp.y_) )
-				return y_ < kp.y_;
-			if ( cmp(z_,kp.z_) )
-				return z_ < kp.z_;
-			return false;
-		}
-
-		double x_,y_,z_;
-		size_t index_;
-	};
-
 	//Loop the bands and compute the points, weights and gradient
-	size_t dimGrid = kgrid_[0]*kgrid_[1]*kgrid_[2];
 	bandsMap_ = std::vector<int>( nbnd, -1 );
+	vtkSmartPointer<vtkPolyData> * marched = new vtkSmartPointer<vtkPolyData> [nbnd] ;
+	size_t totalNumberOfPointsFirstIteration = 0;
 	for ( size_t ib = 0 ; ib < nbnd; ib++)
 	{
-		//Set data onto grid
-		vtkSmartPointer<vtkFloatArray> floatArray =
-			  vtkSmartPointer<vtkFloatArray>::New();
-		floatArray->SetNumberOfValues(energies.size());
-		for (size_t i = 0 ; i < dimGrid; ++i)
-			floatArray->InsertValue(i,energies[ib*dimGrid + i]);
-		grid->GetPointData()->SetScalars( floatArray );
+		size_t surfaceGridDim = SurfaceGrid[0]*SurfaceGrid[1]*SurfaceGrid[2];
+		//Set data onto grid. Use the periodicity for the last point in each dimension.
+		vtkSmartPointer<vtkDoubleArray> doubleArray =
+			  vtkSmartPointer<vtkDoubleArray>::New();
+		doubleArray->SetNumberOfValues(surfaceGridDim);
+		for (size_t i = 0 ; i < SurfaceGrid[0]; ++i)
+			for (size_t j = 0 ; j < SurfaceGrid[1]; ++j)
+				for (size_t k = 0 ; k < SurfaceGrid[2]; ++k)
+				{
+					size_t consq = (i*SurfaceGrid[1]+j)*SurfaceGrid[2]+k;
+					size_t ii = i%kgrid_[0];
+					size_t jj = j%kgrid_[1];
+					size_t kk = k%kgrid_[2];
+					size_t consqEnergies = (ii*kgrid_[1]+jj)*kgrid_[2]+kk;
+					doubleArray->SetValue(consq,energies[consqEnergies*nbnd+ib]);
+				}
+		grid->GetPointData()->SetScalars( doubleArray );
 
 		// Create a 3D model using marching cubes
 		vtkSmartPointer<vtkMarchingCubes> mc =
 				vtkSmartPointer<vtkMarchingCubes>::New();
 		mc->SetInputData(grid);
-		mc->ComputeNormalsOn();
-		mc->ComputeGradientsOn();
+		mc->ComputeNormalsOff();
+		mc->ComputeGradientsOff();//We need that for the adaptive weights
+		mc->ComputeScalarsOff();
 		// second value acts as threshold, and we are sampling the Fermi surface, i.e. E=0
-		mc->SetValue(0, 0.0);
+		mc->SetValue(0, energyVal);
 
 		// Create polydata from iso-surface
-		vtkSmartPointer<vtkPolyData> marched =
-				vtkSmartPointer<vtkPolyData>::New();
 		mc->Update();
-		marched->DeepCopy(mc->GetOutput());
+		marched[ib] = mc->GetOutput();
+	}
 
+	for ( size_t ib = 0 ; ib < nbnd; ib++)
+		totalNumberOfPointsFirstIteration += marched[ib]->GetNumberOfPoints();
+
+	double reductionRatio = 1.0-float(numTargetPoints)/float(totalNumberOfPointsFirstIteration);
+	reductionRatio -= std::floor(reductionRatio);
+
+	for ( size_t ib = 0 ; ib < nbnd; ib++)
+	{
+		if ( marched[ib]->GetNumberOfPoints() == 0 )
+			continue;
 		// Decimation to reduce the number of triangles to roughly the number set on input
 		vtkSmartPointer<vtkDecimatePro> decimator =
-				vtkDecimatePro::New();
-		decimator->SetInputData(marched);
-		decimator->SetTargetReduction(1.0-float(numTargetPoints)/float(marched->GetNumberOfPoints()));
+				vtkSmartPointer<vtkDecimatePro>::New();
+		decimator->SetInputData( marched[ib] );
+		decimator->SetTargetReduction(reductionRatio);
 		decimator->SetPreserveTopology(1);
 		decimator->Update();
 
@@ -123,37 +128,60 @@ void FermiSurface::triangulate_Fermi_surface(
 		vtkSmartPointer<vtkIdList> pointIdsCell =
 			  vtkSmartPointer<vtkIdList>::New();
 
-		//compute the area of each rectangle and attribute 1/3 to each corner point.
-		//Thus each point accumulates weight from rectangles it is part of.
-		std::vector<double> kfWeightsBand(decimator->GetOutput()->GetNumberOfPoints(), 0.0);
-		for(vtkIdType i = 0; i < decimator->GetOutput()->GetNumberOfCells(); i++)
+		int npts = decimator->GetOutput()->GetNumberOfPoints();
+		int ncells = decimator->GetOutput()->GetNumberOfCells();
+
+		std::vector<double> kfWeightsBand(npts, 0.0);
+		for(vtkIdType i = 0; i < ncells; i++)
 		{
-			vtkCell* cell = decimator->GetOutput()->GetCell(i);
-
-			vtkTriangle* triangle = dynamic_cast<vtkTriangle*>(cell);
-			double p0[3],p1[3],p2[3];
-			triangle->GetPoints()->GetPoint(0, p0);
-			triangle->GetPoints()->GetPoint(1, p1);
-			triangle->GetPoints()->GetPoint(2, p2);
-
-			double area = std::abs(vtkTriangle::TriangleArea(p0, p1, p2));
-
+			double p0[3],p1[3],p2[3],center[3],p01[3],p02[3],p12[3];
 			decimator->GetOutput()->GetCellPoints(i,pointIdsCell);
 			if ( pointIdsCell->GetNumberOfIds() != 3 )
 				throw std::logic_error("Error, number of points not 3!");
-			for (size_t j=0; j < 3; j++)
-				kfWeightsBand[ pointIdsCell->GetId(j) ] += area/3.0;
+
+			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(0),p0);
+			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(1),p1);
+			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(2),p2);
+			for (int xi = 0 ; xi < 3; xi++)
+			{
+				center[xi] = 1.0/3.0*(p0[xi]+p1[xi]+p2[xi]);
+				p01[xi] = 1.0/2.0*(p0[xi]+p1[xi]);
+				p02[xi] = 1.0/2.0*(p0[xi]+p2[xi]);
+				p12[xi] = 1.0/2.0*(p1[xi]+p2[xi]);
+			}
+
+			//Get triangles area
+			auto dotProd = [] (const double p1[3], const double p2[3])
+			{
+					return (p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])
+							+(p1[2]-p2[2])*(p1[2]-p2[2]);
+			};
+			auto areaTri = [&] (const double p1[3], const double p2[3], const double p3[3])
+			{
+				double a = dotProd(p1,p2);
+				double b = dotProd(p2,p3);
+				double c = dotProd(p3,p1);
+				return (0.25* std::sqrt(std::fabs(4.0*a*c - (a-b+c)*(a-b+c))));
+			};
+
+			//Attribute weights to points
+			kfWeightsBand[ pointIdsCell->GetId(0) ] += areaTri(p0,p01,center)
+													+ areaTri(p0,p02,center);
+			kfWeightsBand[ pointIdsCell->GetId(1) ] += areaTri(p1,p01,center)
+													+ areaTri(p1,p12,center);
+			kfWeightsBand[ pointIdsCell->GetId(2) ] += areaTri(p2,p02,center)
+													+ areaTri(p2,p12,center);
 		}
-		kfWeights_.insert(std::end(kfWeights_), std::begin(kfWeightsBand), std::end(kfWeightsBand));
+		bandsMap_[ib] = kfWeights_.size();
+		kfWeights_.insert(std::end(kfWeights_),std::begin(kfWeightsBand),std::end(kfWeightsBand));
 
 		std::vector<double> points(decimator->GetOutput()->GetNumberOfPoints()*3);
-		for ( int i = 0 ; i < decimator->GetOutput()->GetNumberOfPoints(); ++i )
-			decimator->GetOutput()->GetPoint(i,&points[3*i]);
+		for ( int ip = 0 ; ip < decimator->GetOutput()->GetNumberOfPoints(); ++ip )
+			decimator->GetOutput()->GetPoint(ip,&points[3*ip]);
 
-		kfPoints_.insert(std::end(kfPoints_), std::begin(points), std::end(points));
-		bandsMap_[ib] = kfWeights_.size();
+		kfPoints_.insert(std::end(kfPoints_),std::begin(points),std::end(points));
 	}
-
+	delete [] marched;
 }
 
 size_t FermiSurface::get_npts_total() const
@@ -173,26 +201,43 @@ void FermiSurface::get_pt_weight(size_t i, double & pw) const
 	pw = kfWeights_[i];
 }
 
-void FermiSurface::compute_fermi_velocities(
-		std::vector<double> const& energyGradientField)
+std::vector<double> const&
+FermiSurface::get_Fermi_vectors() const
 {
-	assert( energyGradientField.size() == bandsMap_.size()*kgrid_[0]*kgrid_[1]*kgrid_[2] );
-	size_t nbnd = bandsMap_.size();
+	return kfPoints_;
+}
 
-	//fetch the grid points that are required for a linear interpolation
-	elephon::Algorithms::TrilinearInterpolation triLin( kgrid_ );
-	std::vector<size_t> queryIndices;
-	triLin.data_query( kfPoints_, queryIndices );
+std::vector<double>
+FermiSurface::get_Fermi_vectors_for_band(size_t ib) const
+{
+	size_t indexBandStart,indexBandEnd;
+	this->band_index_range(ib,indexBandStart,indexBandEnd);
+	std::vector<double> result( &kfPoints_[ indexBandStart*3 ], &kfPoints_[ indexBandEnd*3 ] );
+	return result;
+}
 
-	//copy the relevant data
-	std::vector<double> requestedData(queryIndices.size()*nbnd) ;
-	auto itB = energyGradientField.begin();
-	for (size_t i = 0 ; i < queryIndices.size(); ++i )
-		std::copy(itB+queryIndices[i]*nbnd,itB+(queryIndices[i]+1)*nbnd,
-				requestedData.begin()+i*nbnd);
+std::vector<double>
+FermiSurface::get_Fermi_weights_for_band(size_t ib) const
+{
+	size_t indexBandStart,indexBandEnd;
+	this->band_index_range(ib,indexBandStart,indexBandEnd);
+	std::vector<double> result( &kfWeights_[ indexBandStart ], &kfWeights_[ indexBandEnd ] );
+	return result;
+}
 
-	//interpolate
-	triLin.interpolate( nbnd, requestedData, kfVeloc_);
+void FermiSurface::band_index_range(
+		size_t ib, size_t &start, size_t &end) const
+{
+	size_t numTotal = kfWeights_.size();
+	start = end = 0;
+	if ( bandsMap_[ib] >= 0 )
+	{
+		start = bandsMap_[ib];
+		end = numTotal;
+		if ( ib+1 < bandsMap_.size() )
+			if (  bandsMap_[ib+1] > 0 )
+				end = static_cast<size_t>(bandsMap_[ib+1]);
+	}
 }
 
 } /* namespace ElectronicStructure */
