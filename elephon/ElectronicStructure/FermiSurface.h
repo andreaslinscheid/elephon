@@ -33,8 +33,9 @@ class FermiSurface
 public:
 	FermiSurface();
 
-	void triangulate_Fermi_surface(
+	void triangulate_surface(
 			std::vector<size_t> kgrid,
+			std::vector<double> const& reciprocalLatticeMatrix,
 			size_t nbnd,
 			std::vector<double> const& energies,
 			size_t numTargetPoints,

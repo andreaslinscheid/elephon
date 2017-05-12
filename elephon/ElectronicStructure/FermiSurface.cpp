@@ -42,13 +42,24 @@ FermiSurface::FermiSurface()
 
 }
 
-void FermiSurface::triangulate_Fermi_surface(
+void FermiSurface::triangulate_surface(
 		std::vector<size_t> kgrid,
+		std::vector<double> const& reciprocalLatticeMatrix,
 		size_t nbnd,
 		std::vector<double> const& energies,
 		size_t numTargetPoints,
 		double energyVal)
 {
+	assert(reciprocalLatticeMatrix.size() == 9 );
+	std::vector<double> const& B = reciprocalLatticeMatrix;
+	auto to_cart = [&] (double pt[3])
+	{
+		double ptmp[3];
+		std::copy(pt,pt+3,ptmp);
+		for ( size_t i = 0; i < 3 ; ++i)
+			pt[i] = (B[i*3+0]*ptmp[0]+B[i*3+1]*ptmp[1]+B[i*3+2]*ptmp[2]);
+	};
+
 	kgrid_ = std::move(kgrid);
 	if ( kgrid_.size() != 3 )
 		throw std::logic_error("Can only triangulate 3D Fermi surfaces!");
@@ -64,8 +75,8 @@ void FermiSurface::triangulate_Fermi_surface(
 	vtkSmartPointer<vtkImageData> grid =
 			vtkSmartPointer<vtkImageData>::New();
 	grid->SetOrigin(0,0,0);
-	grid->SetDimensions(SurfaceGrid[0],SurfaceGrid[1],SurfaceGrid[2]);
-	grid->SetSpacing(1.0/float(kgrid_[0]),1.0/float(kgrid_[1]),1.0/float(kgrid_[2]));
+	grid->SetExtent(0,kgrid_[0],0,kgrid_[1],0,kgrid_[2]);
+	grid->SetSpacing(1.0/double(kgrid_[0]),1.0/double(kgrid_[1]),1.0/double(kgrid_[2]));
 
 	//Loop the bands and compute the points, weights and gradient
 	bandsMap_ = std::vector<int>( nbnd, -1 );
@@ -82,7 +93,8 @@ void FermiSurface::triangulate_Fermi_surface(
 			for (size_t j = 0 ; j < SurfaceGrid[1]; ++j)
 				for (size_t k = 0 ; k < SurfaceGrid[2]; ++k)
 				{
-					size_t consq = (i*SurfaceGrid[1]+j)*SurfaceGrid[2]+k;
+					//Note that vtk stores x,y,z in fast to slow running variables
+					size_t consq = (k*SurfaceGrid[1]+j)*SurfaceGrid[0]+i;
 					size_t ii = i%kgrid_[0];
 					size_t jj = j%kgrid_[1];
 					size_t kk = k%kgrid_[2];
@@ -109,7 +121,7 @@ void FermiSurface::triangulate_Fermi_surface(
 	for ( size_t ib = 0 ; ib < nbnd; ib++)
 		totalNumberOfPointsFirstIteration += marched[ib]->GetNumberOfPoints();
 
-	double reductionRatio = 1.0-float(numTargetPoints)/float(totalNumberOfPointsFirstIteration);
+	double reductionRatio = 1.0-double(numTargetPoints)/double(totalNumberOfPointsFirstIteration);
 	reductionRatio -= std::floor(reductionRatio);
 
 	for ( size_t ib = 0 ; ib < nbnd; ib++)
@@ -142,6 +154,12 @@ void FermiSurface::triangulate_Fermi_surface(
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(0),p0);
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(1),p1);
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(2),p2);
+
+			//transform to Cartesian coordinates
+			to_cart(p0);
+			to_cart(p1);
+			to_cart(p2);
+
 			for (int xi = 0 ; xi < 3; xi++)
 			{
 				center[xi] = 1.0/3.0*(p0[xi]+p1[xi]+p2[xi]);

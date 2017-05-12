@@ -35,8 +35,8 @@ BOOST_AUTO_TEST_CASE( Gradient_Cos_Sin )
 		for ( size_t j = 0 ; j < grid[1]; ++j)
 			for ( size_t k = 0 ; k < grid[2]; ++k)
 			{
-				data[((i*grid[1]+j)*grid[2]+k)*2+0] = -std::cos(4*M_PI*i/double(grid[0]))/(4*M_PI);
-				data[((i*grid[1]+j)*grid[2]+k)*2+1] = std::sin(4*M_PI*k/double(grid[2]))/(4*M_PI);
+				data[((i*grid[1]+j)*grid[2]+k)*2+0] = -std::cos(4*M_PI*i/double(grid[0]))/(2.0);
+				data[((i*grid[1]+j)*grid[2]+k)*2+1] = std::sin(4*M_PI*k/double(grid[2]))/(2.0);
 			}
 
 	std::vector<double> latticeMatrix = {   1.000000 , 0.000000 , 0.000000 ,
@@ -74,4 +74,72 @@ BOOST_AUTO_TEST_CASE( Gradient_Cos_Sin )
 	for ( auto a : diff )
 		sum += a/double(gridnum);
 	BOOST_REQUIRE( sum < 1e-6 );
+}
+
+BOOST_AUTO_TEST_CASE( Gradient_Cos_BndModel )
+{
+	//Test the gradient of a system with a cosine band model
+	double const W1 = 200; // electron
+	double const W2 = 100; // hole
+	double const Ee = -50;
+	double const Eg = 10;
+	size_t nBnd = 2;
+	std::vector<size_t> grid({100,100,100});
+	size_t gridnum = grid[0]*grid[1]*grid[2];
+	std::vector<double> data(gridnum*nBnd);
+
+	for ( size_t i = 0 ; i < grid[0]; ++i)
+		for ( size_t j = 0 ; j < grid[1]; ++j)
+			for ( size_t k = 0 ; k < grid[2]; ++k)
+			{
+				double kx = (i<grid[0]/2?double(i):double(i)-grid[0])/double(grid[0]);
+				double ky = (j<grid[1]/2?double(j):double(j)-grid[1])/double(grid[1]);
+				  data[((i*grid[1]+j)*grid[2]+k)*nBnd+0] =
+						  W1*(std::cos( 2*M_PI*kx )+std::cos( 2*M_PI*ky )-2.0)+Ee;
+				  data[((i*grid[1]+j)*grid[2]+k)*nBnd+1] =
+						  W2*(std::cos( 2*M_PI*kx )+std::cos( 2*M_PI*ky )-2.0)+Eg;
+			}
+
+	std::vector<double> latticeMatrix = {   1.000000 , 0.000000 , 0.000000 ,
+											0.000000 , 1.000000 , 0.000000 ,
+											0.000000 , 0.000000 , 1.000000 };
+
+	elephon::ElectronicStructure::GradientFFTReciprocalGrid gradE;
+	gradE.compute_gradient(
+			grid,
+			latticeMatrix,
+			nBnd,
+			data);
+
+	BOOST_REQUIRE( gradE.get_data().size() == nBnd*gridnum*3 );
+
+	std::vector<double> diff(6,0.0);
+	for ( size_t i = 0 ; i < grid[0]; ++i)
+		for ( size_t j = 0 ; j < grid[1]; ++j)
+			for ( size_t k = 0 ; k < grid[2]; ++k)
+			{
+				double kx = (i<grid[0]/2?double(i):double(i)-grid[0])/double(grid[0]);
+				double ky = (j<grid[1]/2?double(j):double(j)-grid[1])/double(grid[1]);
+
+				//band 1
+				size_t bandI = ((i*grid[1]+j)*grid[2]+k)*nBnd+0;
+				diff[0] += std::fabs(gradE.get_data()[bandI*3+0]-
+						  -W1*std::sin( 2*M_PI*kx ) );
+				diff[1] += std::fabs(gradE.get_data()[bandI*3+1]-
+						  -W1*std::sin( 2*M_PI*ky ));
+				diff[2] += std::fabs(gradE.get_data()[bandI*3+2]);
+
+				//band 2
+				bandI = ((i*grid[1]+j)*grid[2]+k)*2+1;
+				diff[3] += std::fabs(gradE.get_data()[bandI*3+0]-
+						-W2*std::sin( 2*M_PI*kx ) );
+				diff[4] += std::fabs(gradE.get_data()[bandI*3+1]-
+						-W2*std::sin( 2*M_PI*ky ) );
+				diff[5] += std::fabs(gradE.get_data()[bandI*3+2]);
+			}
+
+	double sum = 0;
+	for ( auto a : diff )
+		sum += a/double(gridnum);
+	BOOST_REQUIRE( sum < 1e-5 );
 }

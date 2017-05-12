@@ -147,7 +147,7 @@ void GradientFFTReciprocalGrid::compute_gradient(
 		for ( size_t id = 0 ; id < nBlockData_; id++)
 			for (size_t ix = 0 ; ix < 3 ; ix++)
 				reinterpret_cast<std::complex<double>*>(FFTBufferRtoK)[(id*3+ix)*gridnum+ig]
-                  = -2.0*M_PI*std::complex<double>(0,RCartesianVectors[ig*3+ix])*
+                  = -std::complex<double>(0,RCartesianVectors[ig*3+ix])*
 				  reinterpret_cast<std::complex<double>*>(FFTBuffer)[id*gridnum+ig];
 
 	fftw_execute( fftw3PlanFwdRtoK );
@@ -189,7 +189,8 @@ void GradientFFTReciprocalGrid::copy_data(std::vector<size_t> const& conseqGridI
 			size_t iband = bands[id];
 			assert( iband < nBlockData_ );
 			for ( size_t ix = 0 ; ix < 3; ix++)
-				dataAtIndices[(i*bands.size()+id)*3+ix] = gradientDataOnGrid_[ (conseqGridIndices[i]*nBlockData_+iband)*3+ix ];
+				dataAtIndices[(i*bands.size()+id)*3+ix] =
+						gradientDataOnGrid_[ (conseqGridIndices[i]*nBlockData_+iband)*3+ix ];
 		}
 }
 
