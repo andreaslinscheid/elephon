@@ -185,12 +185,12 @@ void ReadVASPPoscar::read_file( std::string filename )
 				frozen[xi] = fortran_bool_parser(word);
 			}
 		}
-		AtomPos a(typeForAtom[i],tauI,frozen);
+		LatticeStructure::Atom a(typeForAtom[i],tauI,frozen);
 		atoms_.push_back( std::move(a) );
 	}
 }
 
-std::vector<ReadVASPPoscar::AtomPos>
+std::vector<LatticeStructure::Atom>
 ReadVASPPoscar::get_atoms_list( ) const
 {
 	return atoms_;

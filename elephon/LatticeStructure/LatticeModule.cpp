@@ -32,37 +32,44 @@ void LatticeModule::initialize( std::vector<double> latticeMatrix )
 	latticeMatrix_ = std::move(latticeMatrix);
 	assert( latticeMatrix_.size() == 9 );
 
-	//We define alat as the length of the first lattice vector
-	//This defines a length scale for Cartesian coordinates
+	//The basis vectors
 	std::vector<double> a1 = {0.0,0.0,0.0};
-	for ( int i = 0 ; i < 3; i++)
-		a1[i] = latticeMatrix_[i*3+0];
-	alat_ = std::sqrt( a1[0]*a1[0] + a1[1]*a1[1] + a1[2]*a1[2] );
-	for (auto &aij : latticeMatrix_)
-		aij /= alat_;
-
-	//Compute the reciprocal lattice matrix
 	auto a2 = a1;
 	auto a3 = a1;
 	auto b1 = a1;
 	auto b2 = a1;
 	auto b3 = a1;
+
+	//Compute the reciprocal lattice matrix
 	for ( int i = 0 ; i < 3; i++)
 	{
 		a1[i] = latticeMatrix_[i*3+0];
 		a2[i] = latticeMatrix_[i*3+1];
 		a3[i] = latticeMatrix_[i*3+2];
 	}
-	this->cross_prod(b1,a2,a3);
-	this->cross_prod(b2,a3,a1);
-	this->cross_prod(b3,a1,a2);
+	this->cross_prod(a2,a3,b1);
+	this->cross_prod(a3,a1,b2);
+	this->cross_prod(a1,a2,b3);
 
+	double unitCellVolume = a1[0]*b1[0]+a1[1]*b1[1]+a1[2]*b1[2];
+
+	reciLatMatrix_ = std::vector<double>(9);
 	for ( int i = 0 ; i < 3; i++)
 	{
-		 reciLatMatrix_[i*3+0] = b1[i];
-		 reciLatMatrix_[i*3+1] = b2[i];
-		 reciLatMatrix_[i*3+2] = b3[i];
+		 reciLatMatrix_[i*3+0] = 2*M_PI*b1[i]/unitCellVolume;
+		 reciLatMatrix_[i*3+1] = 2*M_PI*b2[i]/unitCellVolume;
+		 reciLatMatrix_[i*3+2] = 2*M_PI*b3[i]/unitCellVolume;
 	}
+
+	//We define alat as the length of the first lattice vector
+	//This defines a length scale for Cartesian coordinates
+	//We measure the reciprocal basis in units of 2pi/alat
+	alat_ = std::sqrt( a1[0]*a1[0] + a1[1]*a1[1] + a1[2]*a1[2] );
+	for (auto &aij : latticeMatrix_)
+		aij /= alat_;
+	for (auto &bij : reciLatMatrix_)
+		bij *= alat_/(2*M_PI);
+
 }
 
 std::vector<double> const &

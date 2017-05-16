@@ -1,4 +1,4 @@
-/*	This file ReadVASPPoscar.h is part of elephon.
+/*	This file Atom.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,42 +13,44 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: May 15, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOSCAR_H_
+#ifndef ELEPHON_LATTICESTRUCTURE_ATOM_H_
+#define ELEPHON_LATTICESTRUCTURE_ATOM_H_
 
-#include "LatticeStructure/Atom.h"
 #include <string>
 #include <vector>
 
 namespace elephon
 {
-namespace IOMethods
+namespace LatticeStructure
 {
 
-/**
- *
- */
-class ReadVASPPoscar
+class Atom
 {
 public:
-	void read_file( std::string filename );
+	Atom(std::string kind, std::vector<double> pos,std::vector<bool> frozen);
 
-	std::vector<double> get_lattice_matrix() const;
+	std::string get_kind() const;
 
-	std::vector<LatticeStructure::Atom> get_atoms_list() const;
+	std::vector<double> get_position() const;
+
+	void set_position(std::vector<double> newPos);
+
+	std::vector<bool> get_movement_fixed() const;
 
 private:
 
-	std::vector<double> latticeMatrix_;
+	std::string kind_;
 
-	std::vector<LatticeStructure::Atom> atoms_;
+	std::vector<double> pos_;
+
+	std::vector<bool> frozen_;
 };
 
-} /* namespace IOMethods */
+} /* namespace LatticeStructure */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOSCAR_H_ */
+#endif /* ELEPHON_LATTICESTRUCTURE_ATOM_H_ */

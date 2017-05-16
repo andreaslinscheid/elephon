@@ -1,4 +1,4 @@
-/*	This file ReadVASPPoscar.h is part of elephon.
+/*	This file AtomDisplacement.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,42 +13,23 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: May 15, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-
-#include "LatticeStructure/Atom.h"
-#include <string>
-#include <vector>
+#ifndef ELEPHON_LATTICESTRUCTURE_ATOMDISPLACEMENT_H_
+#define ELEPHON_LATTICESTRUCTURE_ATOMDISPLACEMENT_H_
 
 namespace elephon
 {
-namespace IOMethods
+namespace LatticeStructure
 {
 
-/**
- *
- */
-class ReadVASPPoscar
+class AtomDisplacement
 {
-public:
-	void read_file( std::string filename );
-
-	std::vector<double> get_lattice_matrix() const;
-
-	std::vector<LatticeStructure::Atom> get_atoms_list() const;
-
-private:
-
-	std::vector<double> latticeMatrix_;
-
-	std::vector<LatticeStructure::Atom> atoms_;
 };
 
-} /* namespace IOMethods */
+} /* namespace LatticeStructure */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOSCAR_H_ */
+#endif /* ELEPHON_LATTICESTRUCTURE_ATOMDISPLACEMENT_H_ */

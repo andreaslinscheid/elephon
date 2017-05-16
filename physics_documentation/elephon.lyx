@@ -1198,6 +1198,87 @@ N_{e} & = & \int_{-\infty}^{E_{f}}{\rm d}\omega\rho(\omega)\\
 \end_inset
 
 
+\end_layout
+
+\begin_layout Subsection
+Displacements in a lattice with non-orthogonal basis vectors
+\end_layout
+
+\begin_layout Standard
+In order to minimize the number of symmetry unrelated displacements, we
+ seek to use displacments along the basis vectors of the cell.
+ Thus, it would be beneficial not to displace in 
+\begin_inset Formula $\mu=\alpha,[x,y,z]$
+\end_inset
+
+ but some linear combination of these cartesian vector displacements 
+\begin_inset Formula $\underbar{v}_{\mu\boldsymbol{R}-\boldsymbol{R}_{0}}$
+\end_inset
+
+ such that
+\begin_inset Formula 
+\begin{equation}
+\underbar{v}_{\tilde{\mu}\boldsymbol{R}-\boldsymbol{R}_{0}}=\sum_{\mu}A_{\tilde{\mu},\mu}^{-1}\underbar{v}_{\mu\boldsymbol{R}-\boldsymbol{R}_{0}}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\tilde{\mu}$
+\end_inset
+
+ is 
+\begin_inset Formula $[x,y,z]$
+\end_inset
+
+ in the possibly non-orthogonal coordinate system of the lattice or 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula 
+\begin{equation}
+\nabla_{(\boldsymbol{R}\mu)}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})=\sum_{\tilde{\mu}}A_{\mu,\tilde{\mu}}\nabla_{(\boldsymbol{R}\tilde{\mu})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})
+\end{equation}
+
+\end_inset
+
+which is clear from the linearety of the derivative operator.
+ In practice 
+\begin_inset Formula $\tilde{\Delta}$
+\end_inset
+
+ is finite and the requirement arises that the displacements in the direct
+ lattice can be chosen such that 1) 
+\begin_inset Formula $\tilde{\Delta}$
+\end_inset
+
+ is small enough such that 
+\begin_inset Formula $\{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\tilde{\Delta}\underbar{v}_{\tilde{\mu}\boldsymbol{R}}](\boldsymbol{r})\}/\tilde{\Delta}$
+\end_inset
+
+ is in the linear regeme and 2) the effective 
+\begin_inset Formula $\Delta$
+\end_inset
+
+ is each direction is not too small such that 
+\begin_inset Formula $\nabla_{(\boldsymbol{R}\mu)}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})$
+\end_inset
+
+ is noisy.
+ We expect this problem to occur only if the lattice basis has very strongly
+ overlapping basis vectors.
+\end_layout
+
+\begin_layout Standard
 \begin_inset ERT
 status open
 
