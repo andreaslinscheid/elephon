@@ -21,6 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_SYMMETRY_H_
 
 #include <vector>
+#include <assert.h>
 
 namespace elephon
 {
@@ -31,6 +32,13 @@ class Symmetry
 {
 public:
 
+	typedef struct Sop
+	{
+		int ptgroup[9];
+		double fracTrans[3];
+		void apply( std::vector<double> & v, bool latticePeriodic = true) const;
+	} SymmetryOperation;
+
 	Symmetry();
 
 	void initialize(
@@ -38,7 +46,7 @@ public:
 			std::vector<int> symmetries,
 			std::vector<double> fractionalTranslations);
 
-	void apply(int isym, std::vector<double> & field) const;
+	void apply(int isym, std::vector<double> & field, bool latticePeriodic = true) const;
 
 	int get_index_inverse(int isym);
 
@@ -48,6 +56,9 @@ public:
 
 	void symmetry_reduction( std::vector<int> const& indicesDropped);
 
+	SymmetryOperation get_sym_op( int isym ) const;
+
+	int get_identity_index() const;
 private:
 
 	double symmPrec_ = 0;

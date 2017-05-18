@@ -1,0 +1,3 @@
+This file is created to make the parser find the correct information and
+thus allows us to test the behavior without actually shipping a pseudo potential with the code.
+VRHFIN = Al:

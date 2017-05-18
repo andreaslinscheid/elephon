@@ -20,6 +20,10 @@
 #ifndef ELEPHON_LATTICESTRUCTURE_ATOMDISPLACEMENT_H_
 #define ELEPHON_LATTICESTRUCTURE_ATOMDISPLACEMENT_H_
 
+#include "Symmetry.h"
+#include <vector>
+#include <string>
+
 namespace elephon
 {
 namespace LatticeStructure
@@ -27,6 +31,62 @@ namespace LatticeStructure
 
 class AtomDisplacement
 {
+public:
+
+	AtomDisplacement();
+
+	AtomDisplacement(
+			std::string kind,
+			double magnitude,
+			std::vector<double> position,
+			std::vector<double> direction,
+			double gridPrecision = 1e-6,
+			bool symmetricDirection = true);
+
+	void initialize(
+			std::string kind,
+			double magnitude,
+			std::vector<double> position,
+			std::vector<double> direction,
+			double gridPrecision = 1e-6,
+			bool symmetricDirection = true);
+
+	void transform(Symmetry::SymmetryOperation const& sop);
+
+	double get_prec() const;
+
+	std::vector<double> get_position() const;
+
+	std::vector<double> generate_movement() const;
+
+	std::string get_kind() const;
+
+	//Strict weak ordering is implied by (in that order)
+	//	kind then position [x,y,z] then direction [|x|,|y|,|z|]
+	//NOTE: direction is compared in magnitudes of the components.
+	//		since the derivative is symmetric a displacement in direction (-1,0,0)
+	//		is considered equal to (1,0,0).
+	//Example: 	We compare displacements '1' and '2'.
+	//			First we compare the kinds according to string.compare()
+	//			Then position[x] is compared between to displacements '1' and '2'.
+	//			If |A1 - A2| > equivalencePrc_ this implies '1' < '2'.
+	//			If they are (almost) equal, we compare position y and so on.
+	// This implies '1' == '2' if neither '1'<'2' nor '2' < '1'.
+	friend bool operator< (AtomDisplacement const& d1, AtomDisplacement const& d2);
+
+private:
+
+	double equivalencePrc_ = 1e-6;
+
+	bool treatDirectionSymmetric_ = true;
+
+	std::string kind_;
+
+	double magnitude_ = 0;
+
+	std::vector<double> position_ = {0.0,0.0,0.0};
+
+	std::vector<double> direction_ = {1.0,0.0,0.0};
 };
 
 } /* namespace LatticeStructure */

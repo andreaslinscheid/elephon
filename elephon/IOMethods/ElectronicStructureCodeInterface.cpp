@@ -1,4 +1,4 @@
-/*	This file Input.h is part of elephon.
+/*	This file ElectronicStructureCodeInterface.cpp is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,36 +13,37 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Apr 24, 2017
+ *  Created on: May 17, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_INPUT_H_
-#define ELEPHON_IOMETHODS_INPUT_H_
-
-#include "IOMethods/InputOptions.h"
+#include "ElectronicStructureCodeInterface.h"
+#include <boost/filesystem.hpp>
 
 namespace elephon
 {
 namespace IOMethods
 {
 
-class Input
+ElectronicStructureCodeInterface::ElectronicStructureCodeInterface(
+		IOMethods::InputOptions inputOPts ) : inputOPts_(inputOPts)
 {
-public:
+}
 
-	Input( int argc, char* argv[] );
+ElectronicStructureCodeInterface::~ElectronicStructureCodeInterface()
+{
+	// TODO this class could take care of keeping track of file
+}
 
-	InputOptions const & get_opts() const;
-
-private:
-
-	InputFile inputFile_;
-
-	InputOptions opts_;
-};
+std::vector<std::string>
+ElectronicStructureCodeInterface::gen_input_file_list(std::string directory) const
+{
+	boost::filesystem::path dir(directory);
+	auto result = this->list_all_input_files();
+	for ( auto &f : result )
+		f = (dir / boost::filesystem::path(f)).string();
+	return result;
+}
 
 } /* namespace IOMethods */
 } /* namespace elephon */
-
-#endif /* ELEPHON_IOMETHODS_INPUT_H_ */

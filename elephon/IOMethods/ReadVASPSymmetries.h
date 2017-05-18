@@ -1,4 +1,4 @@
-/*	This file Input.h is part of elephon.
+/*	This file ReadVASPSymmetries.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,36 +13,42 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Apr 24, 2017
+ *  Created on: May 16, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_INPUT_H_
-#define ELEPHON_IOMETHODS_INPUT_H_
+#ifndef ELEPHON_IOMETHODS_READVASPSYMMETRIES_H_
+#define ELEPHON_IOMETHODS_READVASPSYMMETRIES_H_
 
-#include "IOMethods/InputOptions.h"
+#include <string>
+#include <vector>
 
 namespace elephon
 {
 namespace IOMethods
 {
 
-class Input
+class ReadVASPSymmetries
 {
 public:
 
-	Input( int argc, char* argv[] );
+	void read_file(std::string filename );
 
-	InputOptions const & get_opts() const;
+	std::vector<int> const& get_symmetries() const;
+
+	std::vector<double> const& get_fractionTranslations() const;
 
 private:
 
-	InputFile inputFile_;
+	std::vector<int> symmetries_;
 
-	InputOptions opts_;
+	std::vector<double> fractionTranslations_;
+
+	void parse_symmetry_blocks(std::string fcontent,
+			std::vector<std::string> & blocks) const;
 };
 
 } /* namespace IOMethods */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_INPUT_H_ */
+#endif /* ELEPHON_IOMETHODS_READVASPSYMMETRIES_H_ */

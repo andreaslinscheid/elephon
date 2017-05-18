@@ -42,9 +42,20 @@ public:
 
 	void displace_atom( AtomDisplacement const& displ );
 
-	std::vector<AtomDisplacement> generate_displacements() const;
+	void generate_displacements( double displMagn,
+			bool symmetricDisplacements,
+			std::vector<AtomDisplacement> & reducibleDisplacements,
+			std::vector<AtomDisplacement> & irreducibleDisplacements,
+			std::vector<int> & redToIrred,
+			std::vector<int> & symRedToIrred,
+			std::vector< std::vector<int> > & irredToRed,
+			std::vector< std::vector<int> > & symIrredToRed) const;
 
 	std::vector<LatticeStructure::Atom> const & get_atoms_list() const;
+
+	std::vector<double> get_lattice_matrix() const;
+
+	double get_alat() const;
 private:
 
 	LatticeStructure::LatticeModule lattice_;

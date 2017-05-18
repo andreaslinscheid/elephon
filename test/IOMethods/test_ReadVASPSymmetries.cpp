@@ -1,4 +1,4 @@
-/*	This file test_Input.cpp is part of elephon.
+/*	This file test_ReadVASPSymmetries.cpp is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,36 +13,34 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Apr 25, 2017
+ *  Created on: May 16, 2017
  *      Author: A. Linscheid
  */
+
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
+#include "IOMethods/ReadVASPSymmetries.h"
 #include <string>
-#include "IOMethods/Input.h"
+#include <vector>
 
-BOOST_AUTO_TEST_CASE( Default_Args )
+BOOST_AUTO_TEST_CASE( Read_symmetries )
 {
-	using namespace boost::filesystem;
-	path p(__FILE__);
-	path dir = p.parent_path();
-	path test_input_file = dir / "../IOMethods/test_input_file.dat";
-	char * prog = strdup("program name");
-	char * arg = strdup(test_input_file.c_str());
-	char *argv[] = {prog, arg, NULL};
-	int argc = sizeof(argv) / sizeof(char*) - 1;
-	elephon::IOMethods::Input input(argc,argv);
-	elephon::IOMethods::InputOptions options = input.get_opts();
-	delete [] prog;
-	delete [] arg;
+	boost::filesystem::path p(__FILE__);
+	boost::filesystem::path dir = p.parent_path();
+	std::string Al_test_outcar = std::string(dir.c_str())+"/../IOMethods/OUTCAR_Al_test.dat";
 
+	elephon::IOMethods::ReadVASPSymmetries symReader;
+	symReader.read_file(Al_test_outcar);
 
-	BOOST_CHECK( options.get_scell().size() == 3 );
-	BOOST_CHECK( options.get_scell()[0] == 2 );
-	BOOST_CHECK( options.get_scell()[1] == 2 );
-	BOOST_CHECK( options.get_scell()[2] == 1 );
+	BOOST_REQUIRE( symReader.get_symmetries().size() == 48*9 );
 
-	BOOST_CHECK( options.get_numFS() == 2000 );
+	int refIndex  = 22;
+	std::vector<int> ref_sym_22 = {0,0,1,0,-1,0,1,0,0};
+	for ( int i = 0; i < 3 ; ++i)
+		for ( int j = 0; j < 3 ; ++j)
+			BOOST_REQUIRE(symReader.get_symmetries()[(refIndex*3+i)*3+j] == ref_sym_22[i*3+j]);
+
+	BOOST_REQUIRE( symReader.get_fractionTranslations().size() == 48*3 );
 }

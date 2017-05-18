@@ -48,7 +48,7 @@ target_include_directories(elephon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -Wall")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
-find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework filesystem system REQUIRED)
+find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework regex filesystem system REQUIRED)
 find_package(VTK 6.0 REQUIRED NO_MODULE)
 include(${VTK_USE_FILE})
 

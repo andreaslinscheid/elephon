@@ -20,6 +20,7 @@
 #include "Symmetry.h"
 #include <assert.h>
 #include <set>
+#include <cmath>
 
 namespace elephon
 {
@@ -51,9 +52,10 @@ void Symmetry::initialize(
 
 	//TODO in principle here we should check if the input is sensible, e.g. if the symmetries
 	//form a group.
+	//ToDo make sure the identity is in place index 0
 }
 
-void Symmetry::apply(int isym, std::vector<double> & field) const
+void Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic) const
 {
 	assert( field.size()%3 == 0 );
 	assert( isym < numSymmetries_ );
@@ -65,10 +67,14 @@ void Symmetry::apply(int isym, std::vector<double> & field) const
 	{
 		std::copy(std::begin(field)+ic*3,std::begin(field)+(ic+1)*3,std::begin(buff));
 		for ( int xi = 0; xi < 3; ++xi)
+		{
 			field[ic*3+xi] = symmetries_[(isym*3+xi)*3+0]*buff[0]
 							+symmetries_[(isym*3+xi)*3+1]*buff[1]
 							+symmetries_[(isym*3+xi)*3+2]*buff[2]
-							+fractTrans_[xi];
+							+fractTrans_[isym*3+xi];
+			if ( latticePeriodic )
+				field[ic*3+xi] -= std::floor(field[ic*3+xi]);
+		}
 	}
 }
 
@@ -91,13 +97,43 @@ void Symmetry::symmetry_reduction( std::vector<int> const& indicesDropped)
 	int numNewSym = numSymmetries_ - static_cast<int>( drop.size() );
 	std::vector<int> newPtGrpSym( numNewSym*9 );
 	std::vector<double> newFractSym( numNewSym*3 );
+	int nis = 0;
 	for ( int isym = 0 ; isym < numSymmetries_; ++isym)
 		if ( drop.find(isym) == drop.end() ) // we keep this one
 		{
-			std::copy(symmetries_.begin()+isym*9,symmetries_.begin()+(isym+1)*9,newPtGrpSym.begin());
-			std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,newFractSym.begin());
+			std::copy(symmetries_.begin()+isym*9,symmetries_.begin()+(isym+1)*9,newPtGrpSym.begin()+nis*9);
+			std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,newFractSym.begin()+nis*3);
+			nis++;
 		}
 	this->initialize( symmPrec_, newPtGrpSym, newFractSym );
+}
+
+Symmetry::SymmetryOperation
+Symmetry::get_sym_op( int isym ) const
+{
+	assert( isym < numSymmetries_ );
+	Symmetry::SymmetryOperation res;
+	std::copy( &fractTrans_[isym*3],&fractTrans_[isym*3]+3,res.fracTrans);
+	std::copy( &symmetries_[isym*9],&symmetries_[isym*9]+9,res.ptgroup);
+	return res;
+}
+
+
+void Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
+{
+	assert(v.size()==3);
+	auto b = v;
+	for ( int i = 0; i < 3; ++i)
+	{
+		v[i] = ptgroup[i*3+0]*b[0]+ptgroup[i*3+1]*b[1]+ptgroup[i*3+2]*b[2]+fracTrans[i];
+		if ( latticePeriodic )
+			v[i] -= std::floor(v[i]);
+	}
+};
+
+int Symmetry::get_identity_index() const
+{
+	return 0;
 }
 
 } /* namespace LatticeStructure */

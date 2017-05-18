@@ -1,4 +1,4 @@
-/*	This file Input.h is part of elephon.
+/*	This file BuildFolderStructure.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,36 +13,40 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Apr 24, 2017
+ *  Created on: May 17, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_INPUT_H_
-#define ELEPHON_IOMETHODS_INPUT_H_
+#ifndef ELEPHON_IOMETHODS_BUILDFOLDERSTRUCTURE_H_
+#define ELEPHON_IOMETHODS_BUILDFOLDERSTRUCTURE_H_
 
+#include <string>
+#include <boost/filesystem.hpp>
 #include "IOMethods/InputOptions.h"
+#include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "LatticeStructure/AtomDisplacement.h"
+#include "LatticeStructure/UnitCell.h"
 
 namespace elephon
 {
 namespace IOMethods
 {
 
-class Input
+class BuildFolderStructure
 {
 public:
 
-	Input( int argc, char* argv[] );
+	void build(
+			IOMethods::InputOptions const & input,
+			LatticeStructure::UnitCell const & unitcell,
+			ElectronicStructureCodeInterface & interface ) const;
 
-	InputOptions const & get_opts() const;
+	bool check_is_build( std::string rootFolder ) const;
 
 private:
-
-	InputFile inputFile_;
-
-	InputOptions opts_;
 };
 
 } /* namespace IOMethods */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_INPUT_H_ */
+#endif /* ELEPHON_IOMETHODS_BUILDFOLDERSTRUCTURE_H_ */
