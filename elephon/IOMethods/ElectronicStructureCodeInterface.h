@@ -24,6 +24,7 @@
 #include "IOMethods/InputOptions.h"
 #include <vector>
 #include <string>
+#include <complex>
 
 namespace elephon
 {
@@ -56,9 +57,11 @@ public:
 
 	virtual void read_wavefunctions(
 			std::vector<std::string> const & files,
-			std::vector<double> const & kpts,
+			std::vector<int> const & kpts,
 			std::vector<int> const & bandIndices,
-			std::vector<float> & output) = 0;
+			std::vector< std::complex<float> > & wfctData,
+			std::vector< std::vector<int> > & fourierMap,
+			std::vector<int> & fftDim) = 0;
 
 	virtual void read_atoms_list(
 			std::vector<std::string> const & baseFiles,

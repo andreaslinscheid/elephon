@@ -17,18 +17,100 @@
  *      Author: A. Linscheid
  */
 
-#ifndef IOMETHODS_READVASPWAVEFUNCTION_H_
-#define IOMETHODS_READVASPWAVEFUNCTION_H_
+#ifndef ELEPHON_IOMETHODS_READVASPWAVEFUNCTION_H_
+#define ELEPHON_IOMETHODS_READVASPWAVEFUNCTION_H_
 
-namespace elephon {
-namespace IOMethods {
+#include "LatticeStructure/LatticeModule.h"
+#include <cstdint>
+#include <string>
+#include <complex>
+#include <vector>
+#include <fstream>
 
-class ReadVASPWaveFunction {
+namespace elephon
+{
+namespace IOMethods
+{
+
+class ReadVASPWaveFunction
+{
+
 public:
+
 	ReadVASPWaveFunction();
+
+	~ReadVASPWaveFunction();
+
+	void prepare_wavecar(std::string filename);
+
+	void read_wavefunction(
+			std::vector<int> const& kptindices,
+			std::vector<int> const & bandIndices,
+			std::vector< std::complex<float> > & wfctData,
+			std::vector< std::vector<int> > & fourierMap,
+			std::vector<int> & fftDim ) const;
+
+	std::vector<double> const & get_energies() const;
+
+	int get_num_bands() const;
+
+	int get_num_spins() const;
+
+	int get_num_kpts() const;
+
+	std::vector<double> const & get_k_points() const;
+private:
+
+	typedef double VASPDprec;
+
+	typedef float VASPSprec;
+
+	std::size_t recl_ = 0;
+
+	std::size_t total_size_ = 0;
+
+	int nBndsVASP_ = 0;
+
+	double ecutoff_ = 0;
+
+	int nspin_ = 0;
+
+	bool wavefuncDouble_ = false;
+
+	bool spanRecords_ = false;
+
+	std::vector<double> kpoints_;
+
+	std::vector<int> fourierMax_;
+
+	elephon::LatticeStructure::LatticeModule lattice_;
+
+	//The file is kept open and closed in the destructor
+	mutable std::fstream wavecarfile_;
+
+	/**
+	 * For each k point index in the regular
+	 */
+	std::vector< std::vector<std::int64_t> > byteLocationMap_;
+
+	std::vector<int> npwSpinKpt_;
+
+	std::string filename_;
+
+	std::vector<double> energies_;
+
+	//Element (ik,ispin) = ik*nspin_+ispin returns the record number where to find the beginning of the
+	// data for k point 'ik' and spin 'ispin'. The wavefunctions start one (or more) later.
+	std::vector<std::size_t> kptSpinPosToFile_;
+
+	const double energyConverionFactorVASP_ = 0.262465831;
+
+	void set_up_fourier_max();
+
+	int num_records_spanned(std::size_t bytesToRead) const;
 };
 
 } /* namespace IOMethods */
 } /* namespace elephon */
 
-#endif /* IOMETHODS_READVASPWAVEFUNCTION_H_ */
+#endif /* ELEPHON_IOMETHODS_READVASPWAVEFUNCTION_H_ */

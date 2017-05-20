@@ -52,6 +52,7 @@ void LatticeModule::initialize( std::vector<double> latticeMatrix )
 	this->cross_prod(a1,a2,b3);
 
 	double unitCellVolume = a1[0]*b1[0]+a1[1]*b1[1]+a1[2]*b1[2];
+	assert( unitCellVolume > 0 );
 
 	reciLatMatrix_ = std::vector<double>(9);
 	for ( int i = 0 ; i < 3; i++)

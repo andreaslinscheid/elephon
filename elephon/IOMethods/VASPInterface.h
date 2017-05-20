@@ -23,6 +23,7 @@
 #include "IOMethods/ElectronicStructureCodeInterface.h"
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/ReadVASPSymmetries.h"
+#include "IOMethods/ReadVASPWaveFunction.h"
 #include <vector>
 #include <map>
 
@@ -53,9 +54,11 @@ public:
 
 	void read_wavefunctions(
 			std::vector<std::string> const & files,
-			std::vector<double> const & kpts,
+			std::vector<int> const & kpts,
 			std::vector<int> const & bandIndices,
-			std::vector<float> & output);
+			std::vector< std::complex<float> > & wfctData,
+			std::vector< std::vector<int> > & fourierMap,
+			std::vector<int> & fftDim);
 
 	void read_atoms_list(
 			std::vector<std::string> const & baseFiles,
@@ -86,6 +89,8 @@ private:
 	ReadVASPPoscar posReader_;
 
 	ReadVASPSymmetries symReader_;
+
+	ReadVASPWaveFunction wfcReader_;
 
 	void overwrite_POSCAR_file( std::string filename,
 			std::vector<std::string > const & potcarAtomOrder,

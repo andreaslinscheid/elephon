@@ -95,11 +95,14 @@ VASPInterface::options_scf_supercell_no_wfctns_no_relax() const
 
 void VASPInterface::read_wavefunctions(
 		std::vector<std::string> const & files,
-		std::vector<double> const & kpts,
+		std::vector<int> const & kpts,
 		std::vector<int> const & bandIndices,
-		std::vector<float> & output)
+		std::vector< std::complex<float> > & wfctData,
+		std::vector< std::vector<int> > & fourierMap,
+		std::vector<int> & fftDim)
 {
-
+	wfcReader_.prepare_wavecar( files.at(0) );
+	wfcReader_.read_wavefunction( kpts, bandIndices, wfctData, fourierMap, fftDim );
 }
 
 void VASPInterface::read_atoms_list(
