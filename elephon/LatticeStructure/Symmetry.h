@@ -46,6 +46,8 @@ public:
 			std::vector<int> symmetries,
 			std::vector<double> fractionalTranslations);
 
+	void set_reciprocal_space_sym();
+
 	void apply(int isym, std::vector<double> & field, bool latticePeriodic = true) const;
 
 	int get_index_inverse(int isym);
@@ -59,7 +61,11 @@ public:
 	SymmetryOperation get_sym_op( int isym ) const;
 
 	int get_identity_index() const;
+
+	bool is_reci() const;
 private:
+
+	bool isReciprocalSpace_ = false;
 
 	double symmPrec_ = 0;
 

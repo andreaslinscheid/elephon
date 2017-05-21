@@ -38,7 +38,8 @@ Symmetry::Symmetry()
 	symmPrec_ = 1e-6;
 }
 
-void Symmetry::initialize(
+void
+Symmetry::initialize(
 		double symmPrec,
 		std::vector<int> symmetries,
 		std::vector<double> fractionalTranslations )
@@ -55,7 +56,15 @@ void Symmetry::initialize(
 	//ToDo make sure the identity is in place index 0
 }
 
-void Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic) const
+void
+Symmetry::set_reciprocal_space_sym()
+{
+	std::fill(fractTrans_.begin(),fractTrans_.end(),0.0);
+	isReciprocalSpace_ = true;
+}
+
+void
+Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic) const
 {
 	assert( field.size()%3 == 0 );
 	assert( isym < numSymmetries_ );
@@ -78,17 +87,20 @@ void Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic
 	}
 }
 
-double Symmetry::get_symmetry_prec() const
+double
+Symmetry::get_symmetry_prec() const
 {
 	return symmPrec_;
 }
 
-int Symmetry::get_num_symmetries() const
+int
+Symmetry::get_num_symmetries() const
 {
 	return numSymmetries_;
 }
 
-void Symmetry::symmetry_reduction( std::vector<int> const& indicesDropped)
+void
+Symmetry::symmetry_reduction( std::vector<int> const& indicesDropped)
 {
 	//remove possible duplicates and make sure all indices appear
 	std::set<int> drop(indicesDropped.begin(),indicesDropped.end());
@@ -119,7 +131,8 @@ Symmetry::get_sym_op( int isym ) const
 }
 
 
-void Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
+void
+Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
 {
 	assert(v.size()==3);
 	auto b = v;
@@ -127,13 +140,20 @@ void Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
 	{
 		v[i] = ptgroup[i*3+0]*b[0]+ptgroup[i*3+1]*b[1]+ptgroup[i*3+2]*b[2]+fracTrans[i];
 		if ( latticePeriodic )
-			v[i] -= std::floor(v[i]);
+			v[i] -= std::floor(v[i]+0.5);
 	}
 };
 
-int Symmetry::get_identity_index() const
+int
+Symmetry::get_identity_index() const
 {
 	return 0;
+}
+
+bool
+Symmetry::is_reci() const
+{
+	return isReciprocalSpace_;
 }
 
 } /* namespace LatticeStructure */
