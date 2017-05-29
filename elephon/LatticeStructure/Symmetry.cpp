@@ -21,6 +21,9 @@
 #include <assert.h>
 #include <set>
 #include <cmath>
+#include <iostream>
+#include <stdexcept>
+#include <map>
 
 namespace elephon
 {
@@ -29,36 +32,165 @@ namespace LatticeStructure
 
 Symmetry::Symmetry()
 {
-	//This sets the identity symmetry
+	//This sets the identity symmetry group
 	symmetries_ = {	1 , 0 , 0,
 					0 , 1 , 0,
 					0 , 0 , 1};
-	numSymmetries_ = 1;
-	fractTrans_ = {0.0, 0.0, 0.0};
-	symmPrec_ = 1e-6;
+	fractTrans_ = std::vector<double>({0.0, 0.0, 0.0});
+	lattice_.initialize( std::vector<double>({1,0,0,0,1,0,0,0,1}) );
+	this->initialize(1e-6,symmetries_,fractTrans_,lattice_,false);
 }
 
 void
 Symmetry::initialize(
 		double symmPrec,
 		std::vector<int> symmetries,
-		std::vector<double> fractionalTranslations )
+		std::vector<double> fractionalTranslations,
+		LatticeStructure::LatticeModule lattice,
+		bool hasTimeReversal)
 {
 	assert( symmetries.size() % 9 == 0 );
 	assert( fractionalTranslations.size() % 3 == 0 );
+	assert( (fractionalTranslations.size() / 3) == (symmetries.size() / 9) );
 	symmetries_ = std::move( symmetries );
 	numSymmetries_ = symmetries_.size()/9;
 	fractTrans_ = std::move(fractionalTranslations);
 	symmPrec_ = symmPrec;
+	lattice_ = std::move(lattice);
+	hasTimeReversal_ = hasTimeReversal;
 
-	//TODO in principle here we should check if the input is sensible, e.g. if the symmetries
-	//form a group.
-	//ToDo make sure the identity is in place index 0
+	//This transforms S' = B S A into cartesian space
+	// as S = A S' B
+	auto A = lattice_.get_latticeMatrix();
+	auto B = lattice_.get_reciprocal_latticeMatrix();
+
+	auto matMult = [] (double const * A, double const * B, double * result){
+		std::fill(result,result+9,0.0);
+		for ( int i = 0 ; i < 3 ; ++i)
+			for ( int j = 0 ; j < 3 ; ++j)
+				for ( int k = 0 ; k < 3 ; ++k)
+					result[i*3+j] += A[i*3+k]*B[k*3+j];
+	};
+
+	auto transform = [&A,&B] (int const * symOp, double * cartSymOp ) {
+		std::fill(cartSymOp,cartSymOp+9, 0.0 );
+		for ( int i = 0 ; i < 3 ; ++i)
+			for ( int j = 0 ; j < 3 ; ++j)
+				for ( int k = 0 ; k < 3 ; ++k)
+					for ( int l = 0 ; l < 3 ; ++l)
+						cartSymOp[i*3+j] += A[i*3+k]*symOp[k*3+l]*B[l*3+j];
+	};
+
+	for (int isym = 0 ; isym < numSymmetries_; ++isym)
+		if ( std::vector<int>( &symmetries_[9*isym], &symmetries_[9*isym]+9)
+				== std::vector<int>({1,0,0,0,1,0,0,0,1}) )
+		{
+			idIndex_ = isym;
+			break;
+		}
+
+	hasInversion_ = false;
+	for (int isym = 0 ; isym < numSymmetries_; ++isym)
+		if ( std::vector<int>( &symmetries_[9*isym], &symmetries_[9*isym]+9)
+				== std::vector<int>({-1,0,0, 0,-1,0, 0,0,-1}) )
+		{
+			hasInversion_ = true;
+			break;
+		}
+
+	//In case we don't have inversion but time reversal the number of symmetry operations in
+	//reciprocal space is different.
+	if ( (not hasInversion_) and hasTimeReversal_ )
+		numRotations_ = 2*numSymmetries_;
+	else
+		numRotations_ = numSymmetries_;
+
+	//For fast lookups, we define an ordering according to the function below.
+	//It takes two symmetry operations 'a' and 'b' and decides which one is smaller by an element wise comparison
+	//of the nearest integer values. We add an additional element to the front, before
+	//the elements of the rotation that flags time reversal symmetry
+	auto cmpSyms = [] ( std::vector<double> const & a, std::vector<double> const & b )
+	{
+		assert( (a.size()==10) && (b.size()==10) );
+		for ( int i = 0 ; i < 10; ++i)
+			if ( std::floor(a[i]+0.5) !=  std::floor(b[i]+0.5) )
+				return std::floor(a[i]+0.5) < std::floor(b[i]+0.5);
+		return false;
+	};
+	std::map< std::vector<double>, int, decltype(cmpSyms)> symmetryCartesianSet(cmpSyms);
+	std::vector<double> s_cart(10);
+	std::vector<double> inversion = {-1,0,0, 0,-1,0, 0,0,-1};
+	std::vector<double> buffer(9,0.0);
+	for (int isym = 0 ; isym < numSymmetries_; ++isym)
+	{
+		s_cart[0] = -1.0; // < 0 flags normal symmetry operation
+		transform(&symmetries_[9*isym],&s_cart[1]);
+		symmetryCartesianSet.insert( std::make_pair(s_cart, isym ) );
+
+		//In case of time reversal symmetry but no inversion we add the generated additional
+		//rotation into the set. They get a flag which orders them to end of the map.
+		if ( (not hasInversion_) and hasTimeReversal_ )
+		{
+			s_cart[0] = 1.0; // > 0 flags time reversal enabled symmetry operation
+			transform(&symmetries_[9*isym],&s_cart[1]);
+			symmetryCartesianSet.insert( std::make_pair(s_cart, isym ) );
+		}
+
+	}
+	assert( int(symmetryCartesianSet.size()) == numRotations_ );
+
+	inverseMap_.resize(numRotations_);
+	multiplicationTable_.resize( numRotations_*numRotations_);
+	for (auto sym : symmetryCartesianSet)
+	{
+		//find the group multiplication table
+		std::vector<double> prod(10);
+		int inverseIndex = -1;
+		for (auto secondSym : symmetryCartesianSet)
+		{
+			matMult(&sym.first[1],&secondSym.first[1],&prod[1]);
+			prod[0] = sym.first[0] == secondSym.first[0] ? -1.0 : 1.0; //Do we have an even number of inversions?
+			auto ret = symmetryCartesianSet.find( prod );
+			if ( ret == symmetryCartesianSet.end() )
+				throw std::runtime_error("Symmetries do not form a group!");
+			multiplicationTable_[sym.second*numRotations_+secondSym.second] = ret->second;
+			if ( ret->second == this->get_identity_index() )
+				inverseIndex = secondSym.second;
+		}
+
+		if ( inverseIndex < 0 )
+			throw std::runtime_error("Found no inverse matrix");
+		inverseMap_[sym.second] = inverseIndex;
+	}
+
+	//Append the symmetry operations and fractional translations
+	if ( (not hasInversion_) and hasTimeReversal_ )
+	{
+		symmetries_.reserve(numRotations_*9);
+		fractTrans_.reserve(numRotations_*3);
+		for (int isym = 0; isym < numSymmetries_; ++isym)
+		{
+			// S' = -I * S, so we multiply each element by -1
+			for (int i = 0; i < 9; ++i)
+				symmetries_.push_back(-symmetries_[isym*9+i]);
+			for (int i = 0; i < 3; ++i)
+				fractTrans_.push_back(fractTrans_[isym*3+i]);
+		}
+	}
+
+	isSymmorphic_ = std::vector<bool>( numRotations_, true );
+	for ( int irot = 0 ; irot < numRotations_ ; ++irot  )
+		isSymmorphic_[irot] = (std::abs(fractTrans_[irot*3]) < symmPrec_ )
+							and (std::abs(fractTrans_[irot*3+1]) < symmPrec_ )
+							and (std::abs(fractTrans_[irot*3+2]) < symmPrec_ ) ;
 }
 
 void
 Symmetry::set_reciprocal_space_sym()
 {
+	if ( isReciprocalSpace_ )
+		return;
+	fractTransStore_ = fractTrans_;
 	std::fill(fractTrans_.begin(),fractTrans_.end(),0.0);
 	isReciprocalSpace_ = true;
 }
@@ -67,7 +199,7 @@ void
 Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic) const
 {
 	assert( field.size()%3 == 0 );
-	assert( isym < numSymmetries_ );
+	assert( isym < numRotations_ );
 
 	std::vector<double> buff(3);
 
@@ -82,7 +214,7 @@ Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic) con
 							+symmetries_[(isym*3+xi)*3+2]*buff[2]
 							+fractTrans_[isym*3+xi];
 			if ( latticePeriodic )
-				field[ic*3+xi] -= std::floor(field[ic*3+xi]);
+				field[ic*3+xi] -= std::floor(field[ic*3+xi]+0.5);
 		}
 	}
 }
@@ -96,15 +228,56 @@ Symmetry::get_symmetry_prec() const
 int
 Symmetry::get_num_symmetries() const
 {
-	return numSymmetries_;
+	return isReciprocalSpace_ ? numRotations_ : numSymmetries_ ;
+}
+
+bool
+Symmetry::is_symmorphic(int isym) const
+{
+	assert(isym < numRotations_);
+	return isSymmorphic_[isym];
+}
+
+int
+Symmetry::get_index_inverse(int isym) const
+{
+	return inverseMap_[isym];
+}
+
+int
+Symmetry::get_group_product(int isym1, int isym2) const
+{
+	assert( (isym1 < numRotations_) && (isym2 < numRotations_) );
+	return multiplicationTable_[isym1*numRotations_+isym2];
+}
+
+bool
+Symmetry::has_inversion() const
+{
+	return hasInversion_;
+}
+
+bool
+Symmetry::is_inversion(int isym) const
+{
+	assert( isym < numRotations_ );
+	return (isym >= numSymmetries_) and ( isym < numRotations_);
 }
 
 void
-Symmetry::symmetry_reduction( std::vector<int> const& indicesDropped)
+Symmetry::symmetry_reduction( std::vector<int> indicesDropped)
 {
+	//In case of time reversal expanded symmetry sets, remove those from the list
+	//The new initialization will put them back in.
+	if ( numRotations_ != numSymmetries_)
+		for (auto & i : indicesDropped  )
+			i  =  i < numSymmetries_ ? i : i-numSymmetries_;
+
 	//remove possible duplicates and make sure all indices appear
 	std::set<int> drop(indicesDropped.begin(),indicesDropped.end());
 	assert( ((*drop.rbegin()) < numSymmetries_) && ((*drop.begin()) >= 0) );
+	if ( drop.find(idIndex_) !=  drop.end() )
+		throw std::logic_error("Requested to remove the identity element from the symmetry ... ");
 
 	int numNewSym = numSymmetries_ - static_cast<int>( drop.size() );
 	std::vector<int> newPtGrpSym( numNewSym*9 );
@@ -117,13 +290,13 @@ Symmetry::symmetry_reduction( std::vector<int> const& indicesDropped)
 			std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,newFractSym.begin()+nis*3);
 			nis++;
 		}
-	this->initialize( symmPrec_, newPtGrpSym, newFractSym );
+	this->initialize( symmPrec_, newPtGrpSym, newFractSym, lattice_ , hasTimeReversal_);
 }
 
 Symmetry::SymmetryOperation
 Symmetry::get_sym_op( int isym ) const
 {
-	assert( isym < numSymmetries_ );
+	assert( isym < numRotations_ );
 	Symmetry::SymmetryOperation res;
 	std::copy( &fractTrans_[isym*3],&fractTrans_[isym*3]+3,res.fracTrans);
 	std::copy( &symmetries_[isym*9],&symmetries_[isym*9]+9,res.ptgroup);
@@ -147,13 +320,30 @@ Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
 int
 Symmetry::get_identity_index() const
 {
-	return 0;
+	return idIndex_;
 }
 
 bool
 Symmetry::is_reci() const
 {
 	return isReciprocalSpace_;
+}
+
+std::vector<double>
+Symmetry::get_fractional_translation(int isym) const
+{
+	std::vector<double> result(3);
+	if ( isReciprocalSpace_ )
+	{
+		assert( int(fractTransStore_.size()) == numSymmetries_*3);
+		std::copy(fractTransStore_.begin()+isym*3,fractTransStore_.begin()+(isym+1)*3,result.begin());
+	}
+	else
+	{
+		assert( int(fractTrans_.size()) == numSymmetries_*3);
+		std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,result.begin());
+	}
+	return result;
 }
 
 } /* namespace LatticeStructure */

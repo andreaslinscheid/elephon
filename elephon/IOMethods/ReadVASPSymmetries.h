@@ -38,13 +38,17 @@ public:
 
 	std::vector<double> const& get_fractionTranslations() const;
 
+	bool get_time_revesal_symmetry() const;
+
 private:
+
+	bool timeReversal_ = false;
 
 	std::vector<int> symmetries_;
 
 	std::vector<double> fractionTranslations_;
 
-	void parse_symmetry_blocks(std::string fcontent,
+	void parse_symmetry_blocks(std::string const & fcontent,
 			std::vector<std::string> & blocks) const;
 };
 

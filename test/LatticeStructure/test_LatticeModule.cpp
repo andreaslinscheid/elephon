@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE( LatticeModule_BasisRelation )
 {
 	boost::filesystem::path p(__FILE__);
 	boost::filesystem::path dir = p.parent_path();
-	std::string Al_test_poscar = std::string(dir.c_str())+"/../IOMethods/POSCAR_Al_test.dat";
+	std::string Al_test_poscar = std::string(dir.c_str())+"/../IOMethods/Al_test/POSCAR";
 
 	elephon::IOMethods::ReadVASPPoscar filerreader;
 	filerreader.read_file( Al_test_poscar );

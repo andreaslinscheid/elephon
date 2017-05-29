@@ -29,20 +29,16 @@
 
 BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 {
-	boost::filesystem::path p(__FILE__);
-	boost::filesystem::path dir = p.parent_path();
-	std::string Al_test_poscar = std::string(dir.c_str())+"/../IOMethods/POSCAR_Al_test.dat";
-
 	elephon::IOMethods::ReadVASPPoscar filerreader;
-	filerreader.read_file( Al_test_poscar );
+	filerreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/POSCAR").string() );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize(filerreader.get_lattice_matrix());
 
 	elephon::IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( std::string(dir.c_str())+"/../IOMethods/OUTCAR_Al_test.dat" );
+	symreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
 	elephon::LatticeStructure::Symmetry sym;
-	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations());
+	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
 
 	elephon::LatticeStructure::UnitCell uc;
 	uc.initialize( filerreader.get_atoms_list(), lattice, sym);
@@ -59,21 +55,16 @@ BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 {
 	using namespace elephon;
-
-	boost::filesystem::path p(__FILE__);
-	boost::filesystem::path dir = p.parent_path();
-	std::string Al_test_poscar = std::string(dir.c_str())+"/../IOMethods/POSCAR_Al_test.dat";
-
 	IOMethods::ReadVASPPoscar filerreader;
-	filerreader.read_file( Al_test_poscar );
+	filerreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/POSCAR").string() );
 
 	LatticeStructure::LatticeModule lattice;
 	lattice.initialize(filerreader.get_lattice_matrix());
 
 	IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( std::string(dir.c_str())+"/../IOMethods/OUTCAR_Al_test.dat" );
+	symreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
 	LatticeStructure::Symmetry sym;
-	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations());
+	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
 
 	LatticeStructure::UnitCell uc;
 	uc.initialize( filerreader.get_atoms_list(), lattice, sym);

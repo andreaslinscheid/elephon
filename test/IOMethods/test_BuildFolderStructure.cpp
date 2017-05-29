@@ -32,18 +32,14 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	using namespace boost::filesystem;
 	elephon::IOMethods::BuildFolderStructure builder;
 
-	path p(__FILE__);
-	path dir = p.parent_path();
-	path test_root_dir = dir / "../IOMethods/";
-	path test_elph_dir = dir / "../IOMethods/test_dir_struct";
-	path test_Al_structureFile = dir / "../IOMethods/POSCAR_Al_test.dat";
-	path test_Al_symmetryFile = dir / "../IOMethods/OUTCAR_Al_test.dat";
+	path dir = path(__FILE__).parent_path();
+	path test_elph_dir = dir / "test_dir_struct";
 
 	//here we create the test input file
-	path test_input_file = dir / "../IOMethods/test_folderstructure_input.dat";
+	path test_input_file = dir / "test_folderstructure_input.dat";
 	std::string content = std::string()+
 			"scell=2 2 1\n"
-			"root_dir="+test_root_dir.string()+"\n"
+			"root_dir="+(dir/"Al_test").string()+"\n"
 			"elphd="+test_elph_dir.string()+"\n"
 			"";
 	std::ofstream file( test_input_file.c_str() );
@@ -63,20 +59,16 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	//Here we use the VASP interface to generate the folder structure
 	elephon::IOMethods::VASPInterface vi(options);
 	elephon::LatticeStructure::Symmetry sym;
-	vi.read_symmetries(
-			std::vector<std::string>(1,test_Al_symmetryFile.string()),
-			1e-6,
-			sym);
-
-	elephon::LatticeStructure::LatticeModule lattice;
-	vi.read_cell_paramters(
-			std::vector<std::string>(1,test_Al_structureFile.string()),
-			lattice);
-
 	std::vector<elephon::LatticeStructure::Atom> atoms;
-	vi.read_atoms_list(
-			std::vector<std::string>(1,test_Al_structureFile.string()),
-			atoms);
+	elephon::LatticeStructure::LatticeModule lattice;
+	elephon::LatticeStructure::RegularGrid kgrid;
+	vi.read_cell_paramters(
+			(dir / "Al_test").string(),
+			1e-6,
+			kgrid,
+			lattice,
+			atoms,
+			sym);
 
 	elephon::LatticeStructure::UnitCell uc;
 	uc.initialize( atoms, lattice, sym);

@@ -33,18 +33,38 @@ void ReadVASPSymmetries::read_file(std::string filename )
 {
 	//Read the OUTCAR content
 	std::ifstream file(filename.c_str());
+	if ( ! file.good() )
+		throw std::runtime_error( std::string("Problem reading file ")+filename);
 	file.seekg(0, std::ios::end);
 	size_t size = file.tellg();
 	std::string filecontent(size, ' ');
 	file.seekg(0);
 	file.read( &filecontent[0], size);
 
+	//TODO: Find a way to extract that information from the VASP outcar file
+    timeReversal_ = true;
+
 	//fetch the blocks with each symmetry
 	std::vector<std::string> blocks;
-	this->parse_symmetry_blocks( std::move(filecontent) , blocks );
+	this->parse_symmetry_blocks( filecontent , blocks );
 
 	if ( blocks.empty() )
-		throw std::runtime_error( std::string("Unable to parse symmetries from file ")+filename );
+	{
+		//Check if this file is good, but was run switching symmetries off.
+		//VASP does not print the symmetry in this case even though, of cause, there still is
+		//idenity operation
+		boost::regex nosym(
+				"NOSYMM: \\(Re-\\)init\\w* of all symmetry stuff for point group C_1");
+		if ( boost::regex_search(filecontent.begin(),filecontent.end(), nosym ) )
+		{
+		    symmetries_ = std::vector<int>( {1,0,0,0,1,0,0,0,1} );
+		    fractionTranslations_ = std::vector<double>( {0.0, 0.0, 0.0} );
+		    timeReversal_ = false;
+		    return;
+		}
+		else
+			throw std::runtime_error( std::string("Unable to parse symmetries from file ")+filename );
+	}
 
 	const char * reSym =
 			"\\s*isymop:\\s*([+-]?\\d+)\\s+([+-]?\\d+)\\s+([+-]?\\d+)\\s*\\n"
@@ -75,7 +95,7 @@ void ReadVASPSymmetries::read_file(std::string filename )
 	}
 }
 
-void ReadVASPSymmetries::parse_symmetry_blocks(std::string fcontent,
+void ReadVASPSymmetries::parse_symmetry_blocks(std::string const & fcontent,
 		std::vector<std::string> & blocks) const
 {
 	//TODO this regular expression has likely to be hardened against different versions of VASP
@@ -105,6 +125,12 @@ std::vector<double> const&
 ReadVASPSymmetries::get_fractionTranslations() const
 {
 	return fractionTranslations_;
+}
+
+bool
+ReadVASPSymmetries::get_time_revesal_symmetry() const
+{
+	return timeReversal_;
 }
 
 } /* namespace IOMethods */

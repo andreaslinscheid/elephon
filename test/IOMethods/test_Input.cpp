@@ -26,11 +26,9 @@
 BOOST_AUTO_TEST_CASE( Default_Args )
 {
 	using namespace boost::filesystem;
-	path p(__FILE__);
-	path dir = p.parent_path();
-	path test_input_file = dir / "../IOMethods/test_input_file.dat";
+
 	char * prog = strdup("program name");
-	char * arg = strdup(test_input_file.c_str());
+	char * arg = strdup( (path(__FILE__).parent_path() / "test_input_file.dat" ).c_str());
 	char *argv[] = {prog, arg, NULL};
 	int argc = sizeof(argv) / sizeof(char*) - 1;
 	elephon::IOMethods::Input input(argc,argv);

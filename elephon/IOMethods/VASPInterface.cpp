@@ -42,25 +42,23 @@ void VASPInterface::set_up_run(
 	boost::filesystem::path root(root_directory);
 	boost::filesystem::path elphd(target_directory);
 
-	std::vector<std::string> baseFiles = this->list_all_input_files();
-
 	//first things first, we copy the POTCAR file to the location
-	boost::filesystem::path potcarPrev = root / baseFiles[3] ;
-	boost::filesystem::path potcarNew = elphd /  baseFiles[3];
+	boost::filesystem::path potcarPrev = root / "POTCAR" ;
+	boost::filesystem::path potcarNew = elphd /  "POTCAR";
 	boost::filesystem::copy( potcarPrev, potcarNew );
 
 	//write parameters in POSCAR according to data in unitcell
 	auto atomOrder = this->read_potcar_atom_order( potcarNew.string() );
-	boost::filesystem::path poscarNew = elphd / baseFiles[1];
+	boost::filesystem::path poscarNew = elphd / "POSCAR";
 	this->overwrite_POSCAR_file( poscarNew.string(), atomOrder, unitcell );
 
 	//Write the KPOINTS file
-	boost::filesystem::path kpts = elphd / baseFiles[2];
+	boost::filesystem::path kpts = elphd / "KPOINTS";
 	this->write_KPOINTS_file( kpts.string(), kptShift, kptSampling );
 
 	//First copy and then modify the INCAR file
-	boost::filesystem::path incarPrev = root / baseFiles[0] ;
-	boost::filesystem::path incarNew = elphd /  baseFiles[0];
+	boost::filesystem::path incarPrev = root / "INCAR" ;
+	boost::filesystem::path incarNew = elphd /  "INCAR";
 	boost::filesystem::copy( incarPrev, incarNew );
 
 	this->modify_incar_file( incarNew.string(), options );
@@ -93,64 +91,77 @@ VASPInterface::options_scf_supercell_no_wfctns_no_relax() const
 	return options;
 }
 
-void VASPInterface::read_wavefunctions(
-		std::vector<std::string> const & files,
+void
+VASPInterface::read_wavefunctions(
+		std::string root_directory,
 		std::vector<int> const & kpts,
 		std::vector<int> const & bandIndices,
 		std::vector< std::complex<float> > & wfctData,
-		std::vector< std::vector<int> > & fourierMap,
-		std::vector<int> & fftDim)
+		std::vector< int > & npwPerKpt)
 {
-	wfcReader_.prepare_wavecar( files.at(0) );
-	wfcReader_.read_wavefunction( kpts, bandIndices, wfctData, fourierMap, fftDim );
+	boost::filesystem::path rootdir(root_directory);
+	wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
+	wfcReader_.read_wavefunction( kpts, bandIndices, wfctData, npwPerKpt );
 }
 
-void VASPInterface::read_atoms_list(
-		std::vector<std::string> const & baseFiles,
-		std::vector<LatticeStructure::Atom> & atoms)
+void
+VASPInterface::compute_fourier_map(
+		std::vector<double> const & kpts,
+		std::vector< std::vector<int> > & fourierMap)
 {
-	if ( posReader_.get_atoms_list().empty() )
-		posReader_.read_file( baseFiles.at(0) );
-
-	atoms = posReader_.get_atoms_list();
+	//VASP does not store these mapping on disk.
+	wfcReader_.compute_fourier_map(kpts,fourierMap);
 }
 
-void VASPInterface::read_cell_paramters(
-		std::vector<std::string> const & baseFiles,
-		LatticeStructure::LatticeModule & lattice)
+std::vector<int>
+VASPInterface::get_max_fft_dims() const
 {
-	if ( posReader_.get_atoms_list().empty() )
-		posReader_.read_file( baseFiles.at(0) );
+	return wfcReader_.get_fft_max_dims();
+}
 
+void
+VASPInterface::read_cell_paramters(
+		std::string root_directory,
+		double symPrec,
+		LatticeStructure::RegularGrid & kPointMesh,
+		LatticeStructure::LatticeModule & lattice,
+		std::vector<LatticeStructure::Atom> & atoms,
+		LatticeStructure::Symmetry & symmetry)
+{
+	this->check_open_poscar(root_directory);
 	lattice.initialize( posReader_.get_lattice_matrix() );
+	atoms = posReader_.get_atoms_list();
+	if ( symReader_.get_symmetries().empty() )
+		symReader_.read_file( (boost::filesystem::path(root_directory) / "OUTCAR").string() );
+	symmetry.initialize( symPrec, symReader_.get_symmetries(),
+			symReader_.get_fractionTranslations(), lattice, symReader_.get_time_revesal_symmetry() );
+
+	//Read the k point in the irreducible zone
+	std::vector<int> kDim;
+	std::vector<double> shifts;
+	this->read_kpt_sampling(root_directory, kDim, shifts);
+	LatticeStructure::Symmetry kpointSymmetry = symmetry;
+
+	boost::filesystem::path rootdir(root_directory);
+	wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
+	std::vector<double> irreducibleKPoints = wfcReader_.get_k_points();
+	kpointSymmetry.set_reciprocal_space_sym();
+	kPointMesh.initialize( symPrec, kDim, shifts, kpointSymmetry, lattice, irreducibleKPoints );
+}
+
+void
+VASPInterface::check_open_poscar(std::string const & root_dir )
+{
+	boost::filesystem::path rootdir(root_dir);
+	if ( posReader_.get_atoms_list().empty() )
+		posReader_.read_file( (rootdir / "POSCAR").string() );
 }
 
 void VASPInterface::read_electronic_potential(
-		std::vector<std::string> const & files,
+		std::string root_directory,
 		std::vector<float> & output)
 {
 
-}
-
-void VASPInterface::read_symmetries(
-		std::vector<std::string> const & files,
-		double symPrec,
-		LatticeStructure::Symmetry & symmetry)
-{
-	if ( symReader_.get_symmetries().empty() )
-		symReader_.read_file( files.at(0) );
-
-	symmetry.initialize(symPrec, symReader_.get_symmetries(), symReader_.get_fractionTranslations() );
-}
-
-std::vector<std::string> VASPInterface::list_all_input_files() const
-{
-	std::vector<std::string> list;
-	list.push_back("INCAR");
-	list.push_back("POSCAR");
-	list.push_back("KPOINTS");
-	list.push_back("POTCAR");
-	return list;
 }
 
 std::vector<std::string >
@@ -288,7 +299,7 @@ void VASPInterface::modify_incar_file(std::string filename,
 void VASPInterface::read_kpt_sampling(
 		std::string root_directory,
 		std::vector<int> & kptSampling,
-		std::vector<double> & shifts)
+		std::vector<double> & shifts) const
 {
 	boost::filesystem::path root(root_directory);
 	auto filename = (root / "KPOINTS").string();
@@ -317,7 +328,13 @@ void VASPInterface::read_kpt_sampling(
 
 	std::getline( file , buffer );//shift - optional
 	if ( buffer.empty() )
+	{
+		//For even meshes shift by half a cell
+		for ( int  i = 0 ; i < 3 ; ++i )
+			if ( kptSampling[i]%2 == 0 )
+				shifts[i] = 0.5;
 		return;
+	}
 	std::stringstream ssKptshift(buffer);
 	ssKptshift.exceptions( std::ios::failbit );
 	for (int i = 0 ; i < 3 ; ++i)

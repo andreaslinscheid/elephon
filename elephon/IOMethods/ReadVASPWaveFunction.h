@@ -47,8 +47,13 @@ public:
 			std::vector<int> const& kptindices,
 			std::vector<int> const & bandIndices,
 			std::vector< std::complex<float> > & wfctData,
-			std::vector< std::vector<int> > & fourierMap,
-			std::vector<int> & fftDim ) const;
+			std::vector<int> & npwPerKpt ) const;
+
+	void compute_fourier_map(
+			std::vector<double> const& kptCoords,
+			std::vector< std::vector<int> > & fftMapPerK) const;
+
+	std::vector<int> get_fft_max_dims() const;
 
 	std::vector<double> const & get_energies() const;
 

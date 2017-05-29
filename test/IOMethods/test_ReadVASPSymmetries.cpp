@@ -27,12 +27,8 @@
 
 BOOST_AUTO_TEST_CASE( Read_symmetries )
 {
-	boost::filesystem::path p(__FILE__);
-	boost::filesystem::path dir = p.parent_path();
-	std::string Al_test_outcar = std::string(dir.c_str())+"/../IOMethods/OUTCAR_Al_test.dat";
-
 	elephon::IOMethods::ReadVASPSymmetries symReader;
-	symReader.read_file(Al_test_outcar);
+	symReader.read_file( (boost::filesystem::path(__FILE__).parent_path()/"Al_test/OUTCAR").string() );
 
 	BOOST_REQUIRE( symReader.get_symmetries().size() == 48*9 );
 

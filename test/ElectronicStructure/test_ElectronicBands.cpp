@@ -33,22 +33,23 @@
 
 BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 {
-	boost::filesystem::path dir = boost::filesystem::path(__FILE__).parent_path();
+	boost::filesystem::path dir = boost::filesystem::path(__FILE__).parent_path()
+			/ "../data_for_testing/FeSe/";
 
 	//Read data to construct both the band grid from both the symmetric and the non-symmetric input data.
 	elephon::IOMethods::ReadVASPWaveFunction wfcSymRead;
-	wfcSymRead.prepare_wavecar( (dir / "FeSe_WAVECAR_sym.dat").string() );
+	wfcSymRead.prepare_wavecar( (dir / "vasp_sym/WAVECAR").string() );
 
 	elephon::IOMethods::ReadVASPWaveFunction wfcNoSymRead;
-	wfcNoSymRead.prepare_wavecar( (dir / "FeSe_WAVECAR_nosym.dat").string() );
+	wfcNoSymRead.prepare_wavecar( (dir / "vasp_nosym/WAVECAR").string() );
 
 	//First we make sure that the k point that irreducible k point have the same data in the reducible grid
 	//The analogy is put for this hand crafted input data by hand!
-	std::vector<int> irredNoSym = {0,1,5};
-	assert( wfcSymRead.get_num_kpts() == 3 );
+	std::vector<int> irredNoSym = {0,1,2,6,7,12};
+	assert( wfcSymRead.get_num_kpts() == 6 );
 	BOOST_REQUIRE( wfcSymRead.get_num_bands() == wfcNoSymRead.get_num_bands());
 	double diffIrreducibeWedge = 0;
-	for ( int ik = 0 ; ik < 3; ++ik)
+	for ( int ik = 0 ; ik < wfcSymRead.get_num_kpts(); ++ik)
 	{
 		assert( std::abs(wfcSymRead.get_k_points()[ik*3+0]-wfcNoSymRead.get_k_points()[irredNoSym[ik]*3+0]) < 1e-6 );
 		assert( std::abs(wfcSymRead.get_k_points()[ik*3+1]-wfcNoSymRead.get_k_points()[irredNoSym[ik]*3+1]) < 1e-6 );
@@ -63,30 +64,30 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 	BOOST_REQUIRE( diffIrreducibeWedge < 1e-6 );
 
 	elephon::IOMethods::ReadVASPSymmetries symread;
-	symread.read_file( (dir / "FeSe_symmetries.dat").string() );
-
-	elephon::LatticeStructure::Symmetry sym;
-	sym.initialize(1e-6, symread.get_symmetries(), symread.get_fractionTranslations() );
-	sym.set_reciprocal_space_sym();
+	symread.read_file( (dir / "vasp_sym/OUTCAR").string() );
 
 	elephon::IOMethods::ReadVASPPoscar latRead;
-	latRead.read_file( (dir / "FeSe_POSCAR.dat" ).string() );
+	latRead.read_file( (dir / "vasp_sym/POSCAR" ).string() );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize( latRead.get_lattice_matrix() );
 
+	elephon::LatticeStructure::Symmetry sym;
+	sym.initialize(1e-6, symread.get_symmetries(), symread.get_fractionTranslations(), lattice, true );
+	sym.set_reciprocal_space_sym();
+
 	elephon::LatticeStructure::RegularGrid grid;
-	grid.initialize( 1e-6, std::vector<int>({4,4,1}), std::vector<double>({0.5,0.5,0.0}), sym, lattice );
+	grid.initialize( 1e-6, std::vector<int>({5,5,2}), std::vector<double>({0.0,0.0,0.5}), sym, lattice );
 
 	elephon::ElectronicStructure::ElectronicBands bands_sym;
 	bands_sym.initialize( wfcSymRead.get_k_points(), wfcSymRead.get_num_bands(), wfcSymRead.get_energies(), grid );
 
 	elephon::LatticeStructure::Symmetry identity;
-	identity.initialize( 1e-6, std::vector<int>({1,0,0,0,1,0,0,0,1}), std::vector<double>({0,0,0}) );
+	identity.initialize( 1e-6, std::vector<int>({1,0,0,0,1,0,0,0,1}), std::vector<double>({0,0,0}), lattice, false );
 	identity.set_reciprocal_space_sym();
 
 	elephon::LatticeStructure::RegularGrid gridNoSym;
-	gridNoSym.initialize( 1e-6, std::vector<int>({4,4,1}), std::vector<double>({0.5,0.5,0.0}), identity, lattice );
+	gridNoSym.initialize( 1e-6, std::vector<int>({5,5,2}), std::vector<double>({0.0,0.0,0.5}), identity, lattice );
 
 	elephon::ElectronicStructure::ElectronicBands bands_nosym;
 	bands_nosym.initialize( wfcNoSymRead.get_k_points(), wfcNoSymRead.get_num_bands(), wfcNoSymRead.get_energies(), gridNoSym );

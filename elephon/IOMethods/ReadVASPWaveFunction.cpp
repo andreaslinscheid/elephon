@@ -19,6 +19,7 @@
 
 #include <IOMethods/ReadVASPWaveFunction.h>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <algorithm>
 #include <assert.h>
@@ -78,6 +79,8 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 	//		Fortran I/O is *TRUELY* useless.
 
 	wavecarfile_.open( filename_.c_str(), std::ios::in | std::ios::binary);
+	if ( ! wavecarfile_.good() )
+		throw std::runtime_error( std::string("File not readable: " + filename_));
 	wavecarfile_.seekg(0, std::ios::end);
 	total_size_ = wavecarfile_.tellg();
 	wavecarfile_.seekg(0);
@@ -242,17 +245,16 @@ void ReadVASPWaveFunction::set_up_fourier_max()
 			}
 
 	//We need to hold + and - direction (and zero). Also G+k can exceed this
-	// number in each direction so we compute
+	// number in each direction by up to one so we compute
 	for ( auto & nGxi: fourierMax_ )
-		nGxi = 2*(nGxi+1)+1;
+		nGxi = 2*(nGxi+1)+2;
 }
 
 void ReadVASPWaveFunction::read_wavefunction(
 		std::vector<int> const& kptindices,
 		std::vector<int> const & bandIndices,
 		std::vector< std::complex<float> > & wfctData,
-		std::vector< std::vector<int> > & fourierMap,
-		std::vector<int> & fftDim) const
+		std::vector< int > & npwPerKpt) const
 {
 	if ( not wavecarfile_.is_open() )
 		throw std::logic_error( "Can only read wavefunction from an open file " );
@@ -261,55 +263,36 @@ void ReadVASPWaveFunction::read_wavefunction(
 	for ( auto &bij : B )
 		bij *= 2*M_PI/lattice_.get_alat();
 
+	int numKIrred = static_cast<int>(kpoints_.size())/3;
 	int Nk = static_cast<int>(kptindices.size());
 	int Nb = static_cast<int>(bandIndices.size());
-	int fftmax = fourierMax_[0]*fourierMax_[1]*fourierMax_[2];
+	assert( Nk <= numKIrred );
+	assert( Nb <= nBndsVASP_ );
 
-	if ( static_cast<int>(wfctData.size()) != Nk*Nb*nspin_*fftmax )
-		wfctData = std::vector< std::complex<float> >( Nk*Nb*nspin_*fftmax );
+	//Determine the total amount of storage and the locator for the
+	//beginning of each set of plane waves
+	int pwPerBandAndSpin = 0;
+	if ( int(npwPerKpt.size()) != Nk )
+		npwPerKpt.resize(Nk);
+	std::vector<int> bandAndKptToPos(nspin_*Nk,0);
+	for ( int i = 0 ; i < Nk; ++i)
+		for ( int is = 0 ; is < nspin_; ++is)
+		{
+			int ik = kptindices[i];
+			assert( (ik < numKIrred) && ( ik >= 0 ) );
+			npwPerKpt[i] = npwSpinKpt_[ik*nspin_+is];
+			bandAndKptToPos[i*nspin_+is] = pwPerBandAndSpin*Nb;
+			pwPerBandAndSpin += npwSpinKpt_[ik*nspin_+is];
+		}
+	wfctData.resize( pwPerBandAndSpin*Nb*nspin_ );
 
-	if ( static_cast<int>(fourierMap.size()) != Nk*nspin_ )
-		fourierMap=std::vector< std::vector<int> >(Nk*nspin_);
-
-	std::vector<char> buffer( fftmax*sizeof(VASPDprec)*2 );
-	std::vector<double> kPlusG = { 0.0, 0.0, 0.0 };
-	std::vector<double> k = { 0.0, 0.0, 0.0 };
+	int maxSizePW = *std::max_element(npwPerKpt.begin(),npwPerKpt.end());
+	std::vector<char> buffer( maxSizePW*sizeof(VASPDprec)*2 );
 	for ( int is = 0 ; is < nspin_; ++is)
 		for ( int i = 0 ; i < Nk; ++i)
 		{
 			int ik = kptindices[i];
-			assert( (ik < static_cast<int>(kpoints_.size())/3) && ( ik >= 0 ) );
-
-			std::copy( kpoints_.begin()+ik*3, kpoints_.begin()+(ik+1)*3, k.begin() );
-
-			//here we generate the fourier map
-			fourierMap[i] = std::vector<int>(npwSpinKpt_[ ik*nspin_ + is ]*3);
-			int ng = 0;
-			for ( int igz = 0 ; igz < fourierMax_[2]; ++igz)
-			{
-				int igzf = igz < fourierMax_[2]/2 ? igz : igz - fourierMax_[2];
-				for ( int igy = 0 ; igy < fourierMax_[1]; ++igy)
-				{
-					int igyf = igy < fourierMax_[1]/2 ? igy : igy - fourierMax_[1];
-					for ( int igx = 0 ; igx < fourierMax_[0]; ++igx)
-					{
-						int igxf = igx < fourierMax_[0]/2 ? igx : igx - fourierMax_[0];
-						for ( int xi = 0 ; xi < 3; ++xi)
-							kPlusG[xi] = B[xi*3+0]*(k[0]+igxf)+B[xi*3+1]*(k[1]+igyf)+B[xi*3+2]*(k[2]+igzf);
-						if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
-							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff_ )
-						{
-							assert( ng < npwSpinKpt_[ ik*nspin_ + is ] );
-							fourierMap[i][ng*3+0] = igx;
-							fourierMap[i][ng*3+1] = igy;
-							fourierMap[i][ng*3+2] = igz;
-							ng++;
-						}
-					}
-				}
-			}
-			if ( ng != npwSpinKpt_[ ik*nspin_ + is ] )
-				throw std::runtime_error( "Unable to regenerate the Fourier mapping correctly as compared to VASP." );
+			assert( (ik < numKIrred) && ( ik >= 0 ) );
 
 			//locate the base record for this k point and spin
 			std::size_t wfctrecordStart = kptSpinPosToFile_[ik*nspin_+is]
@@ -340,12 +323,65 @@ void ReadVASPWaveFunction::read_wavefunction(
 				typedef std::complex<VASPSprec> const * VPS;
 
 				for ( int ipw = 0 ; ipw < npwSpinKpt_[ik*nspin_+is]; ++ipw)
-					wfctData[((i*Nb+j)*nspin_+is)*fftmax + ipw ] = wavefuncDouble_ ?
+					wfctData[bandAndKptToPos[i*nspin_+is]+j*npwSpinKpt_[ik*nspin_+is]+ipw ] = wavefuncDouble_ ?
 								static_cast< std::complex<float> >(reinterpret_cast<VPD>( &buffer[0] )[ipw] ) :
 								static_cast< std::complex<float> >(reinterpret_cast<VPS>( &buffer[0] )[ipw] ) ;
 			}
 		}
-	fftDim = fourierMax_;
+}
+
+void
+ReadVASPWaveFunction::compute_fourier_map(
+		std::vector<double> const& kptCoords,
+		std::vector< std::vector<int> > & fftMapPerK) const
+{
+	assert( kptCoords.size() % 3 == 0 );
+	int Nk = static_cast<int>(kptCoords.size()/3);
+	if ( static_cast<int>(fftMapPerK.size()) != Nk )
+		fftMapPerK=std::vector< std::vector<int> >(Nk);
+
+	//here we generate the fourier map
+	std::vector<double> kPlusG = { 0.0, 0.0, 0.0 };
+	std::vector<double> B = lattice_.get_reciprocal_latticeMatrix();
+	for ( auto &bij : B )
+		bij *= 2*M_PI/lattice_.get_alat();
+	for ( int is = 0 ; is < nspin_; ++is)
+		for ( int ik = 0 ; ik < Nk; ++ik)
+		{
+			fftMapPerK[ik] = std::vector<int>(fourierMax_[0]*fourierMax_[1]*fourierMax_[2]*3);
+			int ng = 0;
+			for ( int igz = 0 ; igz < fourierMax_[2]; ++igz)
+			{
+				int igzf = igz < fourierMax_[2]/2 ? igz : igz - fourierMax_[2];
+				for ( int igy = 0 ; igy < fourierMax_[1]; ++igy)
+				{
+					int igyf = igy < fourierMax_[1]/2 ? igy : igy - fourierMax_[1];
+					for ( int igx = 0 ; igx < fourierMax_[0]; ++igx)
+					{
+						int igxf = igx < fourierMax_[0]/2 ? igx : igx - fourierMax_[0];
+						for ( int xi = 0 ; xi < 3; ++xi)
+							kPlusG[xi] = B[xi*3+0]*(kptCoords[ik*3+0]+igxf)
+										+B[xi*3+1]*(kptCoords[ik*3+1]+igyf)
+										+B[xi*3+2]*(kptCoords[ik*3+2]+igzf);
+						if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
+							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff_ )
+						{
+							fftMapPerK[ik][ng*3+0] = igx;
+							fftMapPerK[ik][ng*3+1] = igy;
+							fftMapPerK[ik][ng*3+2] = igz;
+							ng++;
+						}
+					}
+				}
+			}
+			fftMapPerK[ik].resize(ng*3);
+		}
+}
+
+std::vector<int>
+ReadVASPWaveFunction::get_fft_max_dims() const
+{
+	return fourierMax_;
 }
 
 int ReadVASPWaveFunction::num_records_spanned(std::size_t bytesToRead) const

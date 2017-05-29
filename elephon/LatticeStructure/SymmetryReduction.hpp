@@ -95,7 +95,7 @@ SymmetryReduction<C>::reduce(
 		{
 			int ir = redToIrred[id];
 			indexIrreducibleToReducible[ir][ dimStarIrred[ir] ] = id;
-			symIrreducibleToReducible[ir][ dimStarIrred[ir] ] = symRedToIrred[id];
+			symIrreducibleToReducible[ir][ dimStarIrred[ir] ] = sym.get_index_inverse( symRedToIrred[id] );
 			dimStarIrred[ir]++;
 			continue;
 		}
@@ -131,8 +131,13 @@ SymmetryReduction<C>::reduce(
 			int indexInReducibleVector = std::distance(reducibleSet.begin(),it);
 			if ( redToIrred[indexInReducibleVector] == numRed) {
 				redToIrred[indexInReducibleVector] = idirr;
-				symRedToIrred[indexInReducibleVector] = isym;
+				//This needs to be the inverse because by reaching here, the actual starting vector
+				//was part of the irreducible set - thus the operation took one from the _irreducible_
+				//to the reducible vector. To go the way back put the inverse index!
+				symRedToIrred[indexInReducibleVector] = sym.get_index_inverse( isym );
 			}
+			else if ( redToIrred[indexInReducibleVector] != idirr)
+				throw std::logic_error("Stars of objects are not distinct: attempted overwriting");
 		}
 		idirr++;
 	}

@@ -22,6 +22,7 @@
 
 #include "LatticeStructure/UnitCell.h"
 #include "IOMethods/InputOptions.h"
+#include "LatticeStructure/RegularGrid.h"
 #include <vector>
 #include <string>
 #include <complex>
@@ -39,8 +40,6 @@ public:
 
 	virtual ~ElectronicStructureCodeInterface();
 
-	virtual std::vector<std::string> list_all_input_files() const = 0;
-
 	virtual void set_up_run(
 			std::string root_directory,
 			std::string target_directory,
@@ -55,37 +54,37 @@ public:
 	virtual std::map<std::string,std::string>
 			options_scf_supercell_no_wfctns_no_relax() const = 0;
 
+	virtual std::vector<int> get_max_fft_dims() const = 0;
+
 	virtual void read_wavefunctions(
-			std::vector<std::string> const & files,
+			std::string root_directory,
 			std::vector<int> const & kpts,
 			std::vector<int> const & bandIndices,
 			std::vector< std::complex<float> > & wfctData,
-			std::vector< std::vector<int> > & fourierMap,
-			std::vector<int> & fftDim) = 0;
+			std::vector< int > & npwPerKpt) = 0;
 
-	virtual void read_atoms_list(
-			std::vector<std::string> const & baseFiles,
-			std::vector<LatticeStructure::Atom> & atoms) = 0;
+	virtual void compute_fourier_map(
+			std::vector<double> const & kpts,
+			std::vector< std::vector<int> > & fourierMap) = 0;
 
 	virtual void read_cell_paramters(
-			std::vector<std::string> const & baseFiles,
-			LatticeStructure::LatticeModule & lattice) = 0;
-
-	virtual void read_electronic_potential(
-			std::vector<std::string> const & files,
-			std::vector<float> & output) = 0;
-
-	virtual void read_symmetries(
-			std::vector<std::string> const & files,
+			std::string root_directory,
 			double symPrec,
+			LatticeStructure::RegularGrid & kPointMesh,
+			LatticeStructure::LatticeModule & lattice,
+			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry) = 0;
 
-	std::vector<std::string> gen_input_file_list( std::string directory ) const;
+	virtual void read_electronic_potential(
+			std::string root_directory,
+			std::vector<float> & output) = 0;
 
 	virtual void read_kpt_sampling(
 			std::string root_directory,
 			std::vector<int> & kptSampling,
-			std::vector<double> & shifts) = 0;
+			std::vector<double> & shifts) const = 0;
+
+	std::vector<std::string> gen_input_file_list( std::string directory ) const;
 
 protected:
 

@@ -20,6 +20,7 @@
 #ifndef ELEPHON_LATTICESTRUCTURE_SYMMETRY_H_
 #define ELEPHON_LATTICESTRUCTURE_SYMMETRY_H_
 
+#include "LatticeModule.h"
 #include <vector>
 #include <assert.h>
 
@@ -44,26 +45,40 @@ public:
 	void initialize(
 			double symmPrec,
 			std::vector<int> symmetries,
-			std::vector<double> fractionalTranslations);
+			std::vector<double> fractionalTranslations,
+			LatticeStructure::LatticeModule lattice,
+			bool hasTimeReversal);
 
 	void set_reciprocal_space_sym();
 
 	void apply(int isym, std::vector<double> & field, bool latticePeriodic = true) const;
 
-	int get_index_inverse(int isym);
+	int get_index_inverse(int isym) const;
+
+	int get_group_product(int isym1, int isym2) const;
 
 	double get_symmetry_prec() const;
 
+	bool is_symmorphic(int isym) const;
+
+	bool has_inversion() const;
+
+	bool is_inversion(int isym) const;
+
 	int get_num_symmetries() const;
 
-	void symmetry_reduction( std::vector<int> const& indicesDropped);
+	void symmetry_reduction( std::vector<int> indicesDropped);
 
 	SymmetryOperation get_sym_op( int isym ) const;
 
 	int get_identity_index() const;
 
 	bool is_reci() const;
+
+	std::vector<double> get_fractional_translation(int isym) const;
 private:
+
+	int idIndex_ = 0;
 
 	bool isReciprocalSpace_ = false;
 
@@ -71,11 +86,25 @@ private:
 
 	int numSymmetries_ = 0;
 
+	int numRotations_ = 0;
+
+	bool hasTimeReversal_ = true;
+
+	bool hasInversion_ = true;
+
+	std::vector<bool> isSymmorphic_;
+
 	std::vector<int> inverseMap_;
+
+	std::vector<int> multiplicationTable_;
 
 	std::vector<int> symmetries_;
 
 	std::vector<double> fractTrans_;
+
+	std::vector<double> fractTransStore_;
+
+	LatticeStructure::LatticeModule lattice_;
 };
 
 } /* namespace LatticeStructure */

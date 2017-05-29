@@ -53,36 +53,34 @@ public:
 			options_scf_supercell_no_wfctns_no_relax() const;
 
 	void read_wavefunctions(
-			std::vector<std::string> const & files,
+			std::string root_directory,
 			std::vector<int> const & kpts,
 			std::vector<int> const & bandIndices,
 			std::vector< std::complex<float> > & wfctData,
-			std::vector< std::vector<int> > & fourierMap,
-			std::vector<int> & fftDim);
+			std::vector< int > & npwPerKpt);
 
-	void read_atoms_list(
-			std::vector<std::string> const & baseFiles,
-			std::vector<LatticeStructure::Atom> & atoms);
+	std::vector<int> get_max_fft_dims() const;
+
+	void compute_fourier_map(
+			std::vector<double> const & kpts,
+			std::vector< std::vector<int> > & fourierMap);
 
 	void read_cell_paramters(
-			std::vector<std::string> const & baseFiles,
-			LatticeStructure::LatticeModule & lattice);
+			std::string root_directory,
+			double symPrec,
+			LatticeStructure::RegularGrid & kPointMesh,
+			LatticeStructure::LatticeModule & lattice,
+			std::vector<LatticeStructure::Atom> & atoms,
+			LatticeStructure::Symmetry & symmetry);
 
 	void read_electronic_potential(
-			std::vector<std::string> const & files,
+			std::string root_directory,
 			std::vector<float> & output);
-
-	void read_symmetries(
-			std::vector<std::string> const & files,
-			double symPrec,
-			LatticeStructure::Symmetry & symmetry);
 
 	void read_kpt_sampling(
 			std::string root_directory,
 			std::vector<int> & kptSampling,
-			std::vector<double> & shifts);
-
-	std::vector<std::string> list_all_input_files() const;
+			std::vector<double> & shifts) const;
 
 private:
 
@@ -106,6 +104,8 @@ private:
 	std::vector<std::string > read_potcar_atom_order( std::string filename ) const;
 
 	std::string get_textfile_constent( std::string filename ) const;
+
+	void check_open_poscar(std::string const & root_dir );
 };
 
 } /* namespace IOMethods */

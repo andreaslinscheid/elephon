@@ -46,28 +46,48 @@ public:
 			std::vector<int> dim,
 			std::vector<double> shift,
 			Symmetry symmetry,
-			LatticeModule lattice);
+			LatticeModule lattice,
+			std::vector<double> const & constraintIrreducible = std::vector<double>());
 
 	int get_np_red() const;
 
 	int get_np_irred() const;
 
+	double get_grid_prec() const;
+
+	std::vector<double> get_vector_direct(int i) const;
+
 	void get_list_lattice_point_indices(
 			std::vector<double> const & points,
 			std::vector<int> & irreducibleIndices) const;
 
+	void get_list_reducible_lattice_point_indices(
+			std::vector<double> const & points,
+			std::vector<int> & reducibleIndices) const;
+
 	void convert_reducible_irreducible(
 			std::vector<int> const& reducibleIndices,
 			std::vector<int> & irreducibleIndices) const;
 
-	void convert_reducible_irreducible(
-			std::vector<int> const& reducibleIndices,
-			std::vector<int> & irreducibleIndices,
-			std::vector<int> & symmetryIndexRedToIrred) const;
+	std::vector< std::vector<int> > const &  get_maps_irreducible_to_reducible() const;
+
+	std::vector< std::vector<int> > const &  get_maps_sym_irred_to_reducible() const;
+
+	std::vector<int> const &  get_maps_sym_red_to_irreducible() const;
+
+	std::vector<int> const &  get_maps_red_to_irreducible() const;
 
 	int get_xyz_to_reducible(std::vector<int> const & xyzTouple) const;
 
+	std::vector<int> get_reducible_to_xyz(int i) const;
+
 	bool is_reci() const;
+
+	LatticeStructure::Symmetry const & get_symmetry() const;
+
+	std::vector<int> const & get_grid_dim() const;
+
+	std::vector<double> get_grid_shift() const;
 private:
 
 	double gridPrec_ = 0;
@@ -88,7 +108,7 @@ private:
 
 	std::vector<int> symRedToIrredMap_;
 
-	std::vector< std::vector<int> > irredToRredMap_;
+	std::vector< std::vector<int> > irredToRedMap_;
 
 	std::vector< std::vector<int> > symIrredToRedMap_;
 

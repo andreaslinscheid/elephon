@@ -27,12 +27,8 @@
 
 BOOST_AUTO_TEST_CASE( Read_postcar )
 {
-	boost::filesystem::path p(__FILE__);
-	boost::filesystem::path dir = p.parent_path();
-	std::string Al_test_poscar = std::string(dir.c_str())+"/../IOMethods/POSCAR_Al_test.dat";
-
 	elephon::IOMethods::ReadVASPPoscar filerreader;
-	filerreader.read_file( Al_test_poscar );
+	filerreader.read_file( (boost::filesystem::path(__FILE__).parent_path()/"Al_test/POSCAR").string() );
 
 	BOOST_REQUIRE( filerreader.get_atoms_list().size() == 4 );
 

@@ -54,6 +54,8 @@ void AtomDisplacement::initialize(
 	kind_ = std::move(kind);
 	magnitude_ = magnitude;
 	position_=std::move(position);
+	for ( auto &xi : position_ )
+		xi -= std::floor(xi + 0.5);
 	direction_=std::move(direction);
 	equivalencePrc_ = gridPrecision;
 	treatDirectionSymmetric_ = symmetricDirection;

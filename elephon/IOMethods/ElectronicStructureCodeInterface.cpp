@@ -35,15 +35,5 @@ ElectronicStructureCodeInterface::~ElectronicStructureCodeInterface()
 	// TODO this class could take care of keeping track of file
 }
 
-std::vector<std::string>
-ElectronicStructureCodeInterface::gen_input_file_list(std::string directory) const
-{
-	boost::filesystem::path dir(directory);
-	auto result = this->list_all_input_files();
-	for ( auto &f : result )
-		f = (dir / boost::filesystem::path(f)).string();
-	return result;
-}
-
 } /* namespace IOMethods */
 } /* namespace elephon */

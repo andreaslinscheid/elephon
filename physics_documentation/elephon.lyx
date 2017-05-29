@@ -1278,6 +1278,202 @@ which is clear from the linearety of the derivative operator.
  overlapping basis vectors.
 \end_layout
 
+\begin_layout Subsection
+Reconstruction of Bloch wave functions at reducible 
+\begin_inset Formula $\boldsymbol{k}$
+\end_inset
+
+ in a plane wave represenation
+\end_layout
+
+\begin_layout Standard
+Electronic structure codes usually try to reduce the workload by only computing
+ wave functions 
+\begin_inset Formula $\psi_{\boldsymbol{k}i}(\boldsymbol{r})$
+\end_inset
+
+ that are in the irreducible Brillouin zone.
+ Here we describe how the symmetry related wave functions are reconstructed.
+ Let us start with the plane wave expansion
+\begin_inset Formula 
+\begin{eqnarray}
+\psi_{\boldsymbol{k}i}(\boldsymbol{r}) & = & \sum_{\boldsymbol{G}}c_{\boldsymbol{k}+\boldsymbol{G}}^{i}{\rm e}^{-{\rm i}(\boldsymbol{k}+\boldsymbol{G})\boldsymbol{r}}\\
+ &  & =u_{\boldsymbol{k}i}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{r}}
+\end{eqnarray}
+
+\end_inset
+
+Electronic structure codes usually compute the periodic part of a Bloch
+ wavefunction 
+\begin_inset Formula $u_{\boldsymbol{k}i}(\boldsymbol{r})$
+\end_inset
+
+.
+ Let us assome 
+\begin_inset Formula $\boldsymbol{k}^{\prime}=\{g|\boldsymbol{\tau}\}\boldsymbol{k}$
+\end_inset
+
+ then we have
+\begin_inset Formula 
+\begin{eqnarray}
+u_{\boldsymbol{k}^{\prime}i}(\boldsymbol{r}) & = & \{g|\boldsymbol{\tau}\}\sum_{\boldsymbol{G}}c_{\boldsymbol{k}+\boldsymbol{G}}^{i}{\rm e}^{-{\rm i}\boldsymbol{G}\cdot\boldsymbol{r}}\\
+ & = & \sum_{\boldsymbol{G}}c_{\boldsymbol{k}+\boldsymbol{G}}^{i}{\rm e}^{-{\rm i}\boldsymbol{G}\cdot(g\cdot\boldsymbol{r}+\boldsymbol{\tau})}\\
+ & = & \sum_{\boldsymbol{G}}c_{\boldsymbol{k}+\boldsymbol{G}}^{i}{\rm e}^{-{\rm i}g^{-1}\cdot\boldsymbol{G}\cdot\boldsymbol{r}}{\rm e}^{-{\rm i}\boldsymbol{G}\cdot\boldsymbol{\tau}}\\
+ & = & \sum_{\boldsymbol{G}^{\prime}}[c_{\boldsymbol{k}^{\prime}+\boldsymbol{G}^{\prime}}^{i}{\rm e}^{-{\rm i}\boldsymbol{G}\cdot\boldsymbol{\tau}}]{\rm e}^{-{\rm i}\boldsymbol{G}^{\prime}\cdot\boldsymbol{r}}
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $c_{\boldsymbol{k}^{\prime}+\boldsymbol{G}^{\prime}}^{i}$
+\end_inset
+
+ is a rearrangement of the set 
+\begin_inset Formula $c_{\boldsymbol{k}+\boldsymbol{G}}^{i}$
+\end_inset
+
+ where symmetry related 
+\begin_inset Formula $\boldsymbol{G}^{\prime}$
+\end_inset
+
+ has to be located in the original set 
+\begin_inset Formula $\boldsymbol{G}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Let us discuss an example.
+ Say we have a tetragonal cell, one band, 3 irreducible k points and 5 or
+ 6 plane waves
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{k}_{0}=(0.125,0.125,0) & : & \{c_{\boldsymbol{k}_{0}},c_{\boldsymbol{k}_{0}-\boldsymbol{x}},c_{\boldsymbol{k}_{0}-\boldsymbol{y}},c_{\boldsymbol{k}_{0}-\boldsymbol{z}},c_{\boldsymbol{k}_{0}+\boldsymbol{z}}\}\\
+\boldsymbol{k}_{1}=(0.375,0.125,0) & : & \{c_{\boldsymbol{k}_{1}},c_{\boldsymbol{k}_{1}-\boldsymbol{x}},c_{\boldsymbol{k}_{1}+\boldsymbol{z}},c_{\boldsymbol{k}_{1}-\boldsymbol{y}+\boldsymbol{z}},c_{\boldsymbol{k}_{1}-\boldsymbol{z}},c_{\boldsymbol{k}_{1}-\boldsymbol{y}-\boldsymbol{z}}\}\\
+\boldsymbol{k}_{2}=(0.375,0.375,0) & : & \{c_{\boldsymbol{k}_{2}},c_{\boldsymbol{k}_{2}-\boldsymbol{x}},c_{\boldsymbol{k}_{2}-\boldsymbol{y}},c_{\boldsymbol{k}_{2}-\boldsymbol{x}-\boldsymbol{y}},c_{\boldsymbol{k}_{2}-\boldsymbol{z}},c_{\boldsymbol{k}_{2}+\boldsymbol{z}}\}
+\end{eqnarray}
+
+\end_inset
+
+which means, e.g.
+\begin_inset Formula 
+\begin{eqnarray}
+u_{\boldsymbol{k}_{0}}(\boldsymbol{r}) & = & c_{\boldsymbol{k}_{0}}+c_{\boldsymbol{k}_{0}-\boldsymbol{x}}{\rm e}^{{\rm i}\boldsymbol{x}\cdot\boldsymbol{r}}+c_{\boldsymbol{k}_{0}-\boldsymbol{y}}{\rm e}^{{\rm i}\boldsymbol{y}\cdot\boldsymbol{r}}+c_{\boldsymbol{k}_{0}-\boldsymbol{z}}{\rm e}^{{\rm i}\boldsymbol{z}\cdot\boldsymbol{r}}+c_{\boldsymbol{k}_{0}+\boldsymbol{z}}{\rm e}^{-{\rm i}\boldsymbol{z}\cdot\boldsymbol{r}}
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $\boldsymbol{x},\boldsymbol{y}$
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{z}$
+\end_inset
+
+ are displacements of one lattice vector in 
+\begin_inset Formula $x,y$
+\end_inset
+
+ or 
+\begin_inset Formula $z$
+\end_inset
+
+, respecetively.
+ These three vectors are connected with 16 symmetry operations to a regular
+ 
+\begin_inset Formula $4x4x1$
+\end_inset
+
+ grid shifted by 
+\begin_inset Formula $1/8$
+\end_inset
+
+ in 
+\begin_inset Formula $x$
+\end_inset
+
+ and 
+\begin_inset Formula $y$
+\end_inset
+
+.
+ The vector 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\boldsymbol{k}_{0}$
+\end_inset
+
+ is connected to the reducible vector 
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{k}_{0}^{2}=(-0.125,0.125,0)
+\end{equation}
+
+\end_inset
+
+by the symmetry operation
+\begin_inset Formula 
+\begin{eqnarray}
+S^{3} & = & \left(\begin{array}{ccc}
+0 & -1 & 0\\
+1 & 0 & 0\\
+0 & 0 & -1
+\end{array}\right)\quad\tau=(0\,0\,0)\\
+\boldsymbol{k}_{0}^{2} & = & S^{3}\cdot\boldsymbol{k}_{0}
+\end{eqnarray}
+
+\end_inset
+
+We have
+\begin_inset Formula 
+\begin{eqnarray}
+u_{\boldsymbol{k}_{0}^{2}}(\boldsymbol{r}) & = & u_{S^{3}\cdot\boldsymbol{k}_{0}}(\boldsymbol{r})=\sum_{\boldsymbol{G}}c_{S^{3}\cdot\boldsymbol{k}_{0}+\boldsymbol{G}}{\rm e}^{-{\rm i}\boldsymbol{G}\cdot\boldsymbol{r}}\\
+ &  & =\sum_{\boldsymbol{G}}c_{S^{3}\cdot(\boldsymbol{k}_{0}+\boldsymbol{G})}{\rm e}^{-{\rm i}S^{3}\boldsymbol{G}\cdot\boldsymbol{r}}\\
+ & \equiv & \sum_{\boldsymbol{G}}\tilde{c}_{\boldsymbol{k}_{0}^{2}+\boldsymbol{G}}{\rm e}^{-{\rm i}\boldsymbol{G}\cdot\boldsymbol{r}}
+\end{eqnarray}
+
+\end_inset
+
+In order to identify 
+\begin_inset Formula $\tilde{c}_{\boldsymbol{k}_{0}^{2}+\boldsymbol{G}}$
+\end_inset
+
+ we simpy compare the linear coefficients of the linear independent plane
+ waves.
+ Note that the symmetry operation is not only a rotation.
+ We need to account for non-symmorphic symmetry operations and inversions
+ by
+\begin_inset Formula 
+\begin{eqnarray}
+u_{\boldsymbol{k}^{\prime}}(\boldsymbol{r}) & = & u_{S\cdot\boldsymbol{k}}(\boldsymbol{r}+\tau)\quad{\rm non-symmorphic}\\
+u_{\boldsymbol{k}^{\prime}}(\boldsymbol{r}) & = & u_{S\cdot\boldsymbol{k}}^{\ast}(\boldsymbol{r}+\tau)\quad{\rm inversion}
+\end{eqnarray}
+
+\end_inset
+
+ and find in this particular case
+\begin_inset Formula 
+\begin{equation}
+\tilde{c}_{\boldsymbol{k}_{0}^{2}+\boldsymbol{G}}:\{c_{\boldsymbol{k}_{0}^{2}}^{\ast},c_{\boldsymbol{k}_{0}^{2}-\boldsymbol{y}}^{\ast},c_{\boldsymbol{k}_{0}^{2}+\boldsymbol{x}}^{\ast},c_{\boldsymbol{k}_{0}^{2}+\boldsymbol{z}}^{\ast},c_{\boldsymbol{k}_{0}^{2}-\boldsymbol{z}}^{\ast}\}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Standard
 \begin_inset ERT
 status open

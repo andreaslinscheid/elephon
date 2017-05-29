@@ -18,6 +18,7 @@
  */
 
 #include "Atom.h"
+#include <cmath>
 
 namespace elephon
 {
@@ -28,7 +29,8 @@ Atom::Atom(std::string kind, std::vector<double> pos,
 		std::vector<bool> frozen)
 		: kind_(std::move(kind)),pos_(std::move(pos)),frozen_(std::move(frozen))
 {
-
+	for ( auto &xi : pos_ )
+		xi -= std::floor(xi + 0.5);
 };
 
 std::string Atom::get_kind() const
@@ -44,6 +46,8 @@ std::vector<double> Atom::get_position() const
 void Atom::set_position(std::vector<double> newPos)
 {
 	pos_ = std::move(newPos);
+	for ( auto &xi : pos_ )
+		xi -= std::floor(xi + 0.5);
 }
 
 std::vector<bool> Atom::get_movement_fixed() const
