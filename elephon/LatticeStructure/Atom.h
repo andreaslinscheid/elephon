@@ -20,6 +20,7 @@
 #ifndef ELEPHON_LATTICESTRUCTURE_ATOM_H_
 #define ELEPHON_LATTICESTRUCTURE_ATOM_H_
 
+#include "LatticeStructure/Symmetry.h"
 #include <string>
 #include <vector>
 
@@ -31,16 +32,19 @@ namespace LatticeStructure
 class Atom
 {
 public:
-	Atom(std::string kind, std::vector<double> pos,std::vector<bool> frozen);
+	Atom(std::string kind, std::vector<double> pos,std::vector<bool> frozen, double gridPrec = 1e-6);
 
 	std::string get_kind() const;
 
-	std::vector<double> get_position() const;
+	std::vector<double> const & get_position() const;
 
 	void set_position(std::vector<double> newPos);
 
 	std::vector<bool> get_movement_fixed() const;
 
+	void transform( Symmetry::SymmetryOperation const & sop  );
+
+	friend bool operator< (Atom const & a1, Atom const & a2);
 private:
 
 	std::string kind_;
@@ -48,6 +52,8 @@ private:
 	std::vector<double> pos_;
 
 	std::vector<bool> frozen_;
+
+	double prec_;
 };
 
 } /* namespace LatticeStructure */

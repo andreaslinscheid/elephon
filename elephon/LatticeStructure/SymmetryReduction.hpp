@@ -19,6 +19,7 @@
 
 #include "SymmetryReduction.h"
 #include <set>
+#include <map>
 #include <stdexcept>
 
 namespace elephon
@@ -71,12 +72,14 @@ SymmetryReduction<C>::reduce(
 	//This requires a concept of 'equal', because we need to locate a transformed object.
 	//For efficient look-up, in fact wee need and ordering by '<'.
 	//This definition must be provided by the class C
-	std::set<C> reducibleSet( reducible.begin(), reducible.end() );
+	const int numRed = reducible.size();
+	std::map<C,int> reducibleMap;
+	for ( int i = 0 ; i < numRed; ++i)
+		reducibleMap.insert( std::move(std::make_pair(reducible[i],i)) );
 
-	const int numRed = static_cast<int>(reducibleSet.size());
 	const int numSym = sym.get_num_symmetries();
-	redToIrred = std::vector<int> ( reducibleSet.size(), numRed );
-	symRedToIrred = std::vector<int> ( reducibleSet.size(), numSym );
+	redToIrred = std::vector<int> ( numRed, numRed );
+	symRedToIrred = std::vector<int> ( numRed, numSym );
 
 	//Note that we need irredIndex+symmetry index to go to the reducible set.
 	//We don't know at this point how many irred displacements we have, so we init with numRed
@@ -85,7 +88,7 @@ SymmetryReduction<C>::reduce(
 
 	std::vector<int> dimStarIrred(numRed,1);
 
-	std::set<C> irreducibleSet;
+	std::map<C,int> irreducibleSet;
 	int idirr = 0;
 	for (int id=0 ; id < numRed ; ++id)
 	{
@@ -101,7 +104,7 @@ SymmetryReduction<C>::reduce(
 		}
 
 		//insert this irreducible displacement into the set
-		auto ret = irreducibleSet.insert( reducible[id] );
+		auto ret = irreducibleSet.insert( std::move(std::make_pair(reducible[id],idirr)) );
 		if (not ret.second)
 			throw std::logic_error("Trying to add a irreducible object that is already present");
 
@@ -115,10 +118,10 @@ SymmetryReduction<C>::reduce(
 		{
 			auto obj = reducible[id];
 			obj.transform( sym.get_sym_op( isym ) );
-			auto it = reducibleSet.find(obj);
+			auto it = reducibleMap.find(obj);
 
 			//The reducible grid is closed under its symmetry operations
-			if ( it == reducibleSet.end() )
+			if ( it == reducibleMap.end() )
 				throw std::logic_error("Reducible set of objects not "
 						"closed under its symmetry operations");
 
@@ -128,7 +131,7 @@ SymmetryReduction<C>::reduce(
 				throw std::logic_error("Stars of objects are not distinct");
 
 			//Add this irreducible index into all later points
-			int indexInReducibleVector = std::distance(reducibleSet.begin(),it);
+			int indexInReducibleVector = it->second;
 			if ( redToIrred[indexInReducibleVector] == numRed) {
 				redToIrred[indexInReducibleVector] = idirr;
 				//This needs to be the inverse because by reaching here, the actual starting vector
@@ -142,7 +145,9 @@ SymmetryReduction<C>::reduce(
 		idirr++;
 	}
 
-	irreducible = std::vector<C>(irreducibleSet.begin(),irreducibleSet.end());
+	irreducible.resize( irreducibleSet.size(), reducible.front() );
+	for ( auto ir : irreducibleSet )
+		irreducible[ir.second] = std::move(ir.first);
 
 	//Clean up - reduce the mappings to their actual size
 	int numIrred = static_cast<int>(irreducible.size());

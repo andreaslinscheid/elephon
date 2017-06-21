@@ -104,10 +104,15 @@ void LatticeModule::cross_prod( std::vector<double> const& v1,
 
 void LatticeModule::direct_to_cartesian(std::vector<double> & v) const
 {
-	assert( (v.size() == 3) && ( latticeMatrix_.size() == 9 ));
-	auto b = v;
-	for ( int i = 0 ; i < 3; i++)
-		v[i] = latticeMatrix_[i*3+0]*b[0]+latticeMatrix_[i*3+1]*b[1]+latticeMatrix_[i*3+2]*b[2];
+	assert( (v.size()%3 == 0) && ( latticeMatrix_.size() == 9 ));
+	std::vector<double> b(3);
+	int nc = int(v.size())/3;
+	for ( int ic = 0 ; ic < nc; ic++)
+	{
+		std::copy(&v[ic*3],&v[ic*3]+3,b.data());
+		for ( int i = 0 ; i < 3; i++)
+			v[ic*3+i] = latticeMatrix_[i*3+0]*b[0]+latticeMatrix_[i*3+1]*b[1]+latticeMatrix_[i*3+2]*b[2];
+	}
 }
 
 void LatticeModule::cartesian_to_direct(std::vector<double> & v) const

@@ -24,6 +24,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <map>
+#include <algorithm>
 
 namespace elephon
 {
@@ -109,22 +110,23 @@ Symmetry::initialize(
 	//It takes two symmetry operations 'a' and 'b' and decides which one is smaller by an element wise comparison
 	//of the nearest integer values. We add an additional element to the front, before
 	//the elements of the rotation that flags time reversal symmetry
-	auto cmpSyms = [] ( std::vector<double> const & a, std::vector<double> const & b )
+	auto cmpSyms = [&] ( std::vector<double> const & a, std::vector<double> const & b )
 	{
 		assert( (a.size()==10) && (b.size()==10) );
 		for ( int i = 0 ; i < 10; ++i)
-			if ( std::floor(a[i]+0.5) !=  std::floor(b[i]+0.5) )
-				return std::floor(a[i]+0.5) < std::floor(b[i]+0.5);
+			if ( std::abs(a[i]-b[i]) > symmPrec_ )
+				return a[i]<b[i];
 		return false;
 	};
 	std::map< std::vector<double>, int, decltype(cmpSyms)> symmetryCartesianSet(cmpSyms);
 	std::vector<double> s_cart(10);
 	std::vector<double> inversion = {-1,0,0, 0,-1,0, 0,0,-1};
-	std::vector<double> buffer(9,0.0);
+	symmetriesCartesian_.resize(numRotations_*9);
 	for (int isym = 0 ; isym < numSymmetries_; ++isym)
 	{
 		s_cart[0] = -1.0; // < 0 flags normal symmetry operation
-		transform(&symmetries_[9*isym],&s_cart[1]);
+		transform(&symmetries_[9*isym],&symmetriesCartesian_[9*isym]);
+		std::copy(&symmetriesCartesian_[9*isym],&symmetriesCartesian_[9*isym]+9,&s_cart[1]);
 		symmetryCartesianSet.insert( std::make_pair(s_cart, isym ) );
 
 		//In case of time reversal symmetry but no inversion we add the generated additional
@@ -133,12 +135,19 @@ Symmetry::initialize(
 		{
 			s_cart[0] = 1.0; // > 0 flags time reversal enabled symmetry operation
 			transform(&symmetries_[9*isym],&s_cart[1]);
+			matMult(&s_cart[1],inversion.data(),&symmetriesCartesian_[9*(isym+numSymmetries_)]);
+			std::copy(&symmetriesCartesian_[9*(isym+numSymmetries_)],
+					&symmetriesCartesian_[9*(isym+numSymmetries_)]+9,&s_cart[1]);
 			symmetryCartesianSet.insert( std::make_pair(s_cart, isym ) );
 		}
 
 	}
 	assert( int(symmetryCartesianSet.size()) == numRotations_ );
 
+	//ToDo This does not take into account fractional translations.
+	//		This must be handled with more care because a supercell build of
+	//		a unit cell with fractional translations can have identity operations
+	//		with fractional translations.
 	inverseMap_.resize(numRotations_);
 	multiplicationTable_.resize( numRotations_*numRotations_);
 	for (auto sym : symmetryCartesianSet)
@@ -149,7 +158,7 @@ Symmetry::initialize(
 		for (auto secondSym : symmetryCartesianSet)
 		{
 			matMult(&sym.first[1],&secondSym.first[1],&prod[1]);
-			prod[0] = sym.first[0] == secondSym.first[0] ? -1.0 : 1.0; //Do we have an even number of inversions?
+			prod[0] = sym.first[0] == secondSym.first[0] ? -1.0 : 1.0; //Do we have an even number of inversions in this product?
 			auto ret = symmetryCartesianSet.find( prod );
 			if ( ret == symmetryCartesianSet.end() )
 				throw std::runtime_error("Symmetries do not form a group!");
@@ -183,6 +192,14 @@ Symmetry::initialize(
 		isSymmorphic_[irot] = (std::abs(fractTrans_[irot*3]) < symmPrec_ )
 							and (std::abs(fractTrans_[irot*3+1]) < symmPrec_ )
 							and (std::abs(fractTrans_[irot*3+2]) < symmPrec_ ) ;
+
+	fractTransCartesian_.resize( numRotations_*3 );
+	for (int isym = 0; isym < numRotations_; ++isym)
+		for (int i = 0; i < 3; ++i)
+			fractTransCartesian_[isym*3+i]
+					= A[i*3+0]*fractTrans_[isym*3+0] + A[i*3+1]*fractTrans_[isym*3+1] + A[i*3+2]*fractTrans_[isym*3+2];
+
+	//TODO We should make sure that the lattice and the symmetries are compatible
 }
 
 void
@@ -192,30 +209,109 @@ Symmetry::set_reciprocal_space_sym()
 		return;
 	fractTransStore_ = fractTrans_;
 	std::fill(fractTrans_.begin(),fractTrans_.end(),0.0);
+	std::fill(fractTransCartesian_.begin(),fractTransCartesian_.end(),0.0);
 	isReciprocalSpace_ = true;
 }
 
 void
 Symmetry::apply(int isym, std::vector<double> & field, bool latticePeriodic) const
 {
-	assert( field.size()%3 == 0 );
+	this->apply(isym,field.begin(),field.end(),latticePeriodic);
+}
+
+void
+Symmetry::apply(int isym, std::vector<double>::iterator fieldBegin,
+					std::vector<double>::iterator fieldEnd,
+					bool latticePeriodic) const
+{
+	assert( std::distance(fieldBegin,fieldEnd)%3 == 0 );
 	assert( isym < numRotations_ );
 
 	std::vector<double> buff(3);
 
-	int numComponents = static_cast<int>(field.size())/3;
+	int numComponents = std::distance(fieldBegin,fieldEnd)/3;
 	for ( int ic = 0; ic < numComponents; ++ic)
 	{
-		std::copy(std::begin(field)+ic*3,std::begin(field)+(ic+1)*3,std::begin(buff));
+		std::copy(fieldBegin+ic*3,fieldBegin+(ic+1)*3,std::begin(buff));
 		for ( int xi = 0; xi < 3; ++xi)
 		{
-			field[ic*3+xi] = symmetries_[(isym*3+xi)*3+0]*buff[0]
+			*(fieldBegin+ic*3+xi) = symmetries_[(isym*3+xi)*3+0]*buff[0]
 							+symmetries_[(isym*3+xi)*3+1]*buff[1]
 							+symmetries_[(isym*3+xi)*3+2]*buff[2]
 							+fractTrans_[isym*3+xi];
 			if ( latticePeriodic )
-				field[ic*3+xi] -= std::floor(field[ic*3+xi]+0.5);
+				*(fieldBegin+ic*3+xi) -= std::floor( *(fieldBegin+ic*3+xi)+0.5);
 		}
+	}
+}
+
+void
+Symmetry::apply_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
+					std::vector<double>::iterator fieldCartEnd) const
+{
+	assert( std::distance(fieldCartBegin,fieldCartEnd)%3 == 0 );
+	assert( isym < numRotations_ );
+
+	std::vector<double> buff(3);
+
+	int numComponents = std::distance(fieldCartBegin,fieldCartEnd)/3;
+	for ( int ic = 0; ic < numComponents; ++ic)
+	{
+		std::copy(fieldCartBegin+ic*3,fieldCartBegin+(ic+1)*3,std::begin(buff));
+		for ( int xi = 0; xi < 3; ++xi)
+		{
+			*(fieldCartBegin+ic*3+xi) = symmetriesCartesian_[(isym*3+xi)*3+0]*buff[0]
+							+symmetriesCartesian_[(isym*3+xi)*3+1]*buff[1]
+							+symmetriesCartesian_[(isym*3+xi)*3+2]*buff[2]
+							+fractTransCartesian_[isym*3+xi];
+		}
+	}
+}
+
+void
+Symmetry::rotate_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
+					std::vector<double>::iterator fieldCartEnd) const
+{
+	assert( std::distance(fieldCartBegin,fieldCartEnd)%3 == 0 );
+	assert( isym < numRotations_ );
+
+	std::vector<double> buff(3);
+
+	int numComponents = std::distance(fieldCartBegin,fieldCartEnd)/3;
+	for ( int ic = 0; ic < numComponents; ++ic)
+	{
+		std::copy(fieldCartBegin+ic*3,fieldCartBegin+(ic+1)*3,std::begin(buff));
+		for ( int xi = 0; xi < 3; ++xi)
+		{
+			*(fieldCartBegin+ic*3+xi) = symmetriesCartesian_[(isym*3+xi)*3+0]*buff[0]
+							+symmetriesCartesian_[(isym*3+xi)*3+1]*buff[1]
+							+symmetriesCartesian_[(isym*3+xi)*3+2]*buff[2];
+		}
+	}
+}
+
+void
+Symmetry::rotate_matrix_cartesian(int isym,
+		std::vector<double>::iterator matrixFieldCartBegin,
+		std::vector<double>::iterator matrixFieldCartEnd) const
+{
+	int elem = std::distance(matrixFieldCartBegin,matrixFieldCartEnd);
+	assert( elem%9 == 0 );
+	assert( isym < numRotations_ );
+
+	std::vector<double> b(9);
+
+	int numComponents = elem/9;
+	for ( int ic = 0; ic < numComponents; ++ic)
+	{
+		std::copy(matrixFieldCartBegin+ic*9,matrixFieldCartBegin+(ic+1)*9,std::begin(b));
+		std::fill(matrixFieldCartBegin+ic*9,matrixFieldCartBegin+(ic+1)*9, 0.0 );
+		auto G = &symmetriesCartesian_[isym*9];
+		for ( int i = 0; i < 3; ++i)
+			for ( int j = 0; j < 3; ++j)
+				for ( int k = 0; k < 3; ++k)
+					for ( int l = 0; l < 3; ++l)
+						*(matrixFieldCartBegin+ic*9+i*3+l) += G[i*3+j]*b[j*3+k]*G[l*3+k];
 	}
 }
 
@@ -229,6 +325,44 @@ int
 Symmetry::get_num_symmetries() const
 {
 	return isReciprocalSpace_ ? numRotations_ : numSymmetries_ ;
+}
+
+void
+Symmetry::small_group(std::vector<double> const& point)
+{
+	//apply all symmetry operations and discard those who map point somewhere else
+	std::vector<int> dropIndices;
+ 	for (int isym = 0 ; isym < numRotations_; ++isym)
+	{
+		auto rotcpy = point;
+		this->apply(isym, rotcpy.begin(), rotcpy.end(), false );
+		for ( int i = 0; i < int(rotcpy.size()); ++i)
+			if ( std::abs(rotcpy[i]-point[i]) > symmPrec_ )
+			{
+				dropIndices.push_back(isym);
+				break;
+			}
+	}
+ 	this->symmetry_reduction(dropIndices);
+}
+
+void
+Symmetry::small_group_cart(std::vector<double> const& pointCartCoords)
+{
+	//apply all symmetry operations and discard those who map point somewhere else
+	std::vector<int> dropIndices;
+ 	for (int isym = 0 ; isym < numRotations_; ++isym)
+	{
+		auto rotcpy = pointCartCoords;
+		this->apply_cartesian(isym, rotcpy.begin(), rotcpy.end() );
+		for ( int i = 0; i < int(rotcpy.size()); ++i)
+			if ( std::abs(rotcpy[i]-pointCartCoords[i]) > symmPrec_ )
+			{
+				dropIndices.push_back(isym);
+				break;
+			}
+	}
+ 	this->symmetry_reduction(dropIndices);
 }
 
 bool
@@ -270,8 +404,14 @@ Symmetry::symmetry_reduction( std::vector<int> indicesDropped)
 	//In case of time reversal expanded symmetry sets, remove those from the list
 	//The new initialization will put them back in.
 	if ( numRotations_ != numSymmetries_)
-		for (auto & i : indicesDropped  )
-			i  =  i < numSymmetries_ ? i : i-numSymmetries_;
+	{
+		auto it = std::remove_if(indicesDropped.begin(), indicesDropped.end(),
+				std::bind2nd(std::greater_equal<int>(), numSymmetries_));
+		indicesDropped.erase (it, indicesDropped.end());
+	}
+
+	if ( indicesDropped.empty() )
+		return;
 
 	//remove possible duplicates and make sure all indices appear
 	std::set<int> drop(indicesDropped.begin(),indicesDropped.end());
@@ -290,6 +430,7 @@ Symmetry::symmetry_reduction( std::vector<int> indicesDropped)
 			std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,newFractSym.begin()+nis*3);
 			nis++;
 		}
+	assert( numNewSym == nis);
 	this->initialize( symmPrec_, newPtGrpSym, newFractSym, lattice_ , hasTimeReversal_);
 }
 
@@ -344,6 +485,26 @@ Symmetry::get_fractional_translation(int isym) const
 		std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,result.begin());
 	}
 	return result;
+}
+
+LatticeStructure::LatticeModule const &
+Symmetry::get_lattice() const
+{
+	return lattice_;
+}
+
+void
+Symmetry::reset_lattice(LatticeStructure::LatticeModule lattice)
+{
+	//simply recalculate everything ...
+	std::vector<int> newPtGrpSym(9*numSymmetries_);
+	std::vector<double> newFractSym(3*numSymmetries_);
+	for ( int isym = 0 ; isym < numSymmetries_; ++isym)
+	{
+		std::copy(symmetries_.begin()+isym*9,symmetries_.begin()+(isym+1)*9,newPtGrpSym.begin()+isym*9);
+		std::copy(fractTrans_.begin()+isym*3,fractTrans_.begin()+(isym+1)*3,newFractSym.begin()+isym*3);
+	}
+	this->initialize( symmPrec_, newPtGrpSym, newFractSym, lattice, hasTimeReversal_);
 }
 
 } /* namespace LatticeStructure */

@@ -51,15 +51,23 @@ public:
 			double gridPrecision = 1e-6,
 			bool symmetricDirection = true);
 
+	void scale_position(double scaleX, double scaleY, double scaleZ);
+
 	void transform(Symmetry::SymmetryOperation const& sop);
+
+	void transform_direction(Symmetry::SymmetryOperation const& sop);
 
 	double get_prec() const;
 
-	std::vector<double> get_position() const;
+	std::vector<double> const & get_position() const;
 
-	std::vector<double> generate_movement() const;
+	std::vector<double> const & get_direction() const;
 
 	std::string get_kind() const;
+
+	double get_magnitude() const;
+
+	bool is_plus_minus_displ_equivalent() const;
 
 	//Strict weak ordering is implied by (in that order)
 	//	kind then position [x,y,z] then direction [|x|,|y|,|z|]
@@ -86,7 +94,10 @@ private:
 
 	std::vector<double> position_ = {0.0,0.0,0.0};
 
+	//In cartesian coordinates
 	std::vector<double> direction_ = {1.0,0.0,0.0};
+
+	void normalize_direction();
 };
 
 } /* namespace LatticeStructure */

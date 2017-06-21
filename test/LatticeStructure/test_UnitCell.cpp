@@ -69,24 +69,12 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 	LatticeStructure::UnitCell uc;
 	uc.initialize( filerreader.get_atoms_list(), lattice, sym);
 
-	std::vector<LatticeStructure::AtomDisplacement> reducibleDisplacements,irreducibleDisplacements;
+	std::vector<LatticeStructure::AtomDisplacement> irreducibleDisplacements;
 	std::vector<int> mapRedToIrred, mapSymRedToIrred;
 	std::vector<std::vector<int>> mapIrredToRed, mapSymIrredToRed;
 	uc.generate_displacements( 0.01,
 			/*bool symmetricDisplacement = */ false,
-			reducibleDisplacements,irreducibleDisplacements,
-			mapRedToIrred, mapSymRedToIrred,
-			mapIrredToRed, mapSymIrredToRed);
+			irreducibleDisplacements);
 
-	size_t numModes = 3*4;// #Atoms = 4
-	BOOST_REQUIRE( reducibleDisplacements.size() == numModes);
-
-	uc.generate_displacements( 0.01,
-			/*bool symmetricDisplacement = */ true,
-			reducibleDisplacements,irreducibleDisplacements,
-			mapRedToIrred, mapSymRedToIrred,
-			mapIrredToRed, mapSymIrredToRed);
-
-	numModes = 2*3*4;// #Atoms = 4, +-xi
-	BOOST_REQUIRE( reducibleDisplacements.size() == numModes);
+	//how to test this?
 }

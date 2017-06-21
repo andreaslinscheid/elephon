@@ -256,6 +256,406 @@ reference "eq:DerivativePotential"
 
 so the matrix of force constants fortunately does not depend on the absolute
  position in the lattice.
+ In practice, we will calculate it from finite differences
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{F}_{\mu_{1}\boldsymbol{R}_{1}}=\tilde{C}(\boldsymbol{R}_{1}\mu_{1},\boldsymbol{0}\mu_{2})\cdot\Delta v_{\mu_{2}\boldsymbol{0}}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\boldsymbol{F}_{\mu_{1}\boldsymbol{R}_{1}}$
+\end_inset
+
+ is the force acting on atom 
+\begin_inset Formula $\mu_{1}$
+\end_inset
+
+ in cell 
+\begin_inset Formula $\boldsymbol{R}_{1}$
+\end_inset
+
+ due to a displacement 
+\begin_inset Formula $\Delta v_{\mu_{2}\boldsymbol{0}}$
+\end_inset
+
+ of atom 
+\begin_inset Formula $\mu_{2}$
+\end_inset
+
+ in cell which we choose as the origin (because of translational invarience).
+ To compute 
+\begin_inset Formula $\tilde{C}(\boldsymbol{R}\mu_{1},\boldsymbol{0}\mu_{2})$
+\end_inset
+
+ one has to apply a supercell method.
+ Let the size of the supercell be 
+\begin_inset Formula $\boldsymbol{L}$
+\end_inset
+
+.
+ Then, we have to take into account that displacement in the replica contributes
+ to the forces, too and we have
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{F}_{\alpha_{1}\boldsymbol{R}_{1}}=\sum_{\boldsymbol{L}}\tilde{C}(\boldsymbol{R}_{1}\alpha_{1},\boldsymbol{L}\alpha_{2})\cdot\Delta\boldsymbol{v}_{\alpha_{2}\boldsymbol{L}}
+\end{equation}
+
+\end_inset
+
+Let us use
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\tilde{C}_{\Sigma}(\mu_{1}\boldsymbol{R}_{1},\mu_{2}\boldsymbol{0})=\sum_{\boldsymbol{L}}\tilde{C}(\boldsymbol{R}_{1}\mu_{1},\boldsymbol{L}\mu_{2})
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Symmetry considerations
+\end_layout
+
+\begin_layout Standard
+Some 
+\begin_inset Formula $\Delta v_{\mu}\equiv u_{\mu}$
+\end_inset
+
+ (suppressing the primitive cell index 
+\begin_inset Formula $\boldsymbol{R}=\boldsymbol{0}$
+\end_inset
+
+) are symmetry equivalent in the sense that the forces induced by such a
+ displacement can be calculated from the displacement related by symmetry.
+ Let us consider for example a site symmetry at an atomic position.
+ A site symmetry is a sub group of the lattice symmetry that leaves the
+ particular point invarient.
+ Of cause, this exlcudes fractional translations.
+ Asumme 
+\begin_inset Formula $g_{\alpha}$
+\end_inset
+
+ is a matrix representation of a member in such a subgroup at atomic site
+ 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{u}_{\alpha}$
+\end_inset
+
+ is a displacement vector.
+ Then let 
+\begin_inset Formula $\boldsymbol{u}_{\alpha}^{\prime}$
+\end_inset
+
+ be the image of 
+\begin_inset Formula $g_{\alpha}$
+\end_inset
+
+.
+ The force in the lattice of each atom 
+\begin_inset Formula $\alpha_{1}$
+\end_inset
+
+ induced by the displacement 
+\begin_inset Formula $\boldsymbol{u}_{\alpha}^{\prime}$
+\end_inset
+
+ is given by
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{F}_{\alpha_{1}\boldsymbol{R}_{1}}=g_{\alpha}\cdot\boldsymbol{F}_{U_{\alpha}^{-1}(\alpha^{\prime})}\label{eq:ForceSiteSymmetry}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $U_{\alpha}^{-1}(\alpha^{\prime})=\alpha_{1}$
+\end_inset
+
+ is the effect of the symmetry operation on mapping atomic sites into each
+ other.
+ Furthermore, let us consider a general symmetry operation 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\{g\vert\tau\}$
+\end_inset
+
+ of the lattice and assume that it takes and atom 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ to an atom 
+\begin_inset Formula $(\beta,\boldsymbol{T}_{1})=\{g\vert\tau\}(\alpha,\boldsymbol{R})$
+\end_inset
+
+.
+ It is intuitive that the matrix of force constants has the symmetry
+\begin_inset Formula 
+\begin{equation}
+\tilde{C}_{\Sigma}(\beta_{1}\boldsymbol{T},\beta_{2})=g\tilde{C}_{\Sigma}(\alpha_{1}\boldsymbol{R},\alpha_{2})g^{-1}\label{eq:InvarianceForceConstantMatrix}
+\end{equation}
+
+\end_inset
+
+since we simply rotate the lattice underneath.
+ So we need only to compute displacements that are on 1) non-equivalent
+ atoms and 2) cannot be reconstructed by a local site-symmetry.
+ We call displacements reducible that are equivalent by symmetry to an irreducib
+le one.
+ For the arbitrary choice of irreducible we simply take the identity symmetry
+ operation as the deciding element.
+\end_layout
+
+\begin_layout Subsubsection
+Reconstruction of reducible displacements
+\end_layout
+
+\begin_layout Standard
+Let us walk through the list of non-equivalent atoms.
+ For each such atom, let us use the site symmetry to reconstruct the forces.
+ Let us call the set of site-irreducible displacements 
+\begin_inset Formula $\boldsymbol{u}_{\alpha}$
+\end_inset
+
+, primed ones are reducible
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{F}_{\beta_{1}\boldsymbol{T}} & = & \tilde{C}_{\Sigma}(\beta_{1}\boldsymbol{T},\alpha)\boldsymbol{u}_{\alpha}\\
+\boldsymbol{F}_{\beta_{1}\boldsymbol{T}} & = & g_{\alpha}^{-1}\tilde{C}_{\Sigma}(\{g_{\alpha}^{-1}\vert\tau\}\beta_{1}\boldsymbol{T},\{g_{\alpha}^{-1}\vert\tau\}\alpha)g_{\alpha}\boldsymbol{u}_{\alpha}\\
+g_{\alpha}\boldsymbol{F}_{\beta_{1}\boldsymbol{T}} & = & \tilde{C}_{\Sigma}(\alpha_{1}\boldsymbol{R},\alpha)\cdot\boldsymbol{u}_{\alpha}^{\prime}
+\end{eqnarray}
+
+\end_inset
+
+Above, we have just used one element of the site symmetry group.
+ Using all irreducible displacements of this atom 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ expanded by all site-symmetry point group elements, enumerated by 
+\begin_inset Formula $j$
+\end_inset
+
+, we find
+\begin_inset Formula 
+\begin{equation}
+g_{\alpha}^{j}\boldsymbol{F}_{{g_{\alpha}^{j}}^{-1}(\alpha_{1}\boldsymbol{R})}=\tilde{C}_{\Sigma}(\alpha_{1}\boldsymbol{R},\alpha)\cdot\boldsymbol{u}_{\alpha}^{j}\label{eq:ForceConstantEq}
+\end{equation}
+
+\end_inset
+
+which can be used to increase the accuracy, since the system can be overdetermin
+ed.
+ Introducing 
+\begin_inset Formula $U_{\alpha}$
+\end_inset
+
+ 
+\begin_inset Formula 
+\begin{equation}
+U_{\alpha}=\left(\begin{array}{ccc}
+u_{\alpha x}^{j=1} & u_{\alpha x}^{j=2} & \ldots\\
+u_{\alpha y}^{1} & u_{\alpha y}^{2} & \ldots\\
+u_{\alpha z}^{1} & u_{\alpha z}^{2} & \ldots
+\end{array}\right)
+\end{equation}
+
+\end_inset
+
+and using the shorthand notation 
+\begin_inset Formula $\boldsymbol{F}_{\alpha_{1}}^{j}=g_{\alpha}^{j}\boldsymbol{F}_{{g_{\alpha}^{j}}^{-1}(\alpha_{1}\boldsymbol{R})}$
+\end_inset
+
+ 
+\begin_inset Formula 
+\begin{equation}
+\mathcal{F}_{\alpha_{1}}=\left(\begin{array}{ccc}
+F_{\alpha_{1}x}^{1} & F_{\alpha_{1}x}^{2} & \ldots\\
+F_{\alpha_{1}y}^{1} & F_{\alpha_{1}y}^{2} & \ldots\\
+F_{\alpha_{1}z}^{1} & F_{\alpha_{1}z}^{2} & \ldots
+\end{array}\right)
+\end{equation}
+
+\end_inset
+
+Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:ForceConstantEq"
+
+\end_inset
+
+ becomes
+\begin_inset Formula 
+\begin{equation}
+\mathcal{F}_{\alpha_{1}}=\tilde{C}_{\Sigma}(\alpha_{1}\boldsymbol{R},\alpha)\cdot U_{\alpha}
+\end{equation}
+
+\end_inset
+
+and is solved for the matrix of force constants by
+\begin_inset Formula 
+\begin{equation}
+\mathcal{F}_{\alpha_{1}}\cdot U_{\alpha}^{+}=\tilde{C}_{\Sigma}(\alpha_{1}\boldsymbol{R},\alpha)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $U_{\alpha}^{+}$
+\end_inset
+
+ is the pseudo inverse.
+ This procedure is applied to all 
+\begin_inset Formula $\alpha_{1}$
+\end_inset
+
+ but gives only the irreducible 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ while the reminder of the matrix elements have to be constructed from
+\begin_inset Formula 
+\begin{equation}
+\tilde{C}_{\Sigma}(\beta,\alpha^{\prime})=g\tilde{C}_{\Sigma}(\{g\vert\tau\}\alpha_{1},\{g\vert\tau\}\alpha)g^{-1}
+\end{equation}
+
+\end_inset
+
+that one of the elements of the symmetry group satisfied the above property
+ is clear from the definition of 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ as an irreducible atom while 
+\begin_inset Formula $\alpha^{\prime}$
+\end_inset
+
+ is an element of the so called star of 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\alpha$
+\end_inset
+
+ reached by the symmetry operation 
+\begin_inset Formula $\{g\vert\tau\}$
+\end_inset
+
+.
+ This way we obtain the matrix of force constants for all (reducible) atoms
+ in the supercell.
+\end_layout
+
+\begin_layout Subsubsection
+Phonon structure
+\end_layout
+
+\begin_layout Standard
+In the previous section, we have used the matrix of force constants in the
+ supercell.
+ The dynamical matrix, however, is related to the matrix of force constants
+ in the infinite lattice.
+ In the units of the primitive cell, the previous matrix reads
+\begin_inset Formula 
+\begin{equation}
+\tilde{C}_{\Sigma}(\mu_{1}\boldsymbol{R}_{1},\mu_{2}\boldsymbol{0})\equiv\tilde{C}_{\Sigma}(\mu_{1}\boldsymbol{R}_{1}+\boldsymbol{L},\mu_{2}\boldsymbol{L}^{\prime})
+\end{equation}
+
+\end_inset
+
+In order to make it approximately equivalent to the results for the infinite
+ cell, we move the reference window with a given atom, so that each atom
+ have the same number of nearest neighbours.
+ This must also include the atoms on the border so we define the extendet
+ set of 
+\begin_inset Formula $\boldsymbol{R}$
+\end_inset
+
+ vectors
+\begin_inset Formula 
+\begin{equation}
+R_{x_{i}}\in M_{x_{i}}=\begin{cases}
+[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm even}\\{}
+[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm odd}
+\end{cases}
+\end{equation}
+
+\end_inset
+
+Note that 
+\begin_inset Formula $\tilde{C}_{\Sigma}$
+\end_inset
+
+ already includes the effect of replicated atoms that induce forces and
+ thus 
+\begin_inset Formula $\boldsymbol{R}$
+\end_inset
+
+ vectors on the border of the cell double count because e.g.
+\begin_inset space ~
+\end_inset
+
+atoms seperated by 
+\begin_inset Formula $\boldsymbol{L}$
+\end_inset
+
+ are in fact the same atom.
+ Thus we need to introduce the weight factor 
+\begin_inset Formula $w_{\boldsymbol{R}}$
+\end_inset
+
+ that counters this multiplicity
+\begin_inset Formula 
+\begin{equation}
+\tilde{C}(\boldsymbol{0}\mu_{1},\boldsymbol{R}\mu_{2})\approx\begin{cases}
+w_{\boldsymbol{R}}\tilde{C}_{\Sigma}(\mu_{1}\boldsymbol{0},\mu_{2}\boldsymbol{R}) & \boldsymbol{R}\in\boldsymbol{M}\\
+0 & {\rm else}
+\end{cases}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula $w_{\boldsymbol{R}}$
+\end_inset
+
+ is 1 for all interior vectors, 1/2 for border surfaces, 1/4 for edges and
+ 1/8 for corner points, because the atoms in this position are included
+ by these number of periodic replicas.
+ With this understanding, we drop the nomenclature 
+\begin_inset Formula $w_{\boldsymbol{R}}\tilde{C}_{\Sigma}(\mu_{1}\boldsymbol{0},\mu_{2}\boldsymbol{R})$
+\end_inset
+
+ and continue with the label for the infinite quantitiy.
  We introduce the half Fourier transform (of just one of the two 
 \begin_inset Formula $\boldsymbol{R}$
 \end_inset
@@ -761,14 +1161,14 @@ The coupling of electrons to the perturbation of the lattice centers is
  is not periodic in the lattice, but
 \begin_inset Formula 
 \begin{eqnarray}
-\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}_{0}) & = & \lim_{\Delta\rightarrow0}\frac{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta\underbar{v}_{\mu\boldsymbol{R}-\boldsymbol{R}_{0}}](\boldsymbol{r})}{\Delta}\\
- & = & \nabla_{(\mu\boldsymbol{R}-\boldsymbol{R}_{0})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})
+\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}_{0}) & = & \lim_{\Delta\rightarrow0}\frac{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta\underbar{v}_{\mu\boldsymbol{R}-\boldsymbol{R}_{0}}](\boldsymbol{r})}{\Delta}\\
+ & = & \nabla_{\mu\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}_{0}-\boldsymbol{R})
 \end{eqnarray}
 
 \end_inset
 
 In fact screening is usually very good, so that 
-\begin_inset Formula $\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{0})$
+\begin_inset Formula $\nabla_{\mu\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{\boldsymbol{R}})$
 \end_inset
 
  is usually very small even for the first non-zero 
@@ -795,7 +1195,7 @@ In fact screening is usually very good, so that
 \noun off
 \color none
 
-\begin_inset Formula $\nabla_{\tau_{\mu\boldsymbol{R}}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{0})$
+\begin_inset Formula $\nabla_{\mu\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{R})$
 \end_inset
 
  is zero for all 
@@ -812,49 +1212,107 @@ Symmetry considerations
 \end_layout
 
 \begin_layout Standard
-Symmetry is very important because the calulations are many for large cells
- get expensive.
- We need 
-\begin_inset Formula $3N$
+Note the translational invarience of the displacement potential
+\begin_inset Formula 
+\begin{eqnarray}
+\{g\vert\tau\}\nabla_{\mu\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}) & = & \lim_{\Delta\rightarrow0}\frac{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta(g^{-1}\underbar{v}_{\mu\boldsymbol{R}}-\underbar{\tau})](\boldsymbol{r}-\boldsymbol{R})}{\Delta}
+\end{eqnarray}
+
 \end_inset
 
- displacements in a possibly large supercell.
- The goal is to relate the peturbation potential of symmetry related displacemen
-ts.
- Consider a symmetry operation of the lattice 
-\begin_inset Formula $\{g\vert\tau\}$
-\end_inset
-
-, exchanging lattice sites, but leaving real space untouched
+where we have already put in that unperturbed ion sites are mapped into
+ themselfs by a symmetry opertion.
+ In the following it helpful to interpret the displacement potential as
+ a linear relation between the induced potential change at each point in
+ space and a given diplacement in the primitive cell
 \begin_inset Formula 
 \begin{equation}
-\{g\vert\tau\}\nabla_{\tau_{\mu\boldsymbol{R}}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})=\lim_{\Delta\rightarrow0}\frac{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta(g^{-1}\underbar{v}_{\mu\boldsymbol{R}}-\underbar{\tau})](\boldsymbol{r})}{\Delta}
+\nabla_{\mu\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})=\delta v_{{\rm {\scriptscriptstyle scf}}}^{\mu}(\boldsymbol{r})u_{\mu\boldsymbol{0}}\label{eq:LinearRelationDisplacementPotential}
 \end{equation}
 
 \end_inset
 
-where 
-\begin_inset Formula $g$
-\end_inset
-
- is a point group operation, i.e.
- a rotation matrix and 
-\begin_inset Formula $\tau$
-\end_inset
-
- is here a fractional translation, we have already put in that unperturbed
- ion sites are mapped into themselfs by a symmetry opertion.
- Transforming real space, too, the perturbed potential is invarient (we
- have just chosen a different coordinate system) and that implies
+which has to be calculated from finite displacements in a supercell
 \begin_inset Formula 
 \begin{equation}
-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta(g^{-1}\underbar{v}_{\mu\boldsymbol{R}}-\underbar{\tau})](\boldsymbol{r})=v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta\underbar{v}_{\mu\boldsymbol{R}}](g\boldsymbol{r}+\tau)
+\Delta_{\mu\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{R})\approx\delta v_{{\rm {\scriptscriptstyle scf}}}^{\mu}(\boldsymbol{r}-\boldsymbol{R})u_{\mu\boldsymbol{0}}
 \end{equation}
 
 \end_inset
 
-Note that this also implies that any symmetry operation which leaves 
-\begin_inset Formula $\underbar{v}_{\mu\boldsymbol{R}}$
+In the above equation, 
+\begin_inset Formula $\boldsymbol{r}$
+\end_inset
+
+ is a point in the primitive cell and 
+\begin_inset Formula $\boldsymbol{R}$
+\end_inset
+
+ is a primitive lattice vector so all space is covered.
+ While this is a simple scalar relation, note that our displacements are
+ not necessary along the cartesian axis.
+ We thus rewrite the above relation using a vector notation
+\begin_inset Formula 
+\begin{equation}
+\Delta_{\alpha,j,\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{R})=\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\alpha}(\boldsymbol{r}-\boldsymbol{R})\cdot\boldsymbol{u}_{\alpha,j\boldsymbol{0}}\label{eq:LinearRelationDisplacementPotentialCartesian}
+\end{equation}
+
+\end_inset
+
+where each displacement has cartesian components 
+\begin_inset Formula $\boldsymbol{u}_{\alpha,j\boldsymbol{0}}=(u_{\alpha,j\boldsymbol{0}}^{x}\; u_{\alpha,j\boldsymbol{0}}^{y}\; u_{\alpha,j\boldsymbol{0}}^{z})^{{\rm T}}$
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\alpha}(\boldsymbol{r}-\boldsymbol{R})$
+\end_inset
+
+ is the sought after 
+\begin_inset Formula 
+\begin{equation}
+\delta v_{{\rm {\scriptscriptstyle scf}}}^{\mu}=(\delta v_{{\rm {\scriptscriptstyle scf}}}^{\alpha x}\;\delta v_{{\rm {\scriptscriptstyle scf}}}^{\alpha y}\;\delta v_{{\rm {\scriptscriptstyle scf}}}^{\alpha z})
+\end{equation}
+
+\end_inset
+
+We follow a similar approach as for the matrix of force constants above.
+ First is again the insight, that in a realistic supercell calculation,
+ the potential change originiates from periodic replica, too, and thus,
+ we obtain from the numerical calculation the cumlutative sum
+\begin_inset Formula 
+\begin{equation}
+{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\mu}(\boldsymbol{r}-\boldsymbol{R})=\sum_{\boldsymbol{L}}\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\mu}(\boldsymbol{r}-\boldsymbol{R}+\boldsymbol{L})
+\end{equation}
+
+\end_inset
+
+Now looking at the displacement potential originating from a displacement
+ at site 
+\begin_inset Formula $\alpha$
+\end_inset
+
+, we can calculate the respective transformed one by applying a site symmetry
+\begin_inset Formula 
+\begin{equation}
+\Delta_{\alpha,g_{\alpha}(j)\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}\bigl(g_{\alpha}^{-1}(\boldsymbol{r}-\boldsymbol{R})\bigr)
+\end{equation}
+
+\end_inset
+
+which is equivalent to Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:ForceSiteSymmetry"
+
+\end_inset
+
+.
+ Note that this also implies that any symmetry operation which leaves 
+\begin_inset Formula $\underbar{v}_{\mu\boldsymbol{0}}$
 \end_inset
 
  invariant is a symmetry of the displacement potential.
@@ -872,16 +1330,209 @@ Note that this also implies that any symmetry operation which leaves
 \end_inset
 
  axis.
- Thus, a good approach is to generate all displacements for a given supercell,
- then apply all symmetry operations and generate an irreducible set plus
- a star of displacments, including the symmetry operations.
- Only the irreducible set 
-\begin_inset Formula $\{\underbar{v}_{\mu\boldsymbol{R}}\}^{{\rm irr}}$
+ Moreover, atoms 
+\begin_inset Formula $\alpha$
 \end_inset
 
- needs to be computed, the reducible displacements can be reconstructed
- from the symmetry operation.
+ and 
+\begin_inset Formula $\beta$
+\end_inset
+
+ that are connected by a symmetry operation 
+\begin_inset Formula $\{g\vert\tau\}$
+\end_inset
+
+ imply equivalence in the displacement potential, similar to Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:InvarianceForceConstantMatrix"
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\beta}(\boldsymbol{r}-\boldsymbol{R})={\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}\bigl(g^{-1}\cdot(\boldsymbol{r}-\boldsymbol{R})-\tau\bigr)\cdot g\label{eq:SymmetryDisplacementPotential}
+\end{equation}
+
+\end_inset
+
+Unsurprisingly, we obtain the same sense of irreducible displacement as
+ before for the matrix of force constants.
+ In order to improve the accuracy, we can use a similar trick as for the
+ matrix of force constants.
+ The main difference is that here, we are looking at continus space, rather
+ than descrete lattice sites.
+ Let us use Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:LinearRelationDisplacementPotentialCartesian"
+
+\end_inset
+
+ for a point in space that is related to the point 
+\begin_inset Formula $\boldsymbol{r}-\boldsymbol{R}$
+\end_inset
+
+ by a site-symmetry of the lattice site 
+\begin_inset Formula $\alpha$
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\Delta_{\alpha,j,\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}\bigl(g_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\bigr)=\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\alpha}\bigl(g_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\bigr)\cdot\boldsymbol{u}_{\alpha,j\boldsymbol{0}}
+\end{equation}
+
+\end_inset
+
+Since it is a site-symmetry, the atom index does not change.
+ Now using Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:SymmetryDisplacementPotential"
+
+\end_inset
+
+, we find
+\begin_inset Formula 
+\begin{eqnarray}
+\Delta_{\alpha,j,\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}\bigl(g_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\bigr) & = & {\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\cdot g_{\alpha}\cdot\boldsymbol{u}_{\alpha,j\boldsymbol{0}}\\
+\Delta_{\alpha,j,\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}\bigl(g_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\bigr) & = & {\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\cdot\boldsymbol{u}_{\alpha,j^{\prime}\boldsymbol{0}}
+\end{eqnarray}
+
+\end_inset
+
+Again, the system can be overdetermined which allows us to reduce statistical
+ errors.
+ We solve with all reducible 
+\begin_inset Formula $j$
+\end_inset
+
+ displacement that can be obtained and find with
+\begin_inset Formula 
+\begin{equation}
+\mathcal{V}_{\boldsymbol{R}}^{\alpha}(\boldsymbol{r})=\left(\begin{array}{ccc}
+\{g_{\alpha}^{j=1}\vert0\}\; & \{g_{\alpha}^{j=2}\vert0\} & \ldots\end{array}\right)\Delta_{\alpha\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{R})
+\end{equation}
+
+\end_inset
+
+and 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $U_{\alpha}$
+\end_inset
+
+ as above, we have
+\begin_inset Formula 
+\begin{equation}
+\mathcal{V}_{\boldsymbol{R}}^{\alpha}(\boldsymbol{r})={\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}(\boldsymbol{r}-\boldsymbol{R})\cdot U_{\alpha}
+\end{equation}
+
+\end_inset
+
+and the linear displacement potential in cartesian coordinates as a solution
+ in the least squares sense
+\begin_inset Formula 
+\begin{equation}
+{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}(\boldsymbol{r}-\boldsymbol{R})=\mathcal{V}_{\boldsymbol{R}}^{\alpha}(\boldsymbol{r})\cdot U_{\alpha}^{+}
+\end{equation}
+
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+Applying the same procedure regarding the definition of Fourier vectors
+\begin_inset Formula 
+\begin{equation}
+\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\approx\begin{cases}
+w_{\boldsymbol{R}}{\delta v_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\mu}(\boldsymbol{r}-\boldsymbol{R}) & \boldsymbol{R}\in\boldsymbol{M}\\
+0 & {\rm else}
+\end{cases}
+\end{equation}
+
+\end_inset
+
+reducible atomic sites can be reconstructed from Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:SymmetryDisplacementPotential"
+
+\end_inset
+
+.
+ Let us have a look at the order of numerical complexity.
  
+\begin_inset Formula $\mathcal{O}(\boldsymbol{R})\sim10$
+\end_inset
+
+ since the interactions are usually pretty local and screening is good.
+ There are easily 
+\begin_inset Formula $\mathcal{O}(\boldsymbol{r})\sim10^{5}$
+\end_inset
+
+ since we need to resolve the atomic potential accurately and the Fourier
+ grid is usually very fine.
+ Furthermore, we have 
+\begin_inset Formula $3\times N_{{\rm atoms}}$
+\end_inset
+
+ modes in the system where 
+\begin_inset Formula $N_{{\rm atoms}}$
+\end_inset
+
+ is the number of atoms in the primitive cell.
+ Assuming 
+\begin_inset Formula $\mathcal{O}(10^{2})$
+\end_inset
+
+ modes, we have to store 
+\begin_inset Formula $10^{8}$
+\end_inset
+
+ real (single pricision) values, which is 
+\begin_inset Formula $\mathcal{O}(1)$
+\end_inset
+
+GB of data and easily managable of modern computer hardware.
+ This estimation is for a rather large system.
 \end_layout
 
 \begin_layout Subsection
@@ -896,7 +1547,7 @@ Now, let us compute the overlap among Bloch states
  created by the transformed
 \begin_inset Formula 
 \begin{equation}
-\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
+\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
 \end{equation}
 
 \end_inset

@@ -44,18 +44,32 @@ public:
 
 	void generate_displacements( double displMagn,
 			bool symmetricDisplacements,
-			std::vector<AtomDisplacement> & reducibleDisplacements,
-			std::vector<AtomDisplacement> & irreducibleDisplacements,
-			std::vector<int> & redToIrred,
-			std::vector<int> & symRedToIrred,
-			std::vector< std::vector<int> > & irredToRed,
-			std::vector< std::vector<int> > & symIrredToRed) const;
+			std::vector<AtomDisplacement> & irreducibleDisplacements) const;
+
+	void get_site_displacements(Atom const & atomicSite,
+			bool symmetricDisplacements,
+			LatticeStructure::Symmetry const & siteSymmetry,
+			double displMagn,
+			std::vector<AtomDisplacement> & irreducible,
+			std::vector<AtomDisplacement> & reducible,
+			std::vector<int> & redToIrredDispl,
+			std::vector<int> & symRedToIrredDispl,
+			std::vector< std::vector<int> > & irredToRedDispl,
+			std::vector< std::vector<int> > & symIrredToRedDispl) const;
 
 	std::vector<LatticeStructure::Atom> const & get_atoms_list() const;
 
-	std::vector<double> get_lattice_matrix() const;
+	LatticeStructure::LatticeModule const & get_lattice() const;
 
 	double get_alat() const;
+
+	LatticeStructure::Symmetry const & get_symmetry() const;
+
+	LatticeStructure::Symmetry const & get_site_symmetry(int atomIndex) const;
+
+	void set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const;
+
+	void generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const;
 private:
 
 	LatticeStructure::LatticeModule lattice_;
@@ -64,7 +78,19 @@ private:
 
 	std::vector<LatticeStructure::Atom> atoms_;
 
-	void reduce_symmetry_to_lattice();
+	std::vector<LatticeStructure::Symmetry> siteSymmetries_;
+
+	void add_displacement( std::vector<double> direction,
+			std::vector<double> const & position,
+			bool symmetricDispl,
+			std::string const & atomName,
+			double gridPrec,
+			double magnInAngstroem,
+			std::vector<AtomDisplacement> & addtothis) const;
+
+	void generate_site_symmetries(std::vector<LatticeStructure::Atom> const & atoms,
+			LatticeStructure::Symmetry const & symmetry,
+			std::vector<LatticeStructure::Symmetry> & siteSymmetries) const;
 };
 
 } /* namespace LatticeStructure */

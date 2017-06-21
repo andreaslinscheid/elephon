@@ -68,7 +68,6 @@ void BuildFolderStructure::build(
 	elephon::LatticeStructure::UnitCell supercell =
 			unitcell.build_supercell( input.get_scell().at(0), input.get_scell().at(1), input.get_scell().at(2));
 	boost::filesystem::create_directories( elphd / "scell" );
-	auto supercellOptions = interface.options_scf_supercell_no_wfctns_no_relax();
 	auto superCellOptions = interface.options_scf_supercell_no_wfctns_no_relax();
 
 	interface.set_up_run(
@@ -79,17 +78,19 @@ void BuildFolderStructure::build(
 			supercell,
 			superCellOptions);
 
-	//Create displacements
-	std::vector< elephon::LatticeStructure::AtomDisplacement>
-		reducible, irreducible;
-	std::vector< int > redToIrred, symRedToIrred;
-	std::vector< std::vector< int > > IrredToRed, symIrredToRed;
-	supercell.generate_displacements(
+	//Create displacements - we have to reduce the symmetry to the supercell in case this is different
+	LatticeStructure::UnitCell unitcellReducedSym;
+	unitcellReducedSym.initialize( unitcell.get_atoms_list(), unitcell.get_lattice(), supercell.get_symmetry() );
+	std::vector< elephon::LatticeStructure::AtomDisplacement>  irreducible;
+	unitcellReducedSym.generate_displacements(
 			input.get_magdispl(),
 			input.get_symDispl(),
-			reducible, irreducible,
-			redToIrred, symRedToIrred,
-			IrredToRed, symIrredToRed );
+			irreducible );
+
+	//transform them from the primitive to the supercell
+	double s[3] = {1.0/input.get_scell().at(0) , 1.0/input.get_scell().at(1), 1.0/input.get_scell().at(2)};
+	for ( auto &id : irreducible )
+		id.scale_position( s[0], s[1], s[2] );
 
 	//We only care about the irreducible displacement at this point.
 	for ( int ipert = 0 ; ipert < static_cast<int>(irreducible.size()); ipert++ )

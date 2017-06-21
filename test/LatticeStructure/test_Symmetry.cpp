@@ -89,3 +89,15 @@ BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 		BOOST_REQUIRE( std::fabs(sopInv.fracTrans[i]) < 1e-16);
 	}
 }
+
+BOOST_AUTO_TEST_CASE( Symemtry_reduction )
+{
+	elephon::IOMethods::ReadVASPSymmetries symReader;
+	symReader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
+
+	elephon::LatticeStructure::LatticeModule lattice;
+	lattice.initialize( std::vector<double>({1,0,0,0,1,0,0,0,1}) );
+
+	elephon::LatticeStructure::Symmetry sym;
+	sym.initialize( 1e-6, symReader.get_symmetries(), symReader.get_fractionTranslations(), lattice, true );
+}

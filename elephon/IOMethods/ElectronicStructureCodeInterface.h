@@ -77,7 +77,13 @@ public:
 
 	virtual void read_electronic_potential(
 			std::string root_directory,
-			std::vector<float> & output) = 0;
+			std::vector<int> & dims,
+			std::vector<double> & output) = 0;
+
+	//The returned forces must be in the same order as the atoms in the unperturbed supercell!
+	virtual void read_forces(
+			std::string root_directory,
+			std::vector<double> & forces) = 0;
 
 	virtual void read_kpt_sampling(
 			std::string root_directory,

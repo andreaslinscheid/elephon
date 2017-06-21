@@ -38,7 +38,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	//here we create the test input file
 	path test_input_file = dir / "test_folderstructure_input.dat";
 	std::string content = std::string()+
-			"scell=2 2 1\n"
+			"scell=1 1 1\n"
 			"root_dir="+(dir/"Al_test").string()+"\n"
 			"elphd="+test_elph_dir.string()+"\n"
 			"";
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	file << content;
 	file.close();
 
-	//here we reed the input file via elephons input mechanism
+	//here we read the input file via elephons input mechanism
 	char * prog = strdup("program name");
 	char * arg = strdup(test_input_file.c_str());
 	char *argv[] = {prog, arg, NULL};
@@ -89,6 +89,6 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	BOOST_REQUIRE( exists(test_elph_dir / "displ_0" )  == true );
 	BOOST_REQUIRE( exists(test_elph_dir / "displ_1" )  == true );
 	BOOST_REQUIRE( exists(test_elph_dir / "displ_2" )  == true );
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_17" )  == true );
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_18" )  == false );
+	BOOST_REQUIRE( exists(test_elph_dir / "displ_3" )  == true );
+	BOOST_REQUIRE( exists(test_elph_dir / "displ_4" )  == false );
 }

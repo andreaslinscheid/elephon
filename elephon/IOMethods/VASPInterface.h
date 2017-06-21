@@ -24,6 +24,8 @@
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPWaveFunction.h"
+#include "IOMethods/ReadVASPPotcar.h"
+#include "IOMethods/ReadVASPxmlFile.h"
 #include <vector>
 #include <map>
 
@@ -73,22 +75,38 @@ public:
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry);
 
+	void read_forces(
+			std::string root_directory,
+			std::vector<double> & forces);
+
 	void read_electronic_potential(
 			std::string root_directory,
-			std::vector<float> & output);
+			std::vector<int> & dims,
+			std::vector<double> & output);
 
 	void read_kpt_sampling(
 			std::string root_directory,
 			std::vector<int> & kptSampling,
 			std::vector<double> & shifts) const;
 
+	void read_electronic_structure(
+			std::string root_directory,
+			int & nBnd,
+			int & nkptsIrred,
+			std::vector<double> & energies,
+			double & fermiEnergy);
+
 private:
 
 	ReadVASPPoscar posReader_;
 
+	ReadVASPPotcar potReader_;
+
 	ReadVASPSymmetries symReader_;
 
 	ReadVASPWaveFunction wfcReader_;
+
+	ReadVASPxmlFile xmlReader_;
 
 	void overwrite_POSCAR_file( std::string filename,
 			std::vector<std::string > const & potcarAtomOrder,

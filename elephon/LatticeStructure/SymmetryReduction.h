@@ -20,6 +20,9 @@
 #ifndef ELEPHON_LATTICESTRUCTURE_SYMMETRYREDUCTION_H_
 #define ELEPHON_LATTICESTRUCTURE_SYMMETRYREDUCTION_H_
 
+#include "LatticeStructure/Symmetry.h"
+#include <vector>
+
 namespace elephon
 {
 namespace LatticeStructure

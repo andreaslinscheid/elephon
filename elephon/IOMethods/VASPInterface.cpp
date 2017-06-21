@@ -157,12 +157,44 @@ VASPInterface::check_open_poscar(std::string const & root_dir )
 		posReader_.read_file( (rootdir / "POSCAR").string() );
 }
 
+void
+VASPInterface::read_forces(
+		std::string root_directory,
+		std::vector<double> & forces)
+{
+	boost::filesystem::path rootdir(root_directory);
+	xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+	forces = xmlReader_.get_forces();
+}
+
 void VASPInterface::read_electronic_potential(
 		std::string root_directory,
-		std::vector<float> & output)
+		std::vector<int> & dims,
+		std::vector<double> & output)
 {
-
+	boost::filesystem::path rootdir(root_directory);
+	potReader_.read_scf_potential( (rootdir / "POTCAR").string(), dims, output );
 }
+
+void
+VASPInterface::read_electronic_structure(
+		std::string root_directory,
+		int & nBnd,
+		int & nkptsIrred,
+		std::vector<double> & energies,
+		double & fermiEnergy)
+{
+	boost::filesystem::path rootdir(root_directory);
+	xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+	fermiEnergy = xmlReader_.get_Fermi_energy();
+
+	wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
+	energies = wfcReader_.get_energies();
+
+	nBnd = wfcReader_.get_num_bands();
+	nkptsIrred = wfcReader_.get_num_kpts();
+}
+
 
 std::vector<std::string >
 VASPInterface::read_potcar_atom_order( std::string filename ) const
@@ -213,7 +245,7 @@ void VASPInterface::overwrite_POSCAR_file( std::string filename,
 	fileContent += std::to_string(unitcell.get_alat())+"\n";
 
 	//Lattice matrix
-	auto A = unitcell.get_lattice_matrix();
+	auto A = unitcell.get_lattice().get_latticeMatrix();
 	std::string a1str =
 			floatAccLine( std::vector<double>( { A[3*0+0], A[3*1+0], A[3*2+0]} ) , 6 );
 	fileContent += a1str+"\n";
@@ -247,7 +279,14 @@ void VASPInterface::overwrite_POSCAR_file( std::string filename,
 	for ( auto atomFile : potcarAtomOrder )
 		for ( auto a : atoms)
 			if ( a.get_kind().compare( atomFile ) == 0 )//It is the turn of this atom kind
-				fileContent += floatAccLine( a.get_position() , 6 )+" "+atomFile+"\n";
+			{
+				//map to the zone [0,1[
+				auto pos = a.get_position();
+				for ( auto & xi : pos )
+					xi = xi < 0 ? xi + 1.0 : xi;
+
+				fileContent += floatAccLine( pos , 6 )+" "+atomFile+"\n";
+			}
 
 	std::ofstream file( filename.c_str() );
 	file << fileContent;

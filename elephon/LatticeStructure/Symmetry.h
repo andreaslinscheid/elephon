@@ -53,6 +53,20 @@ public:
 
 	void apply(int isym, std::vector<double> & field, bool latticePeriodic = true) const;
 
+	void apply(int isym, std::vector<double>::iterator fieldBegin,
+						std::vector<double>::iterator fieldEnd,
+						bool latticePeriodic = true) const;
+
+	void apply_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
+						std::vector<double>::iterator fieldCartEnd) const;
+
+	void rotate_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
+						std::vector<double>::iterator fieldCartEnd) const;
+
+	void rotate_matrix_cartesian(int isym,
+			std::vector<double>::iterator matrixFieldCartBegin,
+			std::vector<double>::iterator matrixFieldCartEnd) const;
+
 	int get_index_inverse(int isym) const;
 
 	int get_group_product(int isym1, int isym2) const;
@@ -67,6 +81,10 @@ public:
 
 	int get_num_symmetries() const;
 
+	void small_group(std::vector<double> const& point);
+
+	void small_group_cart(std::vector<double> const& pointCartCoords);
+
 	void symmetry_reduction( std::vector<int> indicesDropped);
 
 	SymmetryOperation get_sym_op( int isym ) const;
@@ -76,6 +94,10 @@ public:
 	bool is_reci() const;
 
 	std::vector<double> get_fractional_translation(int isym) const;
+
+	LatticeStructure::LatticeModule const & get_lattice() const;
+
+	void reset_lattice(LatticeStructure::LatticeModule lattice);
 private:
 
 	int idIndex_ = 0;
@@ -100,7 +122,11 @@ private:
 
 	std::vector<int> symmetries_;
 
+	std::vector<double> symmetriesCartesian_;
+
 	std::vector<double> fractTrans_;
+
+	std::vector<double> fractTransCartesian_;
 
 	std::vector<double> fractTransStore_;
 

@@ -59,12 +59,29 @@ void AtomDisplacement::initialize(
 	direction_=std::move(direction);
 	equivalencePrc_ = gridPrecision;
 	treatDirectionSymmetric_ = symmetricDirection;
+	this->normalize_direction();
+}
+
+void
+AtomDisplacement::scale_position(double scaleX, double scaleY, double scaleZ)
+{
+	assert( position_.size() == 3 );
+	position_[0] *= scaleX;
+	position_[1] *= scaleY;
+	position_[2] *= scaleZ;
 }
 
 void AtomDisplacement::transform(Symmetry::SymmetryOperation const& sop)
 {
 	sop.apply( position_ );
+	this->transform_direction(sop);
+}
+
+void
+AtomDisplacement::transform_direction(Symmetry::SymmetryOperation const& sop)
+{
 	sop.apply( direction_ , /*bool latticePeriodic = */false);
+	this->normalize_direction(); //symmetry operations in direct coordinates are not necessary unitary
 }
 
 double AtomDisplacement::get_prec() const
@@ -72,22 +89,33 @@ double AtomDisplacement::get_prec() const
 	return equivalencePrc_;
 }
 
-std::vector<double> AtomDisplacement::get_position() const
+std::vector<double> const &
+AtomDisplacement::get_position() const
 {
 	return position_;
 }
 
-std::vector<double> AtomDisplacement::generate_movement() const
+std::vector<double> const &
+AtomDisplacement::get_direction() const
 {
-	auto result =  	direction_;
-	for ( auto &xi : result )
-		xi *= magnitude_;
-	return result;
+	return direction_;
 }
 
 std::string AtomDisplacement::get_kind() const
 {
 	return kind_;
+}
+
+double
+AtomDisplacement::get_magnitude() const
+{
+	return magnitude_;
+}
+
+bool
+AtomDisplacement::is_plus_minus_displ_equivalent() const
+{
+	return treatDirectionSymmetric_;
 }
 
 bool operator< (AtomDisplacement const& d1, AtomDisplacement const& d2)
@@ -129,6 +157,14 @@ bool operator< (AtomDisplacement const& d1, AtomDisplacement const& d2)
 
 	//also equal - thus d1<d2 is false
 	return false;
+}
+
+void
+AtomDisplacement::normalize_direction()
+{
+	double norm = std::sqrt(direction_[0]*direction_[0] + direction_[1]*direction_[1] + direction_[2]*direction_[2]);
+	for ( auto &d : direction_ )
+		d /= norm;
 }
 
 } /* namespace LatticeStructure */

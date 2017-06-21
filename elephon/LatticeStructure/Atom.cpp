@@ -19,6 +19,7 @@
 
 #include "Atom.h"
 #include <cmath>
+#include <assert.h>
 
 namespace elephon
 {
@@ -26,8 +27,9 @@ namespace LatticeStructure
 {
 
 Atom::Atom(std::string kind, std::vector<double> pos,
-		std::vector<bool> frozen)
-		: kind_(std::move(kind)),pos_(std::move(pos)),frozen_(std::move(frozen))
+		std::vector<bool> frozen,
+		double gridPrec)
+		: kind_(std::move(kind)),pos_(std::move(pos)),frozen_(std::move(frozen)), prec_(gridPrec)
 {
 	for ( auto &xi : pos_ )
 		xi -= std::floor(xi + 0.5);
@@ -38,7 +40,7 @@ std::string Atom::get_kind() const
 	return kind_;
 };
 
-std::vector<double> Atom::get_position() const
+std::vector<double> const & Atom::get_position() const
 {
 	return pos_;
 };
@@ -54,6 +56,21 @@ std::vector<bool> Atom::get_movement_fixed() const
 {
 	return frozen_;
 };
+
+void
+Atom::transform( Symmetry::SymmetryOperation const & sop  )
+{
+	sop.apply(pos_,true);
+}
+
+bool operator< (Atom const & a1, Atom const & a2)
+{
+	assert(a1.prec_ == a2.prec_);
+	for ( int i = 3; i-- ; )
+	if ( std::abs(a1.pos_[i] - a2.pos_[i]) >= a1.prec_ )
+		return a1.pos_[i] < a2.pos_[i];
+	return false;
+}
 
 } /* namespace LatticeStructure */
 } /* namespace elephon */

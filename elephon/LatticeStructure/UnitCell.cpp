@@ -38,51 +38,40 @@ void UnitCell::initialize(
 	atoms_ = std::move(atoms);
 	lattice_ = std::move(lattice);
 	symmetry_ = std::move(sym);
-	this->reduce_symmetry_to_lattice();
+	//synchronize symmetries and lattice
+	this->set_symmetry_to_lattice( symmetry_);
+	this->generate_site_symmetries(atoms_,symmetry_,siteSymmetries_);
 }
 
-void UnitCell::reduce_symmetry_to_lattice()
+void
+UnitCell::set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const
 {
-	const double d = symmetry_.get_symmetry_prec();
+	symmetry.reset_lattice( lattice_ );
+	const double d = symmetry.get_symmetry_prec();
 
 	typedef std::vector<double> V;
 
-	//Define an ordering for 3D points
-	auto cmp = [d] (double a, double b) {
-		if ( std::fabs( a-b ) < d )
-			return 0;
-		return ( a < b ? 1 : -1 );
-	};
-
-	auto compare_location = [cmp] (V const& l1, V const& l2) {
-		for (int xi = 0 ; xi < 3; ++xi)
-			if ( cmp(l1[xi],l2[xi]) )
-				return l1[xi] < l2[xi];
-		return false;
-	};
-
-	std::map< V,std::string, decltype(compare_location) > atomsSet(compare_location);
+	std::set< Atom > atomsSet;
 	for ( auto a : atoms_ )
 	{
-		auto ret = atomsSet.insert( std::make_pair(a.get_position(),a.get_kind()) );
+		auto ret = atomsSet.insert( std::move(a) );
 		if ( not ret.second )
 			throw std::logic_error( "Atom positions are not distinct as to symmetry precision" );
 	}
 
 	//Now we check if the atomsSet it mapped to itself for each symmetry operation
 	std::vector<int> dropSym;
-	for (int isym = 0 ; isym < symmetry_.get_num_symmetries(); ++isym)
+	for (int isym = 0 ; isym < symmetry.get_num_symmetries(); ++isym)
 		for ( auto a : atoms_ )
 		{
-			std::vector<double> position = a.get_position();
-			symmetry_.apply(isym,position);
-			auto ret = atomsSet.find(position);
+			a.transform( symmetry.get_sym_op( isym ) );
+			auto ret = atomsSet.find(a);
 			if ( ret == atomsSet.end() )
 			{
 				dropSym.push_back(isym);
 				break;
 			}
-			if ( a.get_kind().compare(ret->second) != 0 )
+			if ( a.get_kind().compare(ret->get_kind()) != 0 )
 			{
 				dropSym.push_back(isym);
 				break;
@@ -91,7 +80,7 @@ void UnitCell::reduce_symmetry_to_lattice()
 
 	//Check if we need to update the symmetry set
 	if ( not dropSym.empty() )
-		symmetry_.symmetry_reduction( dropSym );
+		symmetry.symmetry_reduction( dropSym );
 }
 
 UnitCell UnitCell::build_supercell(int scx, int scy, int scz) const
@@ -138,70 +127,130 @@ UnitCell::get_atoms_list() const
 	return atoms_;
 }
 
-void UnitCell::generate_displacements( double displMagn,
+void
+UnitCell::generate_displacements( double displMagn,
 		bool symmetricDisplacements,
-		std::vector<AtomDisplacement> & reducibleDisplacements,
-		std::vector<AtomDisplacement> & irreducibleDisplacements,
-		std::vector<int> & redToIrred,
-		std::vector<int> & symRedToIrred,
-		std::vector< std::vector<int> > & irredToRed,
-		std::vector< std::vector<int> > & symIrredToRed ) const
+		std::vector<AtomDisplacement> & irreducibleDisplacements) const
 {
-	typedef std::vector<double> V;
-	const double gridPrc = symmetry_.get_symmetry_prec();
-	const double a0 = displMagn/lattice_.get_alat();
-	const bool treatDirSymmetric = not symmetricDisplacements;
-	auto magn = [] (V const& v) { return std::sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] ); };
+	irreducibleDisplacements.clear();
 
-	//First we generate all possible displacements (reducible)
-	std::set<AtomDisplacement> reducibleSet;
-	for ( auto a : atoms_)
-	{
-		//Insert displacement along x (and -x)
-		if ( not a.get_movement_fixed()[0] )
-		{
-			V vx = {1,0,0};
-			lattice_.direct_to_cartesian(vx);
-			double dx = a0/magn(vx);
-			reducibleSet.insert( AtomDisplacement(a.get_kind(), dx, a.get_position(),V({1,0,0}), gridPrc, treatDirSymmetric ) );
-			if (symmetricDisplacements)
-				reducibleSet.insert( AtomDisplacement(a.get_kind(), dx, a.get_position(),V({-1,0,0}), gridPrc, treatDirSymmetric ) );
-		}
-
-		//Insert displacement along y (and -y)
-		if ( not a.get_movement_fixed()[1] )
-		{
-			V vy = {0,1,0};
-			lattice_.direct_to_cartesian(vy);
-			double dy = a0/magn(vy);
-			reducibleSet.insert( AtomDisplacement(a.get_kind(), dy, a.get_position(),V({0,1,0}), gridPrc, treatDirSymmetric ) );
-			if (symmetricDisplacements)
-				reducibleSet.insert( AtomDisplacement(a.get_kind(), dy, a.get_position(),V({0,-1,0}), gridPrc, treatDirSymmetric ) );
-		}
-
-		//Insert displacement along z (and -z)
-		if ( not a.get_movement_fixed()[2] )
-		{
-			V vz = {0,0,1};
-			lattice_.direct_to_cartesian(vz);
-			double dz = a0/magn(vz);
-			reducibleSet.insert( AtomDisplacement(a.get_kind(), dz, a.get_position(),V({0,0,1}), gridPrc, treatDirSymmetric ) );
-			if (symmetricDisplacements)
-				reducibleSet.insert( AtomDisplacement(a.get_kind(), dz, a.get_position(),V({0,0,-1}), gridPrc, treatDirSymmetric ) );
-		}
-	}
-
-	reducibleDisplacements = std::vector<AtomDisplacement>(
-			reducibleSet.begin(),reducibleSet.end());
-
-	SymmetryReduction<AtomDisplacement>(
+	//find equivalent atoms
+	std::vector<Atom> irredAtoms;
+	std::vector<int> redToIrredAtoms;
+	std::vector<int> symRedToIrredAtoms;
+	std::vector< std::vector<int> > irredToRedAtoms;
+	std::vector< std::vector<int> > symIrredToRedAtoms;
+	SymmetryReduction<Atom>(
 			symmetry_,
-			reducibleDisplacements,  irreducibleDisplacements,
-			redToIrred, symRedToIrred,
-			irredToRed, symIrredToRed);
+			this->get_atoms_list(),  irredAtoms,
+			redToIrredAtoms, symRedToIrredAtoms,
+			irredToRedAtoms, symIrredToRedAtoms);
+
+	std::set<AtomDisplacement> reducibleSet;
+	for ( int ia = 0 ; ia < irredAtoms.size(); ++ia)
+	{
+		std::vector<AtomDisplacement> irreducibleThisAtom, reducibleThisAtom;
+		std::vector<int> redToIrred, symRedToIrred;
+		std::vector< std::vector<int> > irredToRed, symIrredToRed;
+
+		this->get_site_displacements( irredAtoms[ia], symmetricDisplacements, siteSymmetries_[ia], displMagn,
+				irreducibleThisAtom, reducibleThisAtom,
+				 redToIrred, symRedToIrred,
+				 irredToRed, symIrredToRed);
+
+		irreducibleDisplacements.insert( irreducibleDisplacements.end(),
+				irreducibleThisAtom.begin(), irreducibleThisAtom.end() );
+	}
 }
 
-void UnitCell::displace_atom( AtomDisplacement const& displ )
+void
+UnitCell::get_site_displacements(Atom const & atomicSite,
+		bool symmetricDisplacements,
+		LatticeStructure::Symmetry const & siteSymmetry,
+		double displMagn,
+		std::vector<AtomDisplacement> & irreducible,
+		std::vector<AtomDisplacement> & reducible,
+		std::vector<int> & redToIrredDispl,
+		std::vector<int> & symRedToIrredDispl,
+		std::vector< std::vector<int> > & irredToRedDispl,
+		std::vector< std::vector<int> > & symIrredToRedDispl) const
+{
+	typedef std::vector<double> V;
+	auto pos = atomicSite.get_position();
+	auto name = atomicSite.get_kind();
+
+	double delta = siteSymmetry.get_symmetry_prec();
+
+	//The best strategy to save numerical effort is to reduce the number of irreducible displacements.
+	//Thus, one should take displacements that are mapped to linear independent displacements by a site symmetry.
+	//On the other hand, in order to make the calculation of the given displacement more efficient, the
+	//overall symmetry group should not be affected.
+	std::vector<AtomDisplacement> nonRotated;
+	nonRotated.reserve( (symmetricDisplacements ? 6 : 3 ) );
+
+	//Insert displacement along x (and -x)
+	V vx = {1,0,0};
+	this->add_displacement( vx, pos, symmetricDisplacements, name, delta, displMagn, nonRotated);
+
+	//Insert displacement along y (and -y)
+	V vy = {0,1,0};
+	this->add_displacement( vy, pos, symmetricDisplacements, name, delta, displMagn, nonRotated);
+
+	//Insert displacement along z (and -z)
+	V vz = {0,0,1};
+	this->add_displacement( vz, pos, symmetricDisplacements, name, delta, displMagn, nonRotated);
+
+	//expand to all reducible displacements at this site
+	std::vector<AtomDisplacement> rotated;
+	rotated.reserve( nonRotated.size() * siteSymmetry.get_num_symmetries() );
+	for ( int issym = 0 ; issym < siteSymmetry.get_num_symmetries(); ++issym )
+		for ( auto ad : nonRotated)
+		{
+			ad.transform_direction( siteSymmetry.get_sym_op(issym) );
+			rotated.push_back( std::move(ad) );
+		}
+
+	//remove equivalent displacements and find the irreducible set
+	std::set<AtomDisplacement> reducibleSet( rotated.begin(), rotated.end() );
+	reducible.assign( reducibleSet.begin(), reducibleSet.end() );
+	SymmetryReduction<AtomDisplacement>( siteSymmetry,
+			reducible,
+			irreducible,
+			redToIrredDispl, symRedToIrredDispl,
+			irredToRedDispl, symIrredToRedDispl);
+}
+
+void
+UnitCell::add_displacement( std::vector<double> direction,
+		std::vector<double> const & position,
+		bool symmetricDispl,
+		std::string const & atomName,
+		double gridPrec,
+		double magnInAngstroem,
+		std::vector<AtomDisplacement> & addtothis) const
+{
+	auto magn = [] (std::vector<double> const& v) { return std::sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] ); };
+
+	//create normalized cartesian vector for the displacement direction
+	lattice_.direct_to_cartesian(direction);
+	double norm = magn(direction);
+	for ( int i = 0; i < 3; ++i )
+		direction[i] /= norm;
+
+	//Create an atom displacement object
+	addtothis.push_back( AtomDisplacement(atomName, magnInAngstroem, position, direction, gridPrec, (not symmetricDispl) ) );
+
+	if (symmetricDispl)
+	{
+		//add the inverse direction, too
+		for ( int i = 0; i < 3; ++i )
+			direction[i] *= -1;
+		addtothis.push_back( AtomDisplacement(atomName, magnInAngstroem, position, direction, gridPrec, (not symmetricDispl) ) );
+	}
+}
+
+void
+UnitCell::displace_atom( AtomDisplacement const& displ )
 {
 	for ( auto &a : atoms_ )
 	{
@@ -215,26 +264,80 @@ void UnitCell::displace_atom( AtomDisplacement const& displ )
 		if ( a.get_kind().compare( displ.get_kind() ) != 0 )
 			throw std::logic_error(" Displacement does not match the atom at this site ");
 
-		//located atom
+		//displace located atom
 		std::vector<double> newPos = a.get_position();
+		auto v = displ.get_direction();
+		lattice_.cartesian_to_direct( v );
 		for (int i = 0 ; i < 3; ++i )
-			newPos[i] += displ.generate_movement()[i];
+			newPos[i] += v[i]*displ.get_magnitude()/lattice_.get_alat();
 		a.set_position( newPos );
 
-		this->reduce_symmetry_to_lattice();
+		this->set_symmetry_to_lattice(symmetry_);
 		return;
 	}
 	throw std::logic_error("Displacement does not match any atom");
 }
 
-std::vector<double> UnitCell::get_lattice_matrix() const
+LatticeStructure::LatticeModule const &
+UnitCell::get_lattice() const
 {
-	return lattice_.get_latticeMatrix();
+	return lattice_;
 }
 
 double UnitCell::get_alat() const
 {
 	return lattice_.get_alat();
+}
+
+LatticeStructure::Symmetry const &
+UnitCell::get_symmetry() const
+{
+	return symmetry_;
+}
+
+void
+UnitCell::generate_site_symmetries(std::vector<LatticeStructure::Atom> const & atoms,
+		LatticeStructure::Symmetry const & symmetry,
+	std::vector<LatticeStructure::Symmetry> & siteSymmetries) const
+{
+	siteSymmetries.clear();
+	siteSymmetries.reserve( atoms.size() );
+	for ( int ia = 0 ; ia < atoms.size(); ++ia)
+	{
+		auto ss = symmetry;
+		ss.small_group( atoms[ia].get_position() );
+		siteSymmetries.push_back( std::move(ss) );
+	}
+}
+
+LatticeStructure::Symmetry const &
+UnitCell::get_site_symmetry(int atomIndex) const
+{
+	assert( (atomIndex >= 0) && (atomIndex < siteSymmetries_.size() ) );
+	return siteSymmetries_[atomIndex];
+}
+
+void
+UnitCell::generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const
+{
+	std::map< Atom, int > cmpMap;
+	for ( int ia = 0 ; ia < atoms_.size() ; ++ia)
+		cmpMap.insert( std::make_pair( atoms_[ia], ia ) );
+
+	rotationMap.resize( symmetry_.get_num_symmetries() );
+	for (int isym = 0 ; isym < symmetry_.get_num_symmetries(); ++isym)
+	{
+		rotationMap[isym].resize( atoms_.size() );
+		for ( int ia = 0 ; ia < atoms_.size() ; ++ia)
+		{
+			auto a = atoms_[ia];
+			a.transform( symmetry_.get_sym_op(isym) );
+			auto ret = cmpMap.find(a);
+			if ( ret == cmpMap.end() )
+				throw std::logic_error("Cannot find rotated atom: set of atoms not closed under rotations!");
+			rotationMap[isym][ia] = ret->second;
+		}
+	}
 }
 
 } /* namespace LatticeStructure */
