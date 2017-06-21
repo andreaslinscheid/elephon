@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 
 project(elephon)
 
+set(elephon_src_tree ${PROJECT_SOURCE_DIR})
+
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../cmake/Modules)
+
 #Switch on C++11
 if (CMAKE_VERSION VERSION_LESS "3.1")
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -38,25 +42,21 @@ SUBDIRLIST( subdirlist ${CMAKE_CURRENT_SOURCE_DIR} )
 foreach(libElephon ${subdirlist})
 	file(GLOB_RECURSE sources ${libElephon}/*.cpp ${libElephon}/*.h)
 	add_library( ${libElephon} ${sources} )
-	target_include_directories(${libElephon} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_include_directories(${libElephon} PUBLIC ${elephon_src_tree})
 endforeach(libElephon)
 
 add_executable(elephon main.cpp)
-
-target_include_directories(elephon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
 
-find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework regex filesystem system REQUIRED)
-find_package(VTK 6.0 REQUIRED NO_MODULE)
-include(${VTK_USE_FILE})
+include(../cmake/dependencies.cmake)
 
-#HACK (!!!) - ${subdirlist} appears twice to resolve cross dependencies of symbols
-# the linker should stop searching once it hits the first, so this should work without causing harm ..
-target_link_libraries(elephon PUBLIC
-  ${subdirlist} ${subdirlist} ${Boost_LIBRARIES} ${VTK_LIBRARIES} "-lfftw3"
-)
+list(APPEND elephon_OPTS "-Wall" "-Wno-sign-compare")
+
+target_compile_options(elephon PUBLIC ${elephon_OPTS} )
+target_include_directories(elephon PUBLIC ${elephon_INCLUDE})
+
+target_link_libraries(elephon PUBLIC ${elephon_LD_LIBS} )
 
 include(CTest)
 
@@ -69,13 +69,13 @@ foreach(testSrc ${sources_test})
 
         #link to Boost libraries AND your targets and dependencies
 	#HACK see before - ${subdirlist} appears twice
-        target_link_libraries(${testName} ${subdirlist} ${subdirlist} ${Boost_LIBRARIES} ${VTK_LIBRARIES} "-lfftw3" )
+        target_link_libraries(${testName} PUBLIC ${elephon_LD_LIBS} )
 
         #I like to move testing binaries into a test/bin directory
         set_target_properties(${testName} PROPERTIES 
             RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin)
-	target_compile_options(${testName} PUBLIC -std=c++11 -Wall)
-	target_include_directories(${testName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+	target_compile_options(${testName} PUBLIC ${elephon_OPTS})
+	target_include_directories(${testName} PUBLIC ${elephon_INCLUDE})
 
         #Finally add it to test execution - 
         #Notice the WORKING_DIRECTORY and COMMAND
