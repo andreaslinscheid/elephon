@@ -13,4 +13,7 @@
 !.htaccess
 #some dirs that do not contain source code
 eclipse/
+debug/
+release/
+test/bin
 #the tests.cpp files, since they are automatically generated
