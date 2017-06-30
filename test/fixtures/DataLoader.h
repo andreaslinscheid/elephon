@@ -1,4 +1,4 @@
-/*	This file ReadVASPPoscar.h is part of elephon.
+/*	This file DataLoader.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,43 +13,40 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: Jun 21, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOSCAR_H_
+#ifndef TEST_FIXTURES_DATALOADER_H_
+#define TEST_FIXTURES_DATALOADER_H_
 
-#include "LatticeStructure/Atom.h"
+#include "IOMethods/VASPInterface.h"
 #include <string>
-#include <vector>
+#include <memory>
 
-namespace elephon
+namespace test
 {
-namespace IOMethods
+namespace fixtures
 {
 
-/**
- *
- */
-class ReadVASPPoscar
+class DataLoader
 {
 public:
-	void read_file( std::string filename,
-			std::vector<std::string> const & defaultAtoms = std::vector<std::string>() );
 
-	std::vector<double> get_lattice_matrix() const;
+	std::shared_ptr<elephon::IOMethods::VASPInterface>
+		create_vasp_loader(	std::string const & contentInputFile,
+							std::string fileName = std::string()) const;
 
-	std::vector<LatticeStructure::Atom> get_atoms_list() const;
+	elephon::LatticeStructure::UnitCell
+		load_unit_cell(		std::string const & contentInputFile,
+							std::string fileName = std::string()) const;
 
 private:
 
-	std::vector<double> latticeMatrix_;
-
-	std::vector<LatticeStructure::Atom> atoms_;
+	void process_fileName(std::string & fileName ) const;
 };
 
-} /* namespace IOMethods */
-} /* namespace elephon */
+} /* namespace fixtures */
+} /* namespace test */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOSCAR_H_ */
+#endif /* TEST_FIXTURES_DATALOADER_H_ */

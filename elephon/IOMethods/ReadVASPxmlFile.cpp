@@ -82,12 +82,44 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	};
 
 	forces_ = newForces;
+
+	std::vector<double> newKpts;
+	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.kpoints") )
+	{
+	    if(val.first == "varray")
+	    {
+	        std::string temp = val.second.get_child("<xmlattr>.name").data();
+	        if ( temp == "kpointlist")
+	        {
+	        	BOOST_FOREACH( ptree::value_type const& val2, val.second )
+				{
+					if ( val2.first == "v" )
+					{
+						double tmp;
+						std::stringstream ss( val2.second.data() );
+						for ( int i = 0 ; i < 3 ; ++i)
+						{
+							ss >> tmp;
+							newKpts.push_back( tmp );
+						}
+					}
+				}
+	        }
+	    }
+	}
+	kpoints_ = newKpts;
 }
 
 std::vector<double> const &
 ReadVASPxmlFile::get_forces() const
 {
 	return forces_;
+}
+
+std::vector<double> const &
+ReadVASPxmlFile::get_k_points() const
+{
+	return kpoints_;
 }
 
 double

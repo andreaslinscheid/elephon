@@ -54,12 +54,12 @@ void LatticeModule::initialize( std::vector<double> latticeMatrix )
 	double unitCellVolume = a1[0]*b1[0]+a1[1]*b1[1]+a1[2]*b1[2];
 	assert( unitCellVolume > 0 );
 
-	reciLatMatrix_ = std::vector<double>(9);
+	reciLatMatrix_.resize(9);
 	for ( int i = 0 ; i < 3; i++)
 	{
-		 reciLatMatrix_[i*3+0] = 2*M_PI*b1[i]/unitCellVolume;
-		 reciLatMatrix_[i*3+1] = 2*M_PI*b2[i]/unitCellVolume;
-		 reciLatMatrix_[i*3+2] = 2*M_PI*b3[i]/unitCellVolume;
+		 reciLatMatrix_[0*3+i] = b1[i]/unitCellVolume;
+		 reciLatMatrix_[1*3+i] = b2[i]/unitCellVolume;
+		 reciLatMatrix_[2*3+i] = b3[i]/unitCellVolume;
 	}
 
 	//We define alat as the length of the first lattice vector
@@ -69,7 +69,7 @@ void LatticeModule::initialize( std::vector<double> latticeMatrix )
 	for (auto &aij : latticeMatrix_)
 		aij /= alat_;
 	for (auto &bij : reciLatMatrix_)
-		bij *= alat_/(2*M_PI);
+		bij *= alat_;
 
 }
 
@@ -113,6 +113,14 @@ void LatticeModule::direct_to_cartesian(std::vector<double> & v) const
 		for ( int i = 0 ; i < 3; i++)
 			v[ic*3+i] = latticeMatrix_[i*3+0]*b[0]+latticeMatrix_[i*3+1]*b[1]+latticeMatrix_[i*3+2]*b[2];
 	}
+}
+
+void
+LatticeModule::direct_to_cartesian_angstroem(std::vector<double> & v) const
+{
+	this->direct_to_cartesian(v);
+	for ( auto &xi : v )
+		xi *= alat_;
 }
 
 void LatticeModule::cartesian_to_direct(std::vector<double> & v) const

@@ -1,4 +1,4 @@
-/*	This file ReadVASPxmlFile.h is part of elephon.
+/*	This file FixtureForceConstant.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,45 +13,28 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 31, 2017
+ *  Created on: Jun 21, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPXMLFILE_H_
-#define ELEPHON_IOMETHODS_READVASPXMLFILE_H_
+#ifndef TEST_FIXTURES_FIXTUREFORCECONSTANT_H_
+#define TEST_FIXTURES_FIXTUREFORCECONSTANT_H_
 
-#include <vector>
-#include <string>
+#include "PhononStructure/ForceConstantMatrix.h"
 
-namespace elephon
+namespace test
 {
-namespace IOMethods
+namespace fixtures
 {
 
-class ReadVASPxmlFile
+class FixtureForceConstant
 {
 public:
 
-	void parse_file( std::string filename );
-
-	std::vector<double> const & get_forces() const;
-
-	std::vector<double> const & get_k_points() const;
-
-	double get_Fermi_energy() const;
-
-private:
-
-	double eFermi_ = 0;
-
-	std::string filename_;
-
-	std::vector<double> forces_;
-
-	std::vector<double> kpoints_;
+	elephon::PhononStructure::ForceConstantMatrix compute_fc_for_Al_gamma();
 };
 
-} /* namespace IOMethods */
-} /* namespace elephon */
+} /* namespace fixtures */
+} /* namespace test */
 
-#endif /* ELEPHON_IOMETHODS_READVASPXMLFILE_H_ */
+#endif /* TEST_FIXTURES_FIXTUREFORCECONSTANT_H_ */

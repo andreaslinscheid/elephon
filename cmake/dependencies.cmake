@@ -7,7 +7,7 @@ set(elephon_OPTS "")
 # %%%% HACK (!!!) %%%%
 # ${subdirlist} appears twice to resolve cross dependencies of symbols
 # the linker should stop searching once it hits the first, so this should work without causing harm ..
-list(APPEND elephon_LD_LIBS  ${subdirlist} ${subdirlist} )
+list(APPEND elephon_LD_LIBS  ${subdirlist} ${subdirlist} ${subdirlist})
 list(APPEND elephon_INCLUDE ${elephon_src_tree})
 
 # BOOST

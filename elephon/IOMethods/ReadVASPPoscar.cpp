@@ -30,7 +30,8 @@ namespace elephon
 namespace IOMethods
 {
 
-void ReadVASPPoscar::read_file( std::string filename )
+void ReadVASPPoscar::read_file( std::string filename,
+		std::vector<std::string> const & defaultAtoms )
 {
 	std::ifstream file( filename.c_str() );
 	if ( ! file.good() )
@@ -101,9 +102,24 @@ void ReadVASPPoscar::read_file( std::string filename )
 	if ( atomsList.size() != 0 )
 		nAtomTypes = static_cast<int>(atomsList.size());
 
+	if ( not atomsList.empty() )
+	{
+		//Prefer the default atoms over the ones presented here
+		if ( not defaultAtoms.empty() )
+		{
+			if ( atomsList.size() != defaultAtoms.size() )
+				throw std::runtime_error("Error parsing POSCAR file: # of default atoms and atoms in file different");
+			atomsList = defaultAtoms;
+		}
+		//The list of atoms was provided - we need to read the next line with
+		//the number of atoms per atom type which is parsed in the next step
+		std::getline( file , buffer );
+	}
+	else
+		atomsList = defaultAtoms;
+
 	//Now that we know how many atom types, read the number of ions per type
 	std::vector<int> numAtomPerType(nAtomTypes);
-	std::getline( file , buffer );
 	std::stringstream ssAtoms(buffer);
 	ssAtoms.exceptions(std::ifstream::failbit);
 	for (int i = 0 ; i < nAtomTypes; ++i)

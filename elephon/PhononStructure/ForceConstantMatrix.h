@@ -41,7 +41,7 @@ public:
 			std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
 			std::vector<std::vector<double>> forces);
 
-	double operator() (int mu1, int mu2, int Rx, int Ry, int Rz) const;
+	double operator() (int Rz, int Ry, int Rx,int mu2, int mu1) const;
 
 	void fourier_transform_q(std::vector<double> const & qVect,
 			std::vector<std::complex<double>> & data) const;
@@ -49,20 +49,21 @@ public:
 	int get_num_modes() const;
 
 	int get_num_R() const;
+
+	void symmetrize(
+			bool accusticSumRule,
+			LatticeStructure::Symmetry const & symmetry );
 private:
 
 	int numModes_ = 0;
 
 	std::vector<int> supercellDim_;
 
-	//The R vector grid spans the cell from [1,1] including both borders in each direction
-	std::vector<int> RVectorDim_;
-
-	std::vector<int> RSupercellMultiplicity_;
-
 	std::vector<double> data_;
 
-	std::vector<double> tau_;
+	///For all atoms 'a' in the unit cell, tau_ contains for all atoms 'b' in the unit cell
+	// and the set of R vectors [(tau_a-tau_b)*numR+ir] a set with vectors of atom positions
+	std::vector< std::vector<double> > tau_;
 
 	void set_supercell_dim(
 			LatticeStructure::UnitCell const & unitCell,
@@ -78,13 +79,11 @@ private:
 
 	int mem_layout( int ir, int mu2, int mu1 ) const;
 
-	void shift_atoms_into_map( std::vector<LatticeStructure::Atom> const & atoms,
-			LatticeStructure::Atom const & site,
-			std::map<LatticeStructure::Atom,int> & shiftedLattice) const;
-
-	void transform_map( std::map<LatticeStructure::Atom,int> & shiftedLattice,
-			LatticeStructure::Symmetry::SymmetryOperation const & symOp,
-			std::vector<int> & rotAtomsMap) const;
+	void transform_map(
+			std::vector<double> const & shift,
+			std::vector<LatticeStructure::Atom> atoms,
+			LatticeStructure::Symmetry const & siteSymmetry,
+			std::vector< std::vector<int> > & rotAtomsMap) const;
 
 	void drift_clean_forces(
 			std::vector<std::vector<double>> forces) const;

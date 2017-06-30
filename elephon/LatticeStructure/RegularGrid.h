@@ -23,7 +23,7 @@
 #include "LatticeStructure/Symmetry.h"
 #include "LatticeStructure/LatticeModule.h"
 #include <vector>
-#include <set>
+#include <map>
 
 namespace elephon
 {
@@ -113,7 +113,7 @@ private:
 	std::vector< std::vector<int> > symIrredToRedMap_;
 
 	void construct_grid_vector_set(
-			std::set< RegularGrid::GridPoint > & reducibleSet) const;
+			std::map< RegularGrid::GridPoint, int > & reducibleSet) const;
 
 };
 

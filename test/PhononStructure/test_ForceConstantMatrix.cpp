@@ -24,10 +24,87 @@
 #include "PhononStructure/ForceConstantMatrix.h"
 #include "IOMethods/Input.h"
 #include "IOMethods/VASPInterface.h"
+#include "fixtures/MockStartup.h"
+#include "fixtures/DataLoader.h"
 #include <assert.h>
 #include <vector>
 #include <fstream>
 #include <string>
+
+BOOST_AUTO_TEST_CASE( build_Al_primitive )
+{
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
+	auto phononDir = rootDir / "phonon";
+
+	//reference data - pulled from the file - for irreducible displacement 0
+	// which displaces atom 0 in direction x and is thus element mu2 = 0
+	//Use it to compute the first column of phi explicitly
+	std::vector<double> ref_forces_displ_0 =	//	Positions in unperturbed cell (mapped to the 1 UC):
+	{ 0.03277268,-0.00000000, 0.00000000,
+	 -0.00119738,-0.00124887,-0.01569525,
+	 -0.00119738,-0.01521390, 0.00405430,
+	  0.00721062,-0.00000000, 0.00000000,
+	 -0.02158553,-0.00000000, 0.00000000,
+	 -0.00119738, 0.00124887, 0.01569525,
+	 -0.00119738, 0.01521390,-0.00405430,
+	 -0.01360824,-0.00000000, 0.00000000};
+
+	double magn = (1-0.99824900)*5.71025;
+
+	for ( auto &f : ref_forces_displ_0)
+		f /= magn;
+
+	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
+	std::vector<elephon::LatticeStructure::Atom> atomsUC;
+	elephon::LatticeStructure::Symmetry symmetry;
+	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::LatticeModule  lattice;
+	//here we create the test input file
+	std::string content = std::string()+
+			"scell=2 2 2\n"
+			"root_dir="+rootDir.string()+"\n"
+			"elphd="+phononDir.string()+"\n"
+			"";
+
+	test::fixtures::DataLoader dl;
+	loader = dl.create_vasp_loader( content );
+
+	loader->read_cell_paramters( rootDir.string(),
+			1e-6,kgrid, lattice, atomsUC, symmetry);
+
+	elephon::LatticeStructure::UnitCell unitCell;
+	unitCell.initialize(atomsUC,lattice, symmetry);
+
+	//here we build the supercell that was used to generate the test data.
+	auto supercell = unitCell.build_supercell( 2, 2, 2 );
+
+	//Here, we regenerate the displacement
+	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDispl;
+	unitCell.generate_displacements(0.01,
+			true,
+			irreducibleDispl);
+
+	//Here, we read the forces from the vasp output
+	int nIrdDispl = int(irreducibleDispl.size());
+	std::vector<std::vector<double>> forces( nIrdDispl );
+	std::vector<double> thisForces;
+	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
+	{
+		loader->read_forces(
+				(phononDir / (std::string("displ_")+std::to_string(idispl))).string(),
+				thisForces);
+
+		forces[idispl] = std::move(thisForces);
+	}
+
+	elephon::PhononStructure::ForceConstantMatrix phi;
+	phi.build( unitCell, supercell, irreducibleDispl, forces);
+
+	BOOST_REQUIRE( phi.get_num_modes() == 3 );
+
+	BOOST_REQUIRE( phi.get_num_R() == 2*2*2 );
+}
 
 void load_data(
 		boost::filesystem::path rootDir ,
@@ -43,28 +120,9 @@ void load_data(
 			"root_dir="+rootDir.string()+"\n"
 			"elphd="+rootDir.string()+"\n"
 			"";
-	std::ofstream file( (rootDir / "test_elephon_input.dat").c_str() );
-	file << content;
-	file.close();
 
-	//here we read the input file via elephons input mechanism
-	std::string progn("program name");
-	std::string fileName = (rootDir / "test_elephon_input.dat").string();
-	char * prog = new char [progn.size()+1];
-	std::copy(progn.begin(),progn.end(),prog);
-	prog[progn.size()] = '\0';
-	char * arg =  new char [fileName.size()+1];
-	std::copy(fileName.begin(),fileName.end(),arg);
-	arg[fileName.size()] = '\0';
-	char *argv[] = {prog, arg, NULL};
-	int argc = sizeof(argv) / sizeof(char*) - 1;
-	elephon::IOMethods::Input input(argc,argv);
-	elephon::IOMethods::InputOptions options = input.get_opts();
-	delete [] prog;
-	delete [] arg;
-
-	//introduce the VASP data loader
-	loader = std::make_shared< elephon::IOMethods::VASPInterface >(input.get_opts());
+	test::fixtures::DataLoader dl;
+	loader = dl.create_vasp_loader( content );
 
 	loader->read_cell_paramters( rootDir.string(),
 			1e-6,kgrid, lattice, atomsUC, symmetry);
@@ -79,8 +137,7 @@ void run_test(boost::filesystem::path rootDir ,
 		std::vector<elephon::LatticeStructure::Atom> const & atomsUC,
 		elephon::LatticeStructure::Symmetry const & symmetry,
 		elephon::LatticeStructure::RegularGrid  const& kgrid,
-		elephon::LatticeStructure::LatticeModule  const& lattice,
-		std::vector<double> const & ref_forces_displ_0)
+		elephon::LatticeStructure::LatticeModule  const& lattice)
 {
 	elephon::LatticeStructure::UnitCell unitCell;
 	unitCell.initialize(atomsUC,lattice, symmetry);
@@ -99,7 +156,7 @@ void run_test(boost::filesystem::path rootDir ,
 
 	//Here, we read the forces from the vasp output
 	int nIrdDispl = int(irreducibleDispl.size());
-	std::vector<std::vector<double>> forces( nIrdDispl+1 );
+	std::vector<std::vector<double>> forces( nIrdDispl );
 	std::vector<double> thisForces;
 	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
 	{
@@ -109,18 +166,27 @@ void run_test(boost::filesystem::path rootDir ,
 
 		forces[idispl] = std::move(thisForces);
 	}
-	//The last element is set of residual forces in the clean supercell
-	loader->read_forces(
-					(rootDir / "scell").string(),
-					thisForces);
-	forces[nIrdDispl] = std::move(thisForces);
 
 	elephon::PhononStructure::ForceConstantMatrix phi;
 	phi.build( unitCell, supercell, irreducibleDispl, forces);
 
 	BOOST_REQUIRE( phi.get_num_modes() == 4*3 );
 
-	BOOST_REQUIRE( phi.get_num_R() == 2*2*2 );
+	BOOST_REQUIRE( phi.get_num_R() == 1 );
+
+	//reference data - pulled from the file - for irreducible displacement 0
+	// which displaces atom 0 in direction x and is thus element mu2 = 0
+	//Use it to compute the first column of phi explicitly
+	std::vector<double> ref_forces_displ_0 =	//	Positions in unperturbed cell (mapped to the 1 UC):
+	{-0.01980411 , -0.00000000 ,  0.00000000, // 0.00000000  0.00000000  0.00000000  R= 0 0 0 Atom : 0
+	 -0.02861889 ,  0.00000000 ,  0.00000000, // 0.00000000 -0.25000000 -0.50000000  R= 0 0 0 Atom : 1
+	  0.02421150 ,  0.00000000 ,  0.00000000, //-0.25000000  0.00000000 -0.50000000  R= 0 0 0 Atom : 2
+	  0.02421150 ,  0.00000000 ,  0.00000000};//-0.25000000 -0.25000000  0.00000000  R= 0 0 0 Atom : 3
+
+	double magn =  0.00247600*4.03893000;
+
+	for ( auto &f : ref_forces_displ_0)
+		f /= -magn;
 
 	//Check the R = 0 first column
 	//We can't be too greedy here - the forces are not more than 2% accurate
@@ -137,7 +203,7 @@ void run_test(boost::filesystem::path rootDir ,
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 10, 0) , ref_forces_displ_0[10] , 2 );
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 11, 0) , ref_forces_displ_0[11] , 2 );
 
-	//it has to equal the row too
+	//it has to equal the row, too
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 0,  0) , ref_forces_displ_0[ 0] , 2 );
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 0,  1) , ref_forces_displ_0[ 1] , 2 );
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 0,  2) , ref_forces_displ_0[ 2] , 2 );
@@ -151,7 +217,7 @@ void run_test(boost::filesystem::path rootDir ,
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 0, 10) , ref_forces_displ_0[10] , 2 );
 	BOOST_CHECK_CLOSE( phi(0, 0, 0, 0, 11) , ref_forces_displ_0[11] , 2 );
 
-	//While the data was generated without symmetry, it must still be approximately there
+	//Even if the data was generated without symmetry, it must still be approximately there
 	elephon::LatticeStructure::UnitCell symmetricUC;
 	symmetricUC.initialize( atomsUC, lattice, symmetry);
 	std::vector<std::vector<int> > rotMap;
@@ -182,28 +248,16 @@ void run_test(boost::filesystem::path rootDir ,
 		}
 }
 
+
 BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_no_symmetry )
 {
-	boost::filesystem::path rootDir = boost::filesystem::path(__FILE__).parent_path()
-			/ "../data_for_testing/Al/vasp/build_mat_fc_no_sym/";
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "build_mat_fc_no_sym" ;
+	auto phononDir = rootDir / "phonon" ;
 
 	//In this example we don't include symmetries
 	elephon::LatticeStructure::Symmetry identityGroup;
 
-	//reference data - pulled from the file - for irreducible displacement 0
-	// which displaces atom 0 in direction x and is thus element mu2 = 0
-	//Use it to compute the first column of phi explicitly
-	std::vector<double> ref_forces_displ_0 =	//	Positions in unperturbed cell (mapped to the 1 UC):
-	{-0.02181663 ,  0.00000000 , -0.00000000, // 0.00000000  0.00000000  0.00000000  R= 0 0 0 Atom : 0
-	  0.02968642 , -0.00000000 ,  0.00000000, // 0.00000000 -0.25000000 -0.50000000  R= 0 0 0 Atom : 1
-	 -0.00393490 , -0.00000000 ,  0.00000000, //-0.25000000  0.00000000 -0.50000000  R= 0 0 0 Atom : 2
-	 -0.00393490 , -0.00000000 ,  0.00000000};//-0.25000000 -0.25000000  0.00000000  R= 0 0 0 Atom : 3
-
-	double magn = -0.00123800*8.07786000;
-
-	for ( auto &f : ref_forces_displ_0)
-		f /= magn;
-
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
 	elephon::LatticeStructure::Symmetry symmetry;
@@ -211,27 +265,14 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_no_symmetry )
 	elephon::LatticeStructure::LatticeModule  lattice;
 	load_data( rootDir, loader, atomsUC, symmetry, kgrid, lattice);
 
-	run_test( rootDir, loader, atomsUC, identityGroup, kgrid, lattice, ref_forces_displ_0 );
+	run_test( phononDir, loader, atomsUC, identityGroup, kgrid, lattice );
 }
 
 BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_partial_symmetry )
 {
-	boost::filesystem::path rootDir = boost::filesystem::path(__FILE__).parent_path()
-			/ "../data_for_testing/Al/vasp/build_mat_fc_partial_sym/";
-
-	//reference data - pulled from the file - for irreducible displacement 0
-	// which displaces atom 0 in direction x and is thus element mu2 = 0
-	//Use it to compute the first column of phi explicitly
-	std::vector<double> ref_forces_displ_0 =	//	Positions in unperturbed cell (mapped to the 1 UC):
-	{-0.02181663 ,  0.00000000 , -0.00000000, // 0.00000000  0.00000000  0.00000000  R= 0 0 0 Atom : 0
-	  0.02968642 , -0.00000000 ,  0.00000000, // 0.00000000 -0.25000000 -0.50000000  R= 0 0 0 Atom : 1
-	 -0.00393490 , -0.00000000 ,  0.00000000, //-0.25000000  0.00000000 -0.50000000  R= 0 0 0 Atom : 2
-	 -0.00393490 , -0.00000000 ,  0.00000000};//-0.25000000 -0.25000000  0.00000000  R= 0 0 0 Atom : 3
-
-	double magn = -0.00123800*8.07786000;
-
-	for ( auto &f : ref_forces_displ_0)
-		f /= magn;
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "build_mat_fc_partial_sym" ;
+	auto phononDir = rootDir / "phonon" ;
 
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
@@ -240,39 +281,26 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_partial_symmetry )
 	elephon::LatticeStructure::LatticeModule  lattice;
 	load_data( rootDir, loader, atomsUC, symmetry, kgrid, lattice);
 
-	std::vector<int> symmetries = { 1, 0, 0,
-							 0, 1, 0,
-							 0, 0, 1,
-							 0, 1, 0,
-							 1, 0, 0,
-							 0, 0, 1};
+	std::vector<int> symmetries = {  1, 0, 0,
+									 0, 1, 0,
+									 0, 0, 1,
+									 0, 1, 0,
+									 1, 0, 0,
+									 0, 0, 1};
 
-	std::vector<double> translations = { 0, 0, 0,
-							 	 0, 0, 0};
+	std::vector<double> translations = { 	0, 0, 0,
+											0, 0, 0};
 	elephon::LatticeStructure::Symmetry overwrite;
 	overwrite.initialize(1e-6,symmetries,translations,lattice,false);
 
-	run_test( rootDir, loader, atomsUC, overwrite, kgrid, lattice, ref_forces_displ_0 );
+	run_test( phononDir, loader, atomsUC, overwrite, kgrid, lattice );
 }
 
 BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_full_symmetry )
 {
-	boost::filesystem::path rootDir = boost::filesystem::path(__FILE__).parent_path()
-			/ "../data_for_testing/Al/vasp/phonon_test/";
-
-	//reference data - pulled from the file - for irreducible displacement 0
-	// which displaces atom 0 in direction x and is thus element mu2 = 0
-	//Use it to compute the first column of phi explicitly
-	std::vector<double> ref_forces_displ_0 =	//	Positions in unperturbed cell (mapped to the 1 UC):
-	{-0.02181663 ,  0.00000000 , -0.00000000, // 0.00000000  0.00000000  0.00000000  R= 0 0 0 Atom : 0
-	  0.02968642 , -0.00000000 ,  0.00000000, // 0.00000000 -0.25000000 -0.50000000  R= 0 0 0 Atom : 1
-	 -0.00393490 , -0.00000000 ,  0.00000000, //-0.25000000  0.00000000 -0.50000000  R= 0 0 0 Atom : 2
-	 -0.00393490 , -0.00000000 ,  0.00000000};//-0.25000000 -0.25000000  0.00000000  R= 0 0 0 Atom : 3
-
-	double magn = -0.00123800*8.07786000;
-
-	for ( auto &f : ref_forces_displ_0)
-		f /= magn;
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "phonon_test" ;
+	auto phononDir = rootDir / "phonon" ;
 
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
@@ -281,5 +309,5 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_full_symmetry )
 	elephon::LatticeStructure::LatticeModule  lattice;
 	load_data( rootDir, loader, atomsUC, symmetry, kgrid, lattice);
 
-	run_test( rootDir, loader, atomsUC, symmetry, kgrid, lattice, ref_forces_displ_0 );
+	run_test( phononDir, loader, atomsUC, symmetry, kgrid, lattice );
 }

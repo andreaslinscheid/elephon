@@ -19,11 +19,14 @@
 
 #include "UnitCell.h"
 #include "SymmetryReduction.h"
+#include "Algorithms/LinearAlgebraInterface.h"
 #include <map>
 #include <cmath>
 #include <stdexcept>
 #include <string>
 #include <set>
+#include <iostream>
+#include <algorithm>
 
 namespace elephon
 {
@@ -98,9 +101,9 @@ UnitCell UnitCell::build_supercell(int scx, int scy, int scz) const
 	//Here we build the new set of Atoms
 	std::vector<LatticeStructure::Atom> newAtoms;
 	newAtoms.reserve( atoms_.size()*scx*scy*scz );
-	for ( int iscx = 0 ; iscx < scx ; ++iscx)
+	for ( int iscz = 0 ; iscz < scz ; ++iscz)
 		for ( int iscy = 0 ; iscy < scy ; ++iscy)
-			for ( int iscz = 0 ; iscz < scz ; ++iscz)
+			for ( int iscx = 0 ; iscx < scx ; ++iscx)
 			{
 				std::vector<double> baseVect =
 					{ double(iscx)/double(scx),double(iscy)/double(scy),double(iscz)/double(scz) };
@@ -180,44 +183,153 @@ UnitCell::get_site_displacements(Atom const & atomicSite,
 	auto name = atomicSite.get_kind();
 
 	double delta = siteSymmetry.get_symmetry_prec();
+	Algorithms::LinearAlgebraInterface linAlg;
 
 	//The best strategy to save numerical effort is to reduce the number of irreducible displacements.
 	//Thus, one should take displacements that are mapped to linear independent displacements by a site symmetry.
 	//On the other hand, in order to make the calculation of the given displacement more efficient, the
 	//overall symmetry group should not be affected.
 	std::vector<AtomDisplacement> nonRotated;
-	nonRotated.reserve( (symmetricDisplacements ? 6 : 3 ) );
+	std::vector<AtomDisplacement> rotated;
 
-	//Insert displacement along x (and -x)
+	auto symmetry_expand = [&] () {
+		rotated.clear();
+		rotated.reserve( nonRotated.size() * siteSymmetry.get_num_symmetries() );
+		irredToRedDispl.resize(nonRotated.size(), std::vector<int>( siteSymmetry.get_num_symmetries() ));
+		symIrredToRedDispl.resize(nonRotated.size(), std::vector<int>( siteSymmetry.get_num_symmetries() ));
+		redToIrredDispl.resize(nonRotated.size()* siteSymmetry.get_num_symmetries());
+		symRedToIrredDispl.resize(nonRotated.size()* siteSymmetry.get_num_symmetries());
+		for ( int issym = 0 ; issym < siteSymmetry.get_num_symmetries(); ++issym )
+		{
+			for (int inr = 0 ; inr < nonRotated.size(); ++inr)
+			{
+				irredToRedDispl[inr][issym] = rotated.size();
+				symIrredToRedDispl[inr][issym] = issym;
+				redToIrredDispl[rotated.size()] = inr;
+				symRedToIrredDispl[rotated.size()] = siteSymmetry.get_index_inverse(issym);
+				auto ad = nonRotated[inr];
+				ad.transform_direction( siteSymmetry.get_sym_op(issym) );
+				rotated.push_back( std::move(ad) );
+			}
+		}
+	};
+
+	//Insert displacement along lattice x
 	V vx = {1,0,0};
-	this->add_displacement( vx, pos, symmetricDisplacements, name, delta, displMagn, nonRotated);
-
-	//Insert displacement along y (and -y)
-	V vy = {0,1,0};
-	this->add_displacement( vy, pos, symmetricDisplacements, name, delta, displMagn, nonRotated);
-
-	//Insert displacement along z (and -z)
-	V vz = {0,0,1};
-	this->add_displacement( vz, pos, symmetricDisplacements, name, delta, displMagn, nonRotated);
+	lattice_.direct_to_cartesian_angstroem(vx);
+	nonRotated.push_back( AtomDisplacement(name, displMagn, pos, vx, delta, (not symmetricDisplacements) ) );
 
 	//expand to all reducible displacements at this site
-	std::vector<AtomDisplacement> rotated;
-	rotated.reserve( nonRotated.size() * siteSymmetry.get_num_symmetries() );
-	for ( int issym = 0 ; issym < siteSymmetry.get_num_symmetries(); ++issym )
-		for ( auto ad : nonRotated)
+	symmetry_expand();
+
+	//Add the minus displacement if it is not already in the set
+	V mvx = {-1,0,0};
+	lattice_.direct_to_cartesian_angstroem(mvx);
+	AtomDisplacement minusDx(name, displMagn, pos, mvx, delta, (not symmetricDisplacements) );
+	auto it = std::find( rotated.begin(), rotated.end(), minusDx);
+	if ( (it == rotated.end()) and (symmetricDisplacements) )
+	{
+		nonRotated.push_back( std::move(minusDx) );
+		symmetry_expand();
+	}
+
+	V redDisplTmp;
+	redDisplTmp.resize(3*rotated.size());
+	for ( int i = 0 ; i < rotated.size(); ++i)
+		for ( int j = 0 ; j < 3; ++j)
+		redDisplTmp[i*3+j] = rotated[i].get_direction()[j];
+
+	//Check if the resulting set of vectors spans full 3D space.
+	//Very small overlaps (<0.01) are considered null
+	int nullDim;
+	V nullSpace;
+	linAlg.null_space(redDisplTmp,rotated.size(),3,nullDim,nullSpace, 0.01);
+
+	auto normalize = [] (V & v ){
+		assert(v.size() == 3 );
+		double norm = std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+		for ( auto &a : v)
+			a /= norm;
+	};
+
+	auto check_overlap_is_small = [] ( V const & nullSpace, int nullDim, V const & trialVector) {
+		const double small = 0.01;
+		assert(nullSpace.size() == 3*nullDim );
+		assert(trialVector.size() == 3 );
+		bool overlapIsZero = true;
+		for ( int i = 0 ; i < nullDim ; ++i )
 		{
-			ad.transform_direction( siteSymmetry.get_sym_op(issym) );
-			rotated.push_back( std::move(ad) );
+			double overlap = 0;
+			for ( int j = 0 ; j < 3 ; ++j )
+				overlap += nullSpace[i*3+j]*trialVector[j];
+			overlapIsZero = overlapIsZero and (overlap < small);
+		}
+		return overlapIsZero;
+	};
+
+	if ( nullDim != 0 )
+	{
+		//x + rotations do not span 3D space, insert displacement
+		// along y (and -y) if its overlap with the nullSpace is not zero
+		V vy = {0,1,0};
+		lattice_.direct_to_cartesian_angstroem(vy);
+		if ( not check_overlap_is_small(nullSpace, nullDim, vy) )
+			nonRotated.push_back( AtomDisplacement(name, displMagn, pos, vy, delta, (not symmetricDisplacements) ) );
+
+		//nonRotated contains now x and y - expand by symmetry and check null space again
+		symmetry_expand();
+
+		V mvy = {0,-1,0};
+		lattice_.direct_to_cartesian_angstroem(mvy);
+		AtomDisplacement minusDy(name, displMagn, pos, mvy, delta, (not symmetricDisplacements) );
+		auto it = std::find( rotated.begin(), rotated.end(), minusDy);
+		if ( (it == rotated.end()) and (symmetricDisplacements) )
+		{
+			nonRotated.push_back( std::move(minusDy) );
+			symmetry_expand();
 		}
 
-	//remove equivalent displacements and find the irreducible set
-	std::set<AtomDisplacement> reducibleSet( rotated.begin(), rotated.end() );
-	reducible.assign( reducibleSet.begin(), reducibleSet.end() );
-	SymmetryReduction<AtomDisplacement>( siteSymmetry,
-			reducible,
-			irreducible,
-			redToIrredDispl, symRedToIrredDispl,
-			irredToRedDispl, symIrredToRedDispl);
+		redDisplTmp.resize(3*rotated.size());
+		for ( int i = 0 ; i < rotated.size(); ++i)
+			for ( int j = 0 ; j < 3; ++j)
+			redDisplTmp[i*3+j] = rotated[i].get_direction()[j];
+		linAlg.null_space(redDisplTmp,rotated.size(),3,nullDim,nullSpace, 0.01);
+	}
+
+	if ( nullDim != 0 )
+	{
+		//x, y + rotations do not span 3D space, insert displacement
+		// along z (and -z) if its overlap with the nullSpace is not zero
+		V vz = {0,0,1};
+		lattice_.direct_to_cartesian_angstroem(vz);
+		nonRotated.push_back( AtomDisplacement(name, displMagn, pos, vz, delta, (not symmetricDisplacements) ) );
+
+		symmetry_expand();
+
+		V mvz = {0,0,-1};
+		lattice_.direct_to_cartesian_angstroem(mvz);
+		AtomDisplacement minusDz(name, displMagn, pos, mvz, delta, (not symmetricDisplacements) );
+		auto it = std::find( rotated.begin(), rotated.end(), minusDz);
+		if ( (it == rotated.end()) and (symmetricDisplacements) )
+		{
+			nonRotated.push_back( std::move(minusDz) );
+			symmetry_expand();
+		}
+
+		//In principle, if the algorithm work, the following is unnecessary but better check
+		//nonRotated contains now x, y and z - expand by symmetry and check null space again
+		redDisplTmp.resize(3*rotated.size());
+		for ( int i = 0 ; i < rotated.size(); ++i)
+			for ( int j = 0 ; j < 3; ++j)
+			redDisplTmp[i*3+j] = rotated[i].get_direction()[j];
+		linAlg.null_space(redDisplTmp,rotated.size(),3,nullDim,nullSpace, 0.01);
+	}
+
+	if ( nullDim != 0 )
+		throw std::logic_error( "Displacement generation algorithm failed to span all 3D space!" );
+
+	irreducible  = std::move(nonRotated);
+	reducible = std::move(rotated);
 }
 
 void
@@ -232,21 +344,13 @@ UnitCell::add_displacement( std::vector<double> direction,
 	auto magn = [] (std::vector<double> const& v) { return std::sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] ); };
 
 	//create normalized cartesian vector for the displacement direction
-	lattice_.direct_to_cartesian(direction);
+	lattice_.direct_to_cartesian_angstroem(direction);
 	double norm = magn(direction);
 	for ( int i = 0; i < 3; ++i )
 		direction[i] /= norm;
 
 	//Create an atom displacement object
 	addtothis.push_back( AtomDisplacement(atomName, magnInAngstroem, position, direction, gridPrec, (not symmetricDispl) ) );
-
-	if (symmetricDispl)
-	{
-		//add the inverse direction, too
-		for ( int i = 0; i < 3; ++i )
-			direction[i] *= -1;
-		addtothis.push_back( AtomDisplacement(atomName, magnInAngstroem, position, direction, gridPrec, (not symmetricDispl) ) );
-	}
 }
 
 void

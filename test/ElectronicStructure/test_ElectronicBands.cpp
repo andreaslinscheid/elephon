@@ -27,21 +27,22 @@
 #include "LatticeStructure/RegularGrid.h"
 #include "LatticeStructure/Symmetry.h"
 #include "ElectronicStructure/ElectronicBands.h"
+#include "fixtures/MockStartup.h"
 #include <vector>
 #include <complex>
 #include <cmath>
 
 BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 {
-	boost::filesystem::path dir = boost::filesystem::path(__FILE__).parent_path()
-			/ "../data_for_testing/FeSe/";
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "FeSe" / "vasp" / "wfct";
 
 	//Read data to construct both the band grid from both the symmetric and the non-symmetric input data.
 	elephon::IOMethods::ReadVASPWaveFunction wfcSymRead;
-	wfcSymRead.prepare_wavecar( (dir / "vasp_sym/WAVECAR").string() );
+	wfcSymRead.prepare_wavecar( (testd / "symmetric" / "WAVECAR").string() );
 
 	elephon::IOMethods::ReadVASPWaveFunction wfcNoSymRead;
-	wfcNoSymRead.prepare_wavecar( (dir / "vasp_nosym/WAVECAR").string() );
+	wfcNoSymRead.prepare_wavecar( (testd / "no_symmetry" / "WAVECAR").string() );
 
 	//First we make sure that the k point that irreducible k point have the same data in the reducible grid
 	//The analogy is put for this hand crafted input data by hand!
@@ -64,10 +65,10 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 	BOOST_REQUIRE( diffIrreducibeWedge < 1e-6 );
 
 	elephon::IOMethods::ReadVASPSymmetries symread;
-	symread.read_file( (dir / "vasp_sym/OUTCAR").string() );
+	symread.read_file( (testd / "symmetric" / "OUTCAR").string() );
 
 	elephon::IOMethods::ReadVASPPoscar latRead;
-	latRead.read_file( (dir / "vasp_sym/POSCAR" ).string() );
+	latRead.read_file( (testd / "symmetric" / "POSCAR").string() );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize( latRead.get_lattice_matrix() );

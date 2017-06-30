@@ -22,14 +22,16 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPxmlFile.h"
+#include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
 
 BOOST_AUTO_TEST_CASE( Read_VASP_xml )
 {
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "supercell" ;
 	elephon::IOMethods::ReadVASPxmlFile filerreader;
-	filerreader.parse_file( (boost::filesystem::path(__FILE__).parent_path()
-			/ "../data_for_testing/Al/vasp/supercell/vasprun.xml").string() );
+	filerreader.parse_file( (testd / "vasprun.xml").string() );
 
 	double EFermi = 8.01896145;
 	BOOST_REQUIRE( filerreader.get_Fermi_energy() == EFermi );
@@ -54,3 +56,29 @@ BOOST_AUTO_TEST_CASE( Read_VASP_xml )
 
 	BOOST_REQUIRE(filerreader.get_forces() == forces);
 }
+
+BOOST_AUTO_TEST_CASE( Read_VASP_xml_kpoints )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "supercell" ;
+	elephon::IOMethods::ReadVASPxmlFile filerreader;
+	filerreader.parse_file( (testd / "vasprun.xml").string() );
+
+	std::vector<double> kpoints = {
+			  0.00000000 , 0.00000000 , 0.08333333 ,
+			  0.33333333 , 0.00000000 , 0.08333333 ,
+			  0.00000000 , 0.33333333 , 0.08333333 ,
+			  0.33333333 , 0.33333333 , 0.08333333 ,
+			  0.00000000 , 0.00000000 , 0.25000000 ,
+			  0.33333333 , 0.00000000 , 0.25000000 ,
+			  0.00000000 , 0.33333333 , 0.25000000 ,
+			  0.33333333 , 0.33333333 , 0.25000000 ,
+			  0.00000000 , 0.00000000 , 0.41666667 ,
+			  0.33333333 , 0.00000000 , 0.41666667 ,
+			  0.00000000 , 0.33333333 , 0.41666667 ,
+			  0.33333333 , 0.33333333 , 0.41666667 };
+
+	BOOST_REQUIRE(filerreader.get_k_points() == kpoints);
+
+}
+

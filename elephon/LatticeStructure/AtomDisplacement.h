@@ -82,6 +82,9 @@ public:
 	// This implies '1' == '2' if neither '1'<'2' nor '2' < '1'.
 	friend bool operator< (AtomDisplacement const& d1, AtomDisplacement const& d2);
 
+
+	friend bool operator== (AtomDisplacement const& d1, AtomDisplacement const& d2);
+
 private:
 
 	double equivalencePrc_ = 1e-6;

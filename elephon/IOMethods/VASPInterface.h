@@ -121,7 +121,7 @@ private:
 
 	std::vector<std::string > read_potcar_atom_order( std::string filename ) const;
 
-	std::string get_textfile_constent( std::string filename ) const;
+	std::string get_textfile_content( std::string filename ) const;
 
 	void check_open_poscar(std::string const & root_dir );
 };

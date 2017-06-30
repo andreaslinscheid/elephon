@@ -24,6 +24,7 @@
 #include "ElectronicStructure/FermiSurface.h"
 #include "ElectronicStructure/GradientFFTReciprocalGrid.h"
 #include "Algorithms/TrilinearInterpolation.h"
+#include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
 #include <fstream>
@@ -353,13 +354,12 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 {
 	//load data from the LiFeAs electronic structure
-	boost::filesystem::path p(__FILE__);
-	boost::filesystem::path dir = p.parent_path();
-	std::string LiFeAs_elstr_f = std::string(dir.c_str())+"/../ElectronicStructure/LiFeAs_energies.dat";
-	std::ifstream input( LiFeAs_elstr_f.c_str(), std::ios::in | std::ios::binary );
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir();
+	std::ifstream input( (testd / "LiFeAs_energies.dat").c_str(), std::ios::in | std::ios::binary );
 
 	if (not input)
-		throw std::logic_error ( std::string("Hard coded file ")+LiFeAs_elstr_f+" not readable ");
+		throw std::runtime_error ( std::string("Hard coded file ")+(testd / "LiFeAs_energies.dat").string()+" not readable ");
 
 	std::streampos fileSize;
 	size_t sizeOfBuffer;

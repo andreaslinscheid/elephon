@@ -26,15 +26,15 @@
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/VASPInterface.h"
 #include "ElectronicStructure/Wavefunctions.h"
+#include "fixtures/MockStartup.h"
 #include <vector>
 #include <complex>
 #include <cmath>
 
 BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 {
-	boost::filesystem::path dir = boost::filesystem::path(__FILE__).parent_path();
-	std::string symDir = (dir / "../data_for_testing/FeSe/vasp_sym").string();
-	std::string noSymDir = (dir / "../data_for_testing/FeSe/vasp_nosym").string();
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "FeSe" / "vasp" / "wfct";
 
 	elephon::IOMethods::InputOptions noop;
 
@@ -46,16 +46,16 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 			std::make_shared< elephon::IOMethods::VASPInterface >(noop);
 
 	elephon::ElectronicStructure::Wavefunctions wfct_sym;
-	wfct_sym.initialize( 1e-6, symDir, loaderSym );
+	wfct_sym.initialize( 1e-6, (testd / "symmetric").string(), loaderSym );
 
 	elephon::ElectronicStructure::Wavefunctions wfct_nosym;
-	wfct_nosym.initialize( 1e-6, noSymDir, loaderNoSym );
+	wfct_nosym.initialize( 1e-6, (testd / "no_symmetry").string(), loaderNoSym );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
 	elephon::LatticeStructure::RegularGrid kgrid;
-	loaderSym->read_cell_paramters(symDir,1e-6,kgrid,lattice,atoms,sym);
+	loaderSym->read_cell_paramters( (testd / "symmetric").string() ,1e-6,kgrid,lattice,atoms,sym);
 
 	//compare band 0
 	std::vector<int> bndInd = {0,5,11,15};

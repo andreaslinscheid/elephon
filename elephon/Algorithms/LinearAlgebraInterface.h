@@ -28,6 +28,21 @@ namespace elephon
 namespace Algorithms
 {
 
+namespace detail
+{
+template<typename T>
+struct ComplexTypeTrait
+{
+	typedef T type;
+};
+
+template<typename T>
+struct ComplexTypeTrait< std::complex<T> >
+{
+	typedef T type;
+};
+}
+
 class LinearAlgebraInterface
 {
 public:
@@ -35,6 +50,10 @@ public:
 	template<typename T>
 	void pseudo_inverse(std::vector<T> A, int n, int m,
 			std::vector<T> & pinvA, double cutoff = 1e-10);
+
+	template<typename T>
+	void null_space(std::vector<T> A, int n, int m,
+			int & kerDim, std::vector<T> & nullA, double tol = 1e-5);
 
 	template<typename T>
 	void inverse(std::vector<T> A, std::vector<T> & invA );
@@ -49,6 +68,12 @@ public:
 	void matrix_matrix_prod(std::vector<T> const & A,
 			std::vector<T> const & B,
 			std::vector<T> & ATimesB, int m, int n) const;
+
+	template<typename T>
+	void svd(std::vector<T> A, int m, int n,
+			std::vector<T> & U,
+			std::vector<T> & VT,
+			std::vector< typename detail::ComplexTypeTrait< std::complex<T> >::type > & sv);
 
 	//Here come the low level routines
 

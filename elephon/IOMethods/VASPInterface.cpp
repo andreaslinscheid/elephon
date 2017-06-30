@@ -70,7 +70,7 @@ VASPInterface::options_nscf_keep_wfctns_no_relax() const
 	std::map<std::string,std::string> options;
 	//We want to keep the wavefunctions
 	options["LWAVE"] = ".TRUE.";
-	options["IBRON"] = "-1";
+	options["IBRION"] = "-1";
 	options["NSW"] = "0";
 	options["ICHARG"] = "11";
 	return options;
@@ -82,7 +82,7 @@ VASPInterface::options_scf_supercell_no_wfctns_no_relax() const
 	std::map<std::string,std::string> options;
 	//We want to keep the wavefunctions
 	options["LWAVE"] = ".FALSE.";
-	options["IBRON"] = "-1";
+	options["IBRION"] = "-1";
 	options["NSW"] = "0";
 	options["ICHARG"] = "1";
 	options["LVTOT"] = ".TRUE.";
@@ -142,9 +142,19 @@ VASPInterface::read_cell_paramters(
 	this->read_kpt_sampling(root_directory, kDim, shifts);
 	LatticeStructure::Symmetry kpointSymmetry = symmetry;
 
+	//make sure that the irreducible zone of elephon and VASP agree
 	boost::filesystem::path rootdir(root_directory);
-	wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
-	std::vector<double> irreducibleKPoints = wfcReader_.get_k_points();
+	std::vector<double> irreducibleKPoints;
+	if ( boost::filesystem::exists( rootdir / "WAVECAR" ) )
+	{
+		wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
+		std::vector<double> irreducibleKPoints = wfcReader_.get_k_points();
+	}
+	else
+	{
+		xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
+		std::vector<double> irreducibleKPoints = xmlReader_.get_k_points();
+	}
 	kpointSymmetry.set_reciprocal_space_sym();
 	kPointMesh.initialize( symPrec, kDim, shifts, kpointSymmetry, lattice, irreducibleKPoints );
 }
@@ -153,8 +163,10 @@ void
 VASPInterface::check_open_poscar(std::string const & root_dir )
 {
 	boost::filesystem::path rootdir(root_dir);
+	//See if we find a POTCAR file which supplies the atom names
+	auto atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
 	if ( posReader_.get_atoms_list().empty() )
-		posReader_.read_file( (rootdir / "POSCAR").string() );
+		posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
 }
 
 void
@@ -173,7 +185,7 @@ void VASPInterface::read_electronic_potential(
 		std::vector<double> & output)
 {
 	boost::filesystem::path rootdir(root_directory);
-	potReader_.read_scf_potential( (rootdir / "POTCAR").string(), dims, output );
+	potReader_.read_scf_potential( (rootdir / "LOCPOT").string(), dims, output );
 }
 
 void
@@ -200,7 +212,7 @@ std::vector<std::string >
 VASPInterface::read_potcar_atom_order( std::string filename ) const
 {
 	//Read the POTCAR content
-	std::string filecontent = this->get_textfile_constent( filename );
+	std::string filecontent = this->get_textfile_content( filename );
 
 	const char * re = "(VRHFIN\\s*=\\s*\\w+\\s*:)";
 	boost::regex expression(re);
@@ -345,6 +357,8 @@ void VASPInterface::read_kpt_sampling(
 
 	//make sure this is an automatic mesh
 	std::ifstream file( filename.c_str() );
+	if ( ! file.good() )
+		throw std::runtime_error( filename + ": file not readable" );
 	std::string buffer;
 	std::getline( file , buffer );//Comment
 	std::getline( file , buffer );
@@ -358,6 +372,9 @@ void VASPInterface::read_kpt_sampling(
 	shifts = std::vector<double>(3,0.0);
 
 	std::getline( file , buffer );//Monkhorst-Pack flag
+	bool isGammaSet = false;
+	if ( ! buffer.empty() )
+		isGammaSet = ((buffer.front()  == 'G') || (buffer.front()  == 'g'));
 
 	std::getline( file , buffer );//Sampling
 	std::stringstream ssKpts(buffer);
@@ -370,20 +387,22 @@ void VASPInterface::read_kpt_sampling(
 	{
 		//For even meshes shift by half a cell
 		for ( int  i = 0 ; i < 3 ; ++i )
-			if ( kptSampling[i]%2 == 0 )
+			if ( (kptSampling[i]%2 == 0) and (not isGammaSet) )
 				shifts[i] = 0.5;
 		return;
 	}
 	std::stringstream ssKptshift(buffer);
 	ssKptshift.exceptions( std::ios::failbit );
 	for (int i = 0 ; i < 3 ; ++i)
-		ssKpts >> shifts[i];
+		ssKptshift >> shifts[i];
 
 }
 
-std::string VASPInterface::get_textfile_constent( std::string filename ) const
+std::string VASPInterface::get_textfile_content( std::string filename ) const
 {
 	std::ifstream file( filename.c_str() );
+	if ( not file.good() )
+		throw std::runtime_error( std::string("file ")+filename+ " not readable" );
 	file.seekg(0, std::ios::end);
 	size_t size = file.tellg();
 	std::string filecontent(size, ' ');

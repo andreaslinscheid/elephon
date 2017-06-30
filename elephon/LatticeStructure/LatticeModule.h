@@ -44,6 +44,8 @@ public:
 
 	void direct_to_cartesian(std::vector<double> & v) const;
 
+	void direct_to_cartesian_angstroem(std::vector<double> & v) const;
+
 	void cartesian_to_direct(std::vector<double> & v) const;
 
 private:

@@ -233,15 +233,25 @@ Symmetry::apply(int isym, std::vector<double>::iterator fieldBegin,
 	for ( int ic = 0; ic < numComponents; ++ic)
 	{
 		std::copy(fieldBegin+ic*3,fieldBegin+(ic+1)*3,std::begin(buff));
-		for ( int xi = 0; xi < 3; ++xi)
-		{
-			*(fieldBegin+ic*3+xi) = symmetries_[(isym*3+xi)*3+0]*buff[0]
-							+symmetries_[(isym*3+xi)*3+1]*buff[1]
-							+symmetries_[(isym*3+xi)*3+2]*buff[2]
-							+fractTrans_[isym*3+xi];
-			if ( latticePeriodic )
-				*(fieldBegin+ic*3+xi) -= std::floor( *(fieldBegin+ic*3+xi)+0.5);
-		}
+		if ( not isReciprocalSpace_ )
+			for ( int xi = 0; xi < 3; ++xi)
+			{
+				*(fieldBegin+ic*3+xi) = symmetries_[(isym*3+xi)*3+0]*buff[0]
+								+symmetries_[(isym*3+xi)*3+1]*buff[1]
+								+symmetries_[(isym*3+xi)*3+2]*buff[2]
+								+fractTrans_[isym*3+xi];
+				if ( latticePeriodic )
+					*(fieldBegin+ic*3+xi) -= std::floor( *(fieldBegin+ic*3+xi)+0.5);
+			}
+		else
+			for ( int xi = 0; xi < 3; ++xi)
+			{
+				*(fieldBegin+ic*3+xi) = symmetries_[(isym*3+0)*3+xi]*buff[0]
+								+symmetries_[(isym*3+1)*3+xi]*buff[1]
+								+symmetries_[(isym*3+2)*3+xi]*buff[2];
+				if ( latticePeriodic )
+					*(fieldBegin+ic*3+xi) -= std::floor( *(fieldBegin+ic*3+xi)+0.5);
+			}
 	}
 }
 
@@ -251,6 +261,10 @@ Symmetry::apply_cartesian(int isym, std::vector<double>::iterator fieldCartBegin
 {
 	assert( std::distance(fieldCartBegin,fieldCartEnd)%3 == 0 );
 	assert( isym < numRotations_ );
+
+	if ( isReciprocalSpace_ )
+		//in cartesian space, symmetries are unitary
+		isym = this->get_index_inverse(isym);
 
 	std::vector<double> buff(3);
 
@@ -275,6 +289,10 @@ Symmetry::rotate_cartesian(int isym, std::vector<double>::iterator fieldCartBegi
 	assert( std::distance(fieldCartBegin,fieldCartEnd)%3 == 0 );
 	assert( isym < numRotations_ );
 
+	if ( isReciprocalSpace_ )
+		//in cartesian space, symmetries are unitary
+		isym = this->get_index_inverse(isym);
+
 	std::vector<double> buff(3);
 
 	int numComponents = std::distance(fieldCartBegin,fieldCartEnd)/3;
@@ -298,6 +316,10 @@ Symmetry::rotate_matrix_cartesian(int isym,
 	int elem = std::distance(matrixFieldCartBegin,matrixFieldCartEnd);
 	assert( elem%9 == 0 );
 	assert( isym < numRotations_ );
+
+	if ( isReciprocalSpace_ )
+		//in cartesian space, symmetries are unitary
+		isym = this->get_index_inverse(isym);
 
 	std::vector<double> b(9);
 
@@ -439,8 +461,17 @@ Symmetry::get_sym_op( int isym ) const
 {
 	assert( isym < numRotations_ );
 	Symmetry::SymmetryOperation res;
-	std::copy( &fractTrans_[isym*3],&fractTrans_[isym*3]+3,res.fracTrans);
-	std::copy( &symmetries_[isym*9],&symmetries_[isym*9]+9,res.ptgroup);
+	for ( int i = 0 ; i < 3 ; ++ i)
+	{
+		res.fracTrans[i] = (isReciprocalSpace_ ? -1.0 : 1.0)*fractTrans_[isym*3+i];
+		for ( int j = 0 ; j < 3 ; ++j)
+			res.ptgroup[i*3+j] = symmetries_[isym*9 + ((isReciprocalSpace_ ? j*3+i : i*3+j)) ];
+	}
+
+	if ( isReciprocalSpace_ )
+		//in cartesian space, symmetries are unitary
+		isym = this->get_index_inverse(isym);
+	std::copy( &symmetriesCartesian_[isym*9],&symmetriesCartesian_[isym*9]+9,res.ptgCart);
 	return res;
 }
 
@@ -456,6 +487,15 @@ Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
 		if ( latticePeriodic )
 			v[i] -= std::floor(v[i]+0.5);
 	}
+};
+
+void
+Symmetry::Sop::rotate_cart( std::vector<double> & v ) const
+{
+	assert(v.size()==3);
+	auto b = v;
+	for ( int i = 0; i < 3; ++i)
+		v[i] = ptgCart[i*3+0]*b[0]+ptgCart[i*3+1]*b[1]+ptgCart[i*3+2]*b[2];
 };
 
 int

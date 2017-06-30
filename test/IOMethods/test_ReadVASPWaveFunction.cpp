@@ -22,6 +22,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPWaveFunction.h"
+#include "fixtures/MockStartup.h"
 #include <vector>
 #include <complex>
 
@@ -30,14 +31,16 @@ BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 	using namespace boost::filesystem;
 
 	elephon::IOMethods::ReadVASPWaveFunction wfctreader;
-	wfctreader.prepare_wavecar( (path(__FILE__).parent_path() / "Al_test/WAVECAR").string() );
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
+	wfctreader.prepare_wavecar( (testd / "WAVECAR").string() );
 
 	int nBnd = 10;
 	BOOST_REQUIRE( wfctreader.get_num_bands() == nBnd );
 	BOOST_REQUIRE( wfctreader.get_num_spins() == 1 );
 	BOOST_REQUIRE( wfctreader.get_num_kpts() == 10 );
 
-	std::ifstream compareFile( (path(__FILE__).parent_path() / "Al_test/wavecar_cmp.dat").c_str() );
+	std::ifstream compareFile( (testd / "wavecar_cmp.dat").string() );
 
 	//Check if the energy was read in correctly
 	std::string buffer;

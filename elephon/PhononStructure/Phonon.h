@@ -1,4 +1,4 @@
-/*	This file ReadVASPPoscar.h is part of elephon.
+/*	This file Phonon.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,43 +13,42 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: Jun 22, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOSCAR_H_
+#ifndef ELEPHON_PHONONSTRUCTURE_PHONON_H_
+#define ELEPHON_PHONONSTRUCTURE_PHONON_H_
 
-#include "LatticeStructure/Atom.h"
-#include <string>
-#include <vector>
+#include "ForceConstantMatrix.h"
 
 namespace elephon
 {
-namespace IOMethods
+namespace PhononStructure
 {
 
-/**
- *
- */
-class ReadVASPPoscar
+class Phonon
 {
 public:
-	void read_file( std::string filename,
-			std::vector<std::string> const & defaultAtoms = std::vector<std::string>() );
 
-	std::vector<double> get_lattice_matrix() const;
+	void initialize( ForceConstantMatrix fc,
+			std::vector<double> masses);
 
-	std::vector<LatticeStructure::Atom> get_atoms_list() const;
+	void compute_at_q(std::vector<double> const & q,
+			std::vector<double> & w2,
+			std::vector< std::complex<double> > & eigenModes) const;
 
+	int get_num_modes() const;
 private:
 
-	std::vector<double> latticeMatrix_;
+	ForceConstantMatrix fc_;
 
-	std::vector<LatticeStructure::Atom> atoms_;
+	std::vector<double> masses_;
+
+	const double eVToTHzConversionFactor_ = 241.79905040241630075812;
 };
 
-} /* namespace IOMethods */
+} /* namespace PhononStructure */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOSCAR_H_ */
+#endif /* ELEPHON_PHONONSTRUCTURE_PHONON_H_ */

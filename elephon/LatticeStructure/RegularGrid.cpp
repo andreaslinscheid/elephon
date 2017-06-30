@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <cmath>
 #include <stdexcept>
+#include <iostream>
 
 namespace elephon
 {
@@ -51,9 +52,12 @@ RegularGrid::initialize(
 	symmetry_ = std::move( symmetry );
 	lattice_ = std::move( lattice );
 
-	std::set< RegularGrid::GridPoint > reducibleSet;
+	std::map< RegularGrid::GridPoint, int > reducibleSet;
 	this->construct_grid_vector_set( reducibleSet );
-	std::vector< RegularGrid::GridPoint > reducible( reducibleSet.begin()  , reducibleSet.end() );
+	std::vector< RegularGrid::GridPoint > reducible;
+	reducible.reserve(reducibleSet.size());
+	for ( auto m : reducibleSet )
+		reducible.push_back( std::move(m.first) );
 
 	//This computes the mappings - we actually don't care about the irreducible data here.
 	std::vector< RegularGrid::GridPoint > irreducible;
@@ -141,23 +145,12 @@ RegularGrid::get_list_reducible_lattice_point_indices(
 {
 	assert( points.size() % 3 == 0 );
 
-	auto vect_to_touple = [&] (double x, double y, double z) {
-		//map to the range [0,1[
-		x -= std::floor(x);
-		y -= std::floor(y);
-		z -= std::floor(z);
-		return std::vector<int>( { 	static_cast<int>(std::floor((x-pointShift_[0])*pointMesh_[0]+0.5)),
-									static_cast<int>(std::floor((y-pointShift_[1])*pointMesh_[1]+0.5)),
-									static_cast<int>(std::floor((z-pointShift_[2])*pointMesh_[2]+0.5))	} );
-	};
-
 	//Construct the mesh for fast point lookup
-	std::set< RegularGrid::GridPoint > reducibleSet;
+	std::map< RegularGrid::GridPoint , int > reducibleSet;
 	this->construct_grid_vector_set( reducibleSet );
 
-	int nK = static_cast<int>(points.size())/3;
-	if ( static_cast<int>(reducibleIndices.size()) != nK)
-		reducibleIndices.resize( nK );
+	int nK = points.size()/3;
+	reducibleIndices.resize( nK );
 	for (int ik = 0 ; ik < nK ; ++ik)
 	{
 		GridPoint gp( std::vector<double>({points[ik*3],points[ik*3+1],points[ik*3+2]}) , gridPrec_ );
@@ -165,8 +158,7 @@ RegularGrid::get_list_reducible_lattice_point_indices(
 		if ( it == reducibleSet.end() )
 			throw std::runtime_error( "Grid vectors passed are not matching any grid vector " );
 
-		reducibleIndices[ik] =  this->get_xyz_to_reducible(
-						vect_to_touple(points[ik*3],points[ik*3+1],points[ik*3+2]) ) ;
+		reducibleIndices[ik] =  it->second ;
 	}
 }
 
@@ -221,14 +213,14 @@ RegularGrid::get_maps_red_to_irreducible() const
 
 void
 RegularGrid::construct_grid_vector_set(
-		std::set< RegularGrid::GridPoint > & reducibleSet) const
+		std::map< RegularGrid::GridPoint, int > & reducibleSet) const
 {
 	reducibleSet.clear();
 	auto hint = reducibleSet.end();
 	for ( int i = 0 ; i < pointMesh_[0]*pointMesh_[1]*pointMesh_[2]; ++i)
 	{
 		GridPoint gp( this->get_vector_direct(i), gridPrec_ );
-		hint = reducibleSet.insert(hint, std::move(gp) );
+		hint = reducibleSet.insert(hint, std::move(std::make_pair( std::move(gp), i ) ) );
 		if ( (++hint) != reducibleSet.end()  )
 			throw std::runtime_error( "Error generating regular grid mesh.\n"
 					"New grid point not placed at the end, indicating that ordering "

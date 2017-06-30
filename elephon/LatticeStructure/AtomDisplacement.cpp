@@ -80,7 +80,7 @@ void AtomDisplacement::transform(Symmetry::SymmetryOperation const& sop)
 void
 AtomDisplacement::transform_direction(Symmetry::SymmetryOperation const& sop)
 {
-	sop.apply( direction_ , /*bool latticePeriodic = */false);
+	sop.rotate_cart( direction_ );
 	this->normalize_direction(); //symmetry operations in direct coordinates are not necessary unitary
 }
 
@@ -157,6 +157,12 @@ bool operator< (AtomDisplacement const& d1, AtomDisplacement const& d2)
 
 	//also equal - thus d1<d2 is false
 	return false;
+}
+
+bool
+operator== (AtomDisplacement const& d1, AtomDisplacement const& d2)
+{
+	return (not (d1 < d2) ) and (not (d2 < d1));
 }
 
 void

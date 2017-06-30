@@ -24,11 +24,14 @@
 #include "LatticeStructure/Symmetry.h"
 #include "LatticeStructure/LatticeModule.h"
 #include "IOMethods/ReadVASPSymmetries.h"
+#include "fixtures/MockStartup.h"
 
 BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 {
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	elephon::IOMethods::ReadVASPSymmetries symReader;
-	symReader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
+	symReader.read_file( (testd / "OUTCAR").string() );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize( std::vector<double>({1,0,0,0,1,0,0,0,1}) );
@@ -92,8 +95,10 @@ BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 
 BOOST_AUTO_TEST_CASE( Symemtry_reduction )
 {
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	elephon::IOMethods::ReadVASPSymmetries symReader;
-	symReader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
+	symReader.read_file( (testd / "OUTCAR").string() );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize( std::vector<double>({1,0,0,0,1,0,0,0,1}) );

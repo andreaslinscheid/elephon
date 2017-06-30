@@ -22,16 +22,19 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPPotcar.h"
+#include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
 
 BOOST_AUTO_TEST_CASE( Read_potcar )
 {
 	elephon::IOMethods::ReadVASPPotcar filerreader;
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "supercell";
 	std::vector<double> potential;
 	std::vector<int> dims;
-	filerreader.read_scf_potential( (boost::filesystem::path(__FILE__).parent_path()
-			/ "../data_for_testing/Al/vasp/supercell/LOCPOT").string(),
+	filerreader.read_scf_potential(
+			(testd / "LOCPOT").string(),
 			dims,
 			potential);
 

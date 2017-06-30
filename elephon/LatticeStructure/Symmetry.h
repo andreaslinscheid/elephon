@@ -36,8 +36,10 @@ public:
 	typedef struct Sop
 	{
 		int ptgroup[9];
+		double ptgCart[9];
 		double fracTrans[3];
 		void apply( std::vector<double> & v, bool latticePeriodic = true) const;
+		void rotate_cart( std::vector<double> & v ) const;
 	} SymmetryOperation;
 
 	Symmetry();

@@ -46,20 +46,6 @@ namespace elephon
 {
 namespace Algorithms
 {
-namespace detail
-{
-template<typename T>
-struct ComplexTypeTrait
-{
-	typedef T type;
-};
-
-template<typename T>
-struct ComplexTypeTrait< std::complex<T> >
-{
-	typedef T type;
-};
-}
 
 template<typename T>
 void
@@ -128,6 +114,29 @@ LinearAlgebraInterface::pseudo_inverse(std::vector<T> A, int m, int n,
 
 template<typename T>
 void
+LinearAlgebraInterface::null_space(std::vector<T> A, int m, int n,
+		int & kerDim, std::vector<T> & nullA, double tol)
+{
+	std::vector<T> U(m*m);
+	std::vector<T> VT(n*n);
+	std::vector<typename detail::ComplexTypeTrait<T>::type > sv(std::min(n,m));
+	this->svd(std::move(A),m,n,U,VT,sv);
+
+	kerDim = 0;
+	for ( int i = 0 ; i < sv.size(); ++i)
+		if ( sv[i] < tol)
+			kerDim++;
+
+	nullA.resize(kerDim*n);
+	for ( int i = n-kerDim ; i < n; ++i)
+		for ( int j = 0 ; j < n; ++j)
+		{
+			nullA[(i-n+kerDim)*n+j] = VT[i*n+j];
+		}
+}
+
+template<typename T>
+void
 LinearAlgebraInterface::matrix_matrix_prod(std::vector<T> const & A,
 		std::vector<T> const & B,
 		std::vector<T> & ATimesB, int m, int n) const
@@ -136,6 +145,46 @@ LinearAlgebraInterface::matrix_matrix_prod(std::vector<T> const & A,
 	assert( k == int(B.size())/n );
 	ATimesB.resize( m * n );
 	this->call_gemm('n','n',m,n,k,T(1.0),A.data(),k,B.data(),n,T(0.0),ATimesB.data(),n);
+}
+
+template<typename T>
+void
+LinearAlgebraInterface::svd(std::vector<T> A, int m, int n,
+		std::vector<T> & U,
+		std::vector<T> & VT,
+		std::vector< typename detail::ComplexTypeTrait< std::complex<T> >::type > & sv)
+{
+	typedef typename detail::ComplexTypeTrait<T>::type realT;
+	U.resize(m*m);
+	VT.resize(n*n);
+	sv.resize(std::min(m,n));
+
+	int ldu =  m;
+	int ldvt = n;
+	int lda = n;
+	int info;
+	IPIV_.resize( std::max(1, 8 * std::min(m, n)) );
+	T work_query;
+	info = this->call_gesdd(LAPACK_ROW_MAJOR,'A',m,n,NULL,lda,NULL,NULL,ldu,NULL,ldvt,&work_query,NULL,-1,IPIV_.data());
+	check_library_info(info,"gesdd");
+
+	//TODO here we should worry about alignment!
+	int lwork = static_cast<int>( std::real(work_query) );
+	int nElemChar = sizeof(T)*lwork;
+	workbuffer_.resize( nElemChar );
+	T * work = reinterpret_cast< T * >( &workbuffer_[0] );
+
+	if ( sizeof(realT) != sizeof(T) )
+		//We are running the complex version
+		rWork_.resize( sizeof(realT)*(std::max(1,std::min(m,n)*std::max(5*std::min(m,n)+7,2*std::max(m,n)+2*std::min(m,n)+1))) );
+		//The above formula (mess) is from https://software.intel.com/en-us/mkl-developer-reference-fortran-gesdd
+
+	//The complex version needs a parameter rwork
+	realT * rwork =  reinterpret_cast< realT * >( rWork_.data() );
+
+	//Left singular vectors (U) are stored column wise, right singular vectors (vT) are stored row wise
+	this->call_gesdd( LAPACK_ROW_MAJOR, 'A', m, n, A.data(), lda, sv.data(), U.data(), ldu, VT.data(),
+			ldvt, work, rwork, lwork, IPIV_.data()  );
 }
 
 template<typename T>
@@ -176,30 +225,32 @@ LinearAlgebraInterface::diagonalize_hermitian(
 		std::vector< std::complex<T> > & eigenvectors,
 		std::vector<T> & eigenvalues )
 {
+	int dim = this->square_matrix_dim( matrix );
+	eigenvectors = std::move( matrix );
+	eigenvalues.resize(dim);
+
 	char v = ( comEV ?  'v' : 'n' );
 
 	char dataLoc = ( data_upper ? 'U' : 'L' );
 
-	int dim = this->square_matrix_dim( matrix );
-
 	int rworksize = ( 3*dim-2 > 1 ? 3 * dim - 2 : 1 ) ;
 	rWork_.resize(sizeof(T)*rworksize);
 
-	T work_query;
+	std::complex<T> work_query;
 	this->call_heev(
 			LAPACK_ROW_MAJOR,
 			v, dataLoc,
-			dim, matrix, dim,
+			dim, eigenvectors.data(), dim,
 			eigenvalues.data(),&work_query,-1,
 			reinterpret_cast< T* >(rWork_.data()));
-	size_t optimal_size = static_cast<size_t>( work_query.real() ) ;
+	size_t optimal_size = static_cast<size_t>( std::real(work_query) ) ;
 	workbuffer_.resize( sizeof(std::complex<T>)*optimal_size );
 
 	int lwork = static_cast<int>(optimal_size);
 	int info = this->call_heev(
 			LAPACK_ROW_MAJOR,
 			v, dataLoc,
-			dim, matrix, dim,
+			dim, eigenvectors.data(), dim,
 			eigenvalues.data(),
 			reinterpret_cast< std::complex<T>* >(workbuffer_.data()),
 			lwork,
@@ -209,9 +260,9 @@ LinearAlgebraInterface::diagonalize_hermitian(
 
 	//Ensure phase convention on eigenvectors (real part of the last component is non-negative)
 	for ( int ib = 0 ; ib < dim ; ++ib )
-		if ( matrix[(dim-1)*dim + ib].real() < 0 )
+		if ( eigenvectors[(dim-1)*dim + ib].real() < 0 )
 			for ( int ibp = 0 ; ibp < dim ; ++ibp )
-				matrix[ibp*dim + ib] *= std::complex<T>(-1.0);
+				eigenvectors[ibp*dim + ib] *= std::complex<T>(-1.0);
 }
 
 template<class C>

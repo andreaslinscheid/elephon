@@ -20,6 +20,7 @@
 #include "Wavefunctions.h"
 #include <complex>
 #include <iostream>
+#include <set>
 
 namespace elephon
 {

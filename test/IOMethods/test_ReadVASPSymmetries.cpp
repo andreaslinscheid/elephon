@@ -22,13 +22,16 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPSymmetries.h"
+#include "fixtures/MockStartup.h"
 #include <string>
 #include <vector>
 
 BOOST_AUTO_TEST_CASE( Read_symmetries )
 {
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	elephon::IOMethods::ReadVASPSymmetries symReader;
-	symReader.read_file( (boost::filesystem::path(__FILE__).parent_path()/"Al_test/OUTCAR").string() );
+	symReader.read_file( (testd / "OUTCAR").string() );
 
 	BOOST_REQUIRE( symReader.get_symmetries().size() == 48*9 );
 

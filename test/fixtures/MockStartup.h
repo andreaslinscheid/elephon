@@ -1,4 +1,4 @@
-/*	This file test_Input.cpp is part of elephon.
+/*	This file MockStartup.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,31 +13,36 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Apr 25, 2017
+ *  Created on: Jun 21, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_MODULE Input_test
+
+#ifndef TEST_FIXTURES_MOCKSTARTUP_H_
+#define TEST_FIXTURES_MOCKSTARTUP_H_
+
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
+#include "IOMethods/InputOptions.h"
 #include <string>
-#include "IOMethods/Input.h"
-#include "fixtures/MockStartup.h"
 
-BOOST_AUTO_TEST_CASE( Default_Args )
+namespace test
 {
-	using namespace boost::filesystem;
+namespace fixtures
+{
 
-	test::fixtures::MockStartup ms;
-	auto testd = ms.get_data_for_testing_dir() / "phony" ;
+class MockStartup
+{
+public:
 
-	elephon::IOMethods::InputOptions options;
-	ms.simulate_elephon_input( (testd / "test_input_file.dat").string(), "scell=2 2 1\nnumFS=2000", options);
+	boost::filesystem::path get_data_for_testing_dir() const;
 
-	BOOST_CHECK( options.get_scell().size() == 3 );
-	BOOST_CHECK( options.get_scell()[0] == 2 );
-	BOOST_CHECK( options.get_scell()[1] == 2 );
-	BOOST_CHECK( options.get_scell()[2] == 1 );
+	void simulate_elephon_input(
+			std::string const & inputFileName,
+			std::string const & inputFileContent,
+			elephon::IOMethods::InputOptions & inputOpts);
+};
 
-	BOOST_CHECK( options.get_numFS() == 2000 );
-}
+} /* namespace fixtures */
+} /* namespace test */
+
+#endif /* TEST_FIXTURES_MOCKSTARTUP_H_ */

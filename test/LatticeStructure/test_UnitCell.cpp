@@ -26,17 +26,49 @@
 #include "LatticeStructure/Symmetry.h"
 #include "LatticeStructure/LatticeModule.h"
 #include "IOMethods/ReadVASPPoscar.h"
+#include "fixtures/MockStartup.h"
+
+BOOST_AUTO_TEST_CASE( Generate_Al_fcc_primitive_displacements )
+{
+	using namespace elephon;
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+	IOMethods::ReadVASPPoscar filerreader;
+	filerreader.read_file( (rootDir / "POSCAR").string() );
+
+	LatticeStructure::LatticeModule lattice;
+	lattice.initialize(filerreader.get_lattice_matrix());
+
+	IOMethods::ReadVASPSymmetries symreader;
+	symreader.read_file( (rootDir / "OUTCAR").string() );
+	LatticeStructure::Symmetry sym;
+	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
+
+	LatticeStructure::UnitCell uc;
+	uc.initialize( filerreader.get_atoms_list(), lattice, sym);
+
+	std::vector<LatticeStructure::AtomDisplacement> irreducibleDisplacements;
+	std::vector<int> mapRedToIrred, mapSymRedToIrred;
+	std::vector<std::vector<int>> mapIrredToRed, mapSymIrredToRed;
+	uc.generate_displacements( 0.01,
+			/*bool symmetricDisplacement = */ true,
+			irreducibleDisplacements);
+
+	BOOST_REQUIRE_EQUAL(irreducibleDisplacements.size(),1);
+}
 
 BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 {
 	elephon::IOMethods::ReadVASPPoscar filerreader;
-	filerreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/POSCAR").string() );
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
+	filerreader.read_file( (testd / "POSCAR").string() );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize(filerreader.get_lattice_matrix());
 
 	elephon::IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
+	symreader.read_file( (testd / "OUTCAR").string() );
 	elephon::LatticeStructure::Symmetry sym;
 	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
 
@@ -56,13 +88,15 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 {
 	using namespace elephon;
 	IOMethods::ReadVASPPoscar filerreader;
-	filerreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/POSCAR").string() );
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
+	filerreader.read_file( (testd / "POSCAR").string() );
 
 	LatticeStructure::LatticeModule lattice;
 	lattice.initialize(filerreader.get_lattice_matrix());
 
 	IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
+	symreader.read_file( (testd / "OUTCAR").string() );
 	LatticeStructure::Symmetry sym;
 	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
 
@@ -78,3 +112,4 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 
 	//how to test this?
 }
+

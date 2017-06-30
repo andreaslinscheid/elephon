@@ -24,6 +24,7 @@
 #include "LatticeStructure/SymmetryReduction.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "LatticeStructure/Atom.h"
+#include "fixtures/MockStartup.h"
 #include <vector>
 
 BOOST_AUTO_TEST_CASE( irreducible_zones )
@@ -40,7 +41,9 @@ BOOST_AUTO_TEST_CASE( irreducible_zones )
 
 	//load the symmetry
 	elephon::IOMethods::ReadVASPSymmetries symReader;
-	symReader.read_file( (boost::filesystem::path(__FILE__).parent_path() / "../IOMethods/Al_test/OUTCAR").string() );
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
+	symReader.read_file( (testd / "OUTCAR").string() );
 	elephon::LatticeStructure::LatticeModule lattice;
 	lattice.initialize( std::vector<double>({1,0,0,0,1,0,0,0,1}) );
 	elephon::LatticeStructure::Symmetry sym;

@@ -92,6 +92,13 @@ class InputOptions : public InputBase<InputOptions>
 			"( -1 , -1 , -1 )",
 			{-1 COMMA_SUBSTITUTION -1 COMMA_SUBSTITUTION -1},
 			std::vector<int>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			gPrec,
+			"The grid precision which decides component-wise up to which value two grid vectors are considered equal.",
+			"1e-6",
+			1e-6,
+			double);
 };
 
 } /* namespace IOMethods */

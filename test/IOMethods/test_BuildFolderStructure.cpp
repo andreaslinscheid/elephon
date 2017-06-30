@@ -25,36 +25,33 @@
 #include "IOMethods/VASPInterface.h"
 #include "IOMethods/Input.h"
 #include "IOMethods/InputOptions.h"
+#include "fixtures/MockStartup.h"
 #include <vector>
 
-BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
+BOOST_AUTO_TEST_CASE( Build_Al_primitive_folderstructure_VASP )
 {
 	using namespace boost::filesystem;
+
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir();
 	elephon::IOMethods::BuildFolderStructure builder;
 
-	path dir = path(__FILE__).parent_path();
-	path test_elph_dir = dir / "test_dir_struct";
+	path rootDir = testd / "Al" / "vasp" / "fcc_primitive";
+	path targetDir = rootDir / "phonon_test_build";
 
 	//here we create the test input file
-	path test_input_file = dir / "test_folderstructure_input.dat";
 	std::string content = std::string()+
-			"scell=1 1 1\n"
-			"root_dir="+(dir/"Al_test").string()+"\n"
-			"elphd="+test_elph_dir.string()+"\n"
+			"scell=2 2 2\n"
+			"root_dir="+rootDir.string()+"\n"
+			"elphd="+targetDir.string()+"\n"
 			"";
-	std::ofstream file( test_input_file.c_str() );
-	file << content;
-	file.close();
+	std::string filename = (rootDir / "test_elephon_input.dat").string();
 
-	//here we read the input file via elephons input mechanism
-	char * prog = strdup("program name");
-	char * arg = strdup(test_input_file.c_str());
-	char *argv[] = {prog, arg, NULL};
-	int argc = sizeof(argv) / sizeof(char*) - 1;
-	elephon::IOMethods::Input input(argc,argv);
-	elephon::IOMethods::InputOptions options = input.get_opts();
-	delete [] prog;
-	delete [] arg;
+	remove_all( targetDir  );
+
+	elephon::IOMethods::InputOptions options;
+	ms.simulate_elephon_input( (rootDir / "test_folderstructure_input.dat").string(),
+			content, options );
 
 	//Here we use the VASP interface to generate the folder structure
 	elephon::IOMethods::VASPInterface vi(options);
@@ -63,7 +60,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::RegularGrid kgrid;
 	vi.read_cell_paramters(
-			(dir / "Al_test").string(),
+			rootDir.string(),
 			1e-6,
 			kgrid,
 			lattice,
@@ -73,22 +70,77 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	elephon::LatticeStructure::UnitCell uc;
 	uc.initialize( atoms, lattice, sym);
 
-	remove_all(test_elph_dir);
+	builder.build( options, uc, vi );
 
-	BOOST_CHECK( builder.check_is_build( test_elph_dir.string() )  == false );
+	BOOST_REQUIRE( builder.check_is_build( targetDir.string() )  ==  true );
+
+	BOOST_REQUIRE( exists(targetDir / "electrons" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "electrons" / "POSCAR" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "electrons" / "KPOINTS" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "electrons" / "INCAR" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "electrons" / "POTCAR" )  == true );
+
+	//We have 1 irreducible displacements
+	BOOST_REQUIRE( exists(targetDir / "displ_0" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_0" / "POSCAR" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_0" / "KPOINTS" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_0" / "INCAR" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_0" / "POTCAR" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_1" )  == false );
+}
+
+BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
+{
+	using namespace boost::filesystem;
+	elephon::IOMethods::BuildFolderStructure builder;
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir();
+	path rootDir = testd / "Al" / "vasp" / "conventional";
+	path targetDir = rootDir / "test_dir_struct";
+
+	//here we create the test input file
+	std::string content = std::string()+
+			"scell=1 1 1\n"
+			"root_dir="+rootDir.string()+"\n"
+			"elphd="+targetDir.string()+"\n"
+			"";
+	std::string filename = (rootDir / "test_elephon_input.dat").string();
+
+	elephon::IOMethods::InputOptions options;
+	ms.simulate_elephon_input( (rootDir / "test_folderstructure_input.dat").string(),
+			content, options );
+
+	//Here we use the VASP interface to generate the folder structure
+	elephon::IOMethods::VASPInterface vi(options);
+	elephon::LatticeStructure::Symmetry sym;
+	std::vector<elephon::LatticeStructure::Atom> atoms;
+	elephon::LatticeStructure::LatticeModule lattice;
+	elephon::LatticeStructure::RegularGrid kgrid;
+	vi.read_cell_paramters(
+			rootDir.string(),
+			1e-6,
+			kgrid,
+			lattice,
+			atoms,
+			sym);
+
+	elephon::LatticeStructure::UnitCell uc;
+	uc.initialize( atoms, lattice, sym);
+
+	remove_all(targetDir);
+
+	BOOST_CHECK( builder.check_is_build( targetDir.string() )  == false );
 
 	builder.build( options, uc, vi );
 
-	BOOST_REQUIRE( builder.check_is_build( test_elph_dir.string() )  ==  true );
+	BOOST_REQUIRE( builder.check_is_build( targetDir.string() )  ==  true );
 
-	BOOST_REQUIRE( exists(test_elph_dir / "electrons" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "electrons" )  == true );
 
-	BOOST_REQUIRE( exists(test_elph_dir / "scell" )  == true );
-
-	//We have 18 irreducible displacements
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_0" )  == true );
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_1" )  == true );
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_2" )  == true );
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_3" )  == true );
-	BOOST_REQUIRE( exists(test_elph_dir / "displ_4" )  == false );
+	//We have 4 irreducible displacements
+	BOOST_REQUIRE( exists(targetDir / "displ_0" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_1" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_2" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_3" )  == true );
+	BOOST_REQUIRE( exists(targetDir / "displ_4" )  == false );
 }

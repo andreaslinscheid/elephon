@@ -58,25 +58,15 @@ void BuildFolderStructure::build(
 			denseNSCFOptions);
 
 	//Determine the kpt sampling for the supercells
-	std::string sCellScfRoot = (elphd / "scell").string();
 	std::vector<int> kptsSCell = input.get_kscell();
 	for (int ki = 0 ; ki < static_cast<int>(kptsSCell.size()) ; ++ki )
 		if ( kptsSCell[ki] <= 0)
 			kptsSCell[ki] = std::ceil(double(defaultKSampling[ki])/double( input.get_scell()[ki] ));
+	auto superCellOptions = interface.options_scf_supercell_no_wfctns_no_relax();
 
 	//Create the clean supercell
 	elephon::LatticeStructure::UnitCell supercell =
 			unitcell.build_supercell( input.get_scell().at(0), input.get_scell().at(1), input.get_scell().at(2));
-	boost::filesystem::create_directories( elphd / "scell" );
-	auto superCellOptions = interface.options_scf_supercell_no_wfctns_no_relax();
-
-	interface.set_up_run(
-			input.get_root_dir(),
-			sCellScfRoot,
-			kptsSCell,
-			defaultKShift,
-			supercell,
-			superCellOptions);
 
 	//Create displacements - we have to reduce the symmetry to the supercell in case this is different
 	LatticeStructure::UnitCell unitcellReducedSym;
