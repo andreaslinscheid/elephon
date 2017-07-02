@@ -26,7 +26,6 @@
 #include <set>
 #include <map>
 #include <iostream>
-#include "boost/multi_array.hpp"
 
 namespace elephon
 {
@@ -52,7 +51,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 	//		using the pseudo inverse which amounts to the least squares.
 	//	4. Use the symmetry of the Matrix of force constants to expand the solutions to the symmetry equivalent atomic positions
 	//
-	this->set_supercell_dim( unitCell, superCell );
+	unitCell.compute_supercell_dim(superCell, supercellDim_ );
 	numModes_ = unitCell.get_atoms_list().size()*3;
 
 	assert( forces.size() == irredDispl.size() );
@@ -313,6 +312,7 @@ ForceConstantMatrix::mem_layout(int Rz, int Ry, int Rx, int mu1, int mu2) const
 int
 ForceConstantMatrix::mem_layout( int ir, int mu2, int mu1) const
 {
+	assert( (mu1 >= 0 && mu1 < numModes_) && (mu2 >= 0 && mu2 < numModes_) );
 	assert( (ir >= 0) && (ir < this->get_num_R()) );
 	int consqIndex = (ir*numModes_+mu2)*numModes_+mu1;
 	assert( consqIndex < int(data_.size()) );
@@ -417,40 +417,6 @@ ForceConstantMatrix::transform_map(
 			rotAtomsMap[isym][it->second] = i;
 		}
 	}
-}
-
-void
-ForceConstantMatrix::set_supercell_dim(
-		LatticeStructure::UnitCell const & unitCell,
-		LatticeStructure::UnitCell const & superCell)
-{
-	//Locate the unit cell in the supercell
-	auto A = unitCell.get_lattice().get_latticeMatrix();
-	for ( auto &aij : A )
-		aij *= unitCell.get_alat();
-
-	auto As = superCell.get_lattice().get_latticeMatrix();
-	for ( auto &aij : As )
-		aij *= superCell.get_alat();
-
-	auto slice = [] (std::vector<double> const & A, int i) {
-			return std::vector<double>({A[0*3+i],A[1*3+i],A[2*3+i]});
-		};
-	auto dot_p = [] (std::vector<double> const & a, std::vector<double> const & b) {
-		return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-	};
-
-	double scaleX  = dot_p(slice(A,0),slice(As,0))/dot_p(slice(A,0),slice(A,0));
-	double scaleY  = dot_p(slice(A,1),slice(As,1))/dot_p(slice(A,1),slice(A,1));
-	double scaleZ  = dot_p(slice(A,2),slice(As,2))/dot_p(slice(A,2),slice(A,2));
-
-	supercellDim_ = std::vector<int> {
-								int(std::floor( scaleX + 0.5 )),
-								int(std::floor( scaleY + 0.5 )),
-								int(std::floor( scaleZ + 0.5 )) };
-	assert( (std::abs(scaleX - supercellDim_[0]) < superCell.get_symmetry().get_symmetry_prec()) &&
-			(std::abs(scaleY - supercellDim_[1]) < superCell.get_symmetry().get_symmetry_prec()) &&
-			(std::abs(scaleZ - supercellDim_[2]) < superCell.get_symmetry().get_symmetry_prec()) );
 }
 
 void

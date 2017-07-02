@@ -62,6 +62,12 @@ public:
 	void apply_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
 						std::vector<double>::iterator fieldCartEnd) const;
 
+	template<typename T>
+	void rotate(int isym,
+				typename std::vector<T>::iterator fieldDirectSpaceBegin,
+				typename std::vector<T>::iterator fieldDirectSpaceEnd,
+				bool latticePeriodic) 								const;
+
 	void rotate_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
 						std::vector<double>::iterator fieldCartEnd) const;
 
@@ -138,4 +144,5 @@ private:
 } /* namespace LatticeStructure */
 } /* namespace elephon */
 
+#include "LatticeStructure/Symmetry.hpp"
 #endif /* ELEPHON_LATTICESTRUCTURE_SYMMETRY_H_ */

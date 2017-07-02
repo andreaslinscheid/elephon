@@ -41,19 +41,19 @@ BOOST_AUTO_TEST_CASE( build_Al_primitive )
 	// which displaces atom 0 in direction x and is thus element mu2 = 0
 	//Use it to compute the first column of phi explicitly
 	std::vector<double> ref_forces_displ_0 =	//	Positions in unperturbed cell (mapped to the 1 UC):
-	{ 0.03277268,-0.00000000, 0.00000000,
-	 -0.00119738,-0.00124887,-0.01569525,
-	 -0.00119738,-0.01521390, 0.00405430,
-	  0.00721062,-0.00000000, 0.00000000,
-	 -0.02158553,-0.00000000, 0.00000000,
-	 -0.00119738, 0.00124887, 0.01569525,
-	 -0.00119738, 0.01521390,-0.00405430,
-	 -0.01360824,-0.00000000, 0.00000000};
+	{ -0.03302156 , -0.00000000 ,  0.00000000,  //  0.00000000  0.00000000  0.00000000
+	   0.02164656 , -0.00000000 ,  0.00000000,  //  1.00000000  0.00000000  0.00000000
+	   0.00122385 ,  0.01523475 , -0.00407815,  //  0.00000000  1.00000000  0.00000000
+	   0.00122385 , -0.01523475 ,  0.00407815,  //  1.00000000  1.00000000  0.00000000
+	   0.00122385 ,  0.00123334 ,  0.01572286,  //  0.00000000  0.00000000  1.00000000
+	   0.00122385 , -0.00123334 , -0.01572286,  //  1.00000000  0.00000000  1.00000000
+	  -0.00717966 , -0.00000000 ,  0.00000000,  //  0.00000000  1.00000000  1.00000000
+	   0.01365925 , -0.00000000 ,  0.00000000}; //  1.00000000  1.00000000  1.00000000
 
-	double magn = (1-0.99824900)*5.71025;
+	double magn = 0.001751*5.712;
 
 	for ( auto &f : ref_forces_displ_0)
-		f /= magn;
+		f /= -magn;
 
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
@@ -104,6 +104,17 @@ BOOST_AUTO_TEST_CASE( build_Al_primitive )
 	BOOST_REQUIRE( phi.get_num_modes() == 3 );
 
 	BOOST_REQUIRE( phi.get_num_R() == 2*2*2 );
+
+	//Check the R = 0 first column
+	//We can't be too greedy here
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 0) - ref_forces_displ_0[ 0] , 0.01 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 1, 0) - ref_forces_displ_0[ 1] , 0.01 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 2, 0) - ref_forces_displ_0[ 2] , 0.01 );
+
+	//it has to equal the row, too
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 0) - ref_forces_displ_0[ 0] , 0.01 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 1) - ref_forces_displ_0[ 1] , 0.01 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 2) - ref_forces_displ_0[ 2] , 0.01 );
 }
 
 void load_data(

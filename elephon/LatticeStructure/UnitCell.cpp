@@ -444,5 +444,39 @@ UnitCell::generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) c
 	}
 }
 
+void
+UnitCell::compute_supercell_dim(
+		UnitCell const & superCell,
+		std::vector<int> & supercellDim ) const
+{
+	//Locate the unit cell in the supercell
+	auto A = this->get_lattice().get_latticeMatrix();
+	for ( auto &aij : A )
+		aij *= this->get_alat();
+
+	auto As = superCell.get_lattice().get_latticeMatrix();
+	for ( auto &aij : As )
+		aij *= superCell.get_alat();
+
+	auto slice = [] (std::vector<double> const & A, int i) {
+			return std::vector<double>({A[0*3+i],A[1*3+i],A[2*3+i]});
+		};
+	auto dot_p = [] (std::vector<double> const & a, std::vector<double> const & b) {
+		return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+	};
+
+	double scaleX  = dot_p(slice(A,0),slice(As,0))/dot_p(slice(A,0),slice(A,0));
+	double scaleY  = dot_p(slice(A,1),slice(As,1))/dot_p(slice(A,1),slice(A,1));
+	double scaleZ  = dot_p(slice(A,2),slice(As,2))/dot_p(slice(A,2),slice(A,2));
+
+	supercellDim = std::vector<int> {
+								int(std::floor( scaleX + 0.5 )),
+								int(std::floor( scaleY + 0.5 )),
+								int(std::floor( scaleZ + 0.5 )) };
+	assert( (std::abs(scaleX - supercellDim[0]) < superCell.get_symmetry().get_symmetry_prec()) &&
+			(std::abs(scaleY - supercellDim[1]) < superCell.get_symmetry().get_symmetry_prec()) &&
+			(std::abs(scaleZ - supercellDim[2]) < superCell.get_symmetry().get_symmetry_prec()) );
+}
+
 } /* namespace LatticeStructure */
 } /* namespace elephon */

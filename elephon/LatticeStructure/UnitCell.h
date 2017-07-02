@@ -70,6 +70,8 @@ public:
 	void set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const;
 
 	void generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const;
+
+	void compute_supercell_dim(UnitCell const & supercell, std::vector<int> & supercellDim ) const;
 private:
 
 	LatticeStructure::LatticeModule lattice_;

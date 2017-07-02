@@ -65,10 +65,6 @@ private:
 	// and the set of R vectors [(tau_a-tau_b)*numR+ir] a set with vectors of atom positions
 	std::vector< std::vector<double> > tau_;
 
-	void set_supercell_dim(
-			LatticeStructure::UnitCell const & unitCell,
-			LatticeStructure::UnitCell const & superCell);
-
 	void determine_lattice_vector(LatticeStructure::AtomDisplacement const & displ,
 			std::vector<LatticeStructure::Atom> const & superCell,
 			std::vector<int> & R, int & mu);
