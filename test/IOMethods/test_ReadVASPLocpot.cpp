@@ -21,14 +21,14 @@
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
-#include "IOMethods/ReadVASPPotcar.h"
+#include <IOMethods/ReadVASPLocpot.h>
 #include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
 
 BOOST_AUTO_TEST_CASE( Read_potcar )
 {
-	elephon::IOMethods::ReadVASPPotcar filerreader;
+	elephon::IOMethods::ReadVASPLocpot filerreader;
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "supercell";
 	std::vector<double> potential;

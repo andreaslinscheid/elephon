@@ -604,8 +604,8 @@ In order to make it approximately equivalent to the results for the infinite
 \begin_inset Formula 
 \begin{equation}
 R_{x_{i}}\in M_{x_{i}}=\begin{cases}
-[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm even}\\{}
-[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm odd}
+[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm even}\\
+{}[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm odd}
 \end{cases}
 \end{equation}
 
@@ -1533,6 +1533,10 @@ reference "eq:SymmetryDisplacementPotential"
 
 GB of data and easily managable of modern computer hardware.
  This estimation is for a rather large system.
+\end_layout
+
+\begin_layout Standard
+ 
 \end_layout
 
 \begin_layout Subsection

@@ -17,7 +17,7 @@
  *      Author: A. Linscheid
  */
 
-#include "ReadVASPPotcar.h"
+#include <IOMethods/ReadVASPLocpot.h>
 #include <fstream>
 #include <stdexcept>
 #include <sstream>
@@ -28,7 +28,7 @@ namespace IOMethods
 {
 
 void
-ReadVASPPotcar::read_scf_potential(std::string const & filename,
+ReadVASPLocpot::read_scf_potential(std::string const & filename,
 		std::vector<int> & dims,
 		std::vector<double> & potential) const
 {

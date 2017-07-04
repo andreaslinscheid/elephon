@@ -1,4 +1,4 @@
-/*	This file ReadVASPPotcar.h is part of elephon.
+/*	This file WriteVASPRealSpaceData.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,13 +13,14 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: Jul 2, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOTCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOTCAR_H_
+#ifndef ELEPHON_IOMETHODS_WRITEVASPREALSPACEDATA_H_
+#define ELEPHON_IOMETHODS_WRITEVASPREALSPACEDATA_H_
 
+#include "LatticeStructure/UnitCell.h"
 #include <string>
 #include <vector>
 
@@ -28,18 +29,19 @@ namespace elephon
 namespace IOMethods
 {
 
-class ReadVASPPotcar
+class WriteVASPRealSpaceData
 {
 public:
 
-	void read_scf_potential(std::string const & filename,
-			std::vector<int> & dims,
-			std::vector<double> & potential) const;
-private:
-
+	void write_file(std::string const & filename,
+			std::string  comment,
+			std::vector<int> const & dataDims,
+			LatticeStructure::UnitCell const & unitCell,
+			std::vector<double> const & data,
+			bool spin_resolved = false) const;
 };
 
 } /* namespace IOMethods */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOTCAR_H_ */
+#endif /* ELEPHON_IOMETHODS_WRITEVASPREALSPACEDATA_H_ */

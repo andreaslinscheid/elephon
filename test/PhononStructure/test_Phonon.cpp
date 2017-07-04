@@ -72,4 +72,23 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 	for ( int iq = 0; iq < nq; ++iq)
 		for ( int mu = 0; mu < ph.get_num_modes() ; ++mu)
 			BOOST_CHECK_SMALL(refData[iq*ph.get_num_modes()+mu]-w[iq*ph.get_num_modes()+mu],0.1);
+
+	for ( int iq = 0; iq < nq; ++iq)
+	{
+		std::vector<std::complex<double>> u1(3),u2(3),u3(3);
+		for ( int i = 0; i < 3; ++i)
+		{
+			u1[i] = eigenmodes[iq*9+0*3+i];
+			u2[i] = eigenmodes[iq*9+1*3+i];
+			u3[i] = eigenmodes[iq*9+2*3+i];
+		}
+
+		BOOST_CHECK_CLOSE( std::abs(u1[0]*u1[0]+u1[1]*u1[1]+u1[2]*u1[2]) , 1.0, 0.02);
+		BOOST_CHECK_CLOSE( std::abs(u2[0]*u2[0]+u2[1]*u2[1]+u2[2]*u2[2]) , 1.0, 0.02);
+		BOOST_CHECK_CLOSE( std::abs(u3[0]*u3[0]+u3[1]*u3[1]+u3[2]*u3[2]) , 1.0, 0.02);
+
+		BOOST_CHECK_SMALL( std::abs(u1[0]*u2[0]+u1[1]*u2[1]+u1[2]*u2[2]) , 0.0002);
+		BOOST_CHECK_SMALL( std::abs(u1[0]*u3[0]+u1[1]*u3[1]+u1[2]*u3[2]) , 0.0002);
+		BOOST_CHECK_SMALL( std::abs(u2[0]*u3[0]+u2[1]*u3[1]+u2[2]*u3[2]) , 0.0002);
+	}
 }

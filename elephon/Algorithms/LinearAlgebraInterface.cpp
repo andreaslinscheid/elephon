@@ -41,29 +41,45 @@ LinearAlgebraInterface::call_gemm(
         int m, int n, int k, double alpha, double const * A, int lda,
         double const * B, int ldb, double beta,double * C,int ldc) const
 {
-	auto ctoen = [] (char const & c){
-		switch (c) {
-			case 'c':
-			case 'C':
-				return CblasConjTrans;
-			case 'n':
-			case 'N':
-				return CblasNoTrans;
-			case 't':
-			case 'T':
-				return CblasTrans;
-			default:
-				throw std::runtime_error("Invalid char passed to gemm");
-				break;
-		}
-		return CblasNoTrans;
-	};
-
 	cblas_dgemm(CblasRowMajor, ctoen(transA), ctoen(transB),
 			m, n, k,
 			alpha, A, lda,
 			B, ldb,
 			beta, C, ldc);
+	return 0;
+}
+
+CBLAS_TRANSPOSE
+LinearAlgebraInterface::ctoen(char const & c) const
+{
+	switch (c) {
+		case 'c':
+		case 'C':
+			return CblasConjTrans;
+		case 'n':
+		case 'N':
+			return CblasNoTrans;
+		case 't':
+		case 'T':
+			return CblasTrans;
+		default:
+			throw std::runtime_error("Invalid char passed to gemm");
+			break;
+	}
+	return CblasNoTrans;
+}
+
+int
+LinearAlgebraInterface::call_gemm(
+		char transA, char transB,
+        int m, int n, int k, std::complex<float> alpha, std::complex<float> const * A, int lda,
+		std::complex<float> const * B, int ldb, std::complex<float> beta,std::complex<float> * C,int ldc) const
+{
+	cblas_cgemm(CblasRowMajor, ctoen(transA), ctoen(transB),
+			m, n, k,
+			reinterpret_cast<void*>(&alpha), reinterpret_cast<const void*>(A), lda,
+			reinterpret_cast<const void*>(B), ldb,
+			reinterpret_cast<void*>(&beta), reinterpret_cast<void*>(C), ldc);
 	return 0;
 }
 

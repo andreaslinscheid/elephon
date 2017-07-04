@@ -24,10 +24,10 @@
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPWaveFunction.h"
-#include "IOMethods/ReadVASPPotcar.h"
 #include "IOMethods/ReadVASPxmlFile.h"
 #include <vector>
 #include <map>
+#include "ReadVASPLocpot.h"
 
 namespace elephon
 {
@@ -100,7 +100,7 @@ private:
 
 	ReadVASPPoscar posReader_;
 
-	ReadVASPPotcar potReader_;
+	ReadVASPLocpot potReader_;
 
 	ReadVASPSymmetries symReader_;
 

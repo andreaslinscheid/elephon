@@ -21,6 +21,24 @@
 #define ELEPHON_ALGORITHMS_LINEARALGEBRAINTERFACE_H_
 
 #include <complex>
+#ifdef USE_MKL
+
+#define MKL_INT int
+#define MKL_Complex16 std::complex<double>
+#define MKL_Complex8 std::complex<float>
+#include <mkl_types.h>
+#include <mkl_lapacke.h>
+#include <mkl.h>
+
+#else
+extern "C"
+{
+#define lapack_complex_float std::complex<float>
+#define lapack_complex_double std::complex<double>
+#include <cblas.h>
+#include <lapacke.h>
+}
+#endif
 #include <vector>
 
 namespace elephon
@@ -82,6 +100,11 @@ public:
 	        int m, int n, int k, double alpha, double const * A, int lda,
 	        double const * B, int ldb, double beta,double * C,int ldc) const;
 
+	int call_gemm(
+			char transA, char transB,
+	        int m, int n, int k, std::complex<float> alpha, std::complex<float> const * A, int lda,
+			std::complex<float> const * B, int ldb, std::complex<float> beta,std::complex<float> * C,int ldc) const;
+
 	int call_getri( int matrix_order, int n, double * a, int lda,
 			const int * ipiv, double * work, int lwork);
 
@@ -114,6 +137,8 @@ private:
 	int square_matrix_dim(C const & A) const;
 
 	void check_library_info(int returnCode, std::string const & calledByWhat ) const;
+
+	CBLAS_TRANSPOSE ctoen(char const & c) const;
 };
 
 } /* namespace Algorithms */

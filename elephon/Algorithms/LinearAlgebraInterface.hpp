@@ -18,24 +18,6 @@
  */
 
 #include "LinearAlgebraInterface.h"
-#ifdef USE_MKL
-
-#define MKL_INT int
-#define MKL_Complex16 std::complex<double>
-#define MKL_Complex8 std::complex<float>
-#include <mkl_types.h>
-#include <mkl_lapacke.h>
-#include <mkl.h>
-
-#else
-extern "C"
-{
-#define lapack_complex_float std::complex<float>
-#define lapack_complex_double std::complex<double>
-#include <cblas.h>
-#include <lapacke.h>
-}
-#endif
 #include <cmath>
 #include <assert.h>
 #include <stdexcept>

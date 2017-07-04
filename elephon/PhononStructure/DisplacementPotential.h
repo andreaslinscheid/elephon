@@ -23,6 +23,8 @@
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/AtomDisplacement.h"
 #include "LatticeStructure/RegularGrid.h"
+#include <vector>
+#include <complex>
 
 namespace elephon
 {
@@ -33,30 +35,42 @@ class DisplacementPotential
 {
 public:
 
-	void build(  LatticeStructure::UnitCell const & unitCell,
+	void build(  LatticeStructure::UnitCell unitCell,
 			LatticeStructure::UnitCell const & superCell,
 			std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
-			LatticeStructure::RegularGrid const & unitcellGrid,
+			LatticeStructure::RegularGrid unitcellGrid,
 			LatticeStructure::RegularGrid const & supercellGrid,
 			std::vector<double> const & potentialUC,
 			std::vector< std::vector<double> > const & potentialDispl );
 
-	void compute_dvscf(
+	void compute_dvscf_q(
 			std::vector<double> const & qVect,
-			std::vector<double> const & dynamicalMatrices,
+			std::vector<std::complex<double>> const & dynamicalMatrices,
 			std::vector<double> const & masses,
-			std::vector<float> & dvscf) const;
+			std::vector<std::complex<float>> & dvscf) const;
 
 	int RVectorLayout(int iRz, int iRy, int iRx ) const;
 
 	int get_num_R() const;
 
 	int get_num_modes() const;
+
+	void write_dvscf(int atomIndex, int xi, std::string filename) const;
+
+	void write_dvscf_q(std::vector<double> const & qVect,
+			std::vector<int> modeIndices,
+			std::vector<std::complex<double>> const & dynamicalMatrices,
+			std::vector<double> const & masses,
+			std::string filename) const;
 private:
 
 	int numModes_ = 0;
 
-	int nptsRealSpace_;
+	int nptsRealSpace_ = 0;
+
+	LatticeStructure::RegularGrid unitCellGrid_;
+
+	LatticeStructure::UnitCell unitCell_;
 
 	///For each lattice vector, the linear displacement potential sorted
 	///according 1) the mode index and 2) to the realspaceGrid_ in z-slowest-running order.
@@ -75,6 +89,11 @@ private:
 			std::vector< std::vector<int> > & rotMap) const;
 
 	int mem_layout(int ir, int mu, int iR ) const;
+
+	void build_supercell_to_primite(
+			LatticeStructure::RegularGrid const & primitiveCellGrid,
+			LatticeStructure::RegularGrid const & supercellGrid,
+			std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const;
 };
 
 } /* namespace PhononStructure */
