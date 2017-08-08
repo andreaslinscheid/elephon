@@ -1856,6 +1856,77 @@ N_{e} & = & \int_{-\infty}^{E_{f}}{\rm d}\omega\rho(\omega)\\
 \end_layout
 
 \begin_layout Subsection
+Lattice basis
+\end_layout
+
+\begin_layout Standard
+Let us consider the scalar product of the cartesian vectors
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{k}^{{\rm T}}\cdot\boldsymbol{R} & = & c\\
+\tilde{\boldsymbol{k}}^{{\rm T}}\cdot B^{{\rm T}}\cdot A\cdot\tilde{\boldsymbol{R}} & = & c=\tilde{\boldsymbol{k}}^{{\rm T}}\cdot\tilde{\boldsymbol{R}}\\
+(B\cdot\tilde{\boldsymbol{k}})^{{\rm T}}\cdot A\cdot\tilde{\boldsymbol{R}} & = & c
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $B$
+\end_inset
+
+ is the reciprocal lattice basis and 
+\begin_inset Formula $A$
+\end_inset
+
+ is the real space lattice basis.
+ Clearly 
+\begin_inset Formula $B^{{\rm T}}\cdot A=1=A^{{\rm T}}\cdot B$
+\end_inset
+
+.
+ Thus
+\begin_inset Formula 
+\begin{equation}
+B^{{\rm T}}=A^{-1}\Leftrightarrow A\cdot B^{{\rm T}}=1
+\end{equation}
+
+\end_inset
+
+Now let us consider the effect of symmetry operations
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{k}^{{\rm T}}\cdot S^{-1}S\cdot\boldsymbol{R} & = & c\\
+(S\cdot\boldsymbol{k})^{{\rm T}}S\cdot\boldsymbol{R} & = & c\\
+(S\cdot\boldsymbol{k})^{{\rm T}}A\cdot B^{{\rm T}}\cdot S\cdot A\cdot\tilde{\boldsymbol{R}} & = & c\\
+(S\cdot B\cdot\tilde{\boldsymbol{k}})^{{\rm T}}A\cdot\tilde{S}\cdot\tilde{\boldsymbol{R}} & = & c\\
+(A^{{\rm T}}\cdot S\cdot B\cdot\tilde{\boldsymbol{k}})^{{\rm T}}\cdot\tilde{S}\cdot\tilde{\boldsymbol{R}} & = & c\\
+(\tilde{S}_{k}\cdot\tilde{\boldsymbol{k}})^{{\rm T}}\cdot\tilde{S}\cdot\tilde{\boldsymbol{R}} & = & c\\
+\tilde{\boldsymbol{k}}^{{\rm T}}\cdot\tilde{S}_{k}^{{\rm T}}\cdot\tilde{S}\cdot\tilde{\boldsymbol{R}} & = & c
+\end{eqnarray}
+
+\end_inset
+
+by which we see
+\begin_inset Formula 
+\begin{equation}
+\tilde{S}_{k}^{{\rm T}}\cdot\tilde{S}=1
+\end{equation}
+
+\end_inset
+
+with
+\begin_inset Formula 
+\begin{eqnarray}
+B^{{\rm T}}\cdot S\cdot A & = & \tilde{S}\\
+A^{{\rm T}}\cdot S\cdot B & = & \tilde{S}_{k}\leftrightarrow\tilde{S}^{{\rm T}}=\tilde{S}_{k}^{-1}
+\end{eqnarray}
+
+\end_inset
+
+even though the matrices are not nessecary unitary.
+\end_layout
+
+\begin_layout Subsection
 Displacements in a lattice with non-orthogonal basis vectors
 \end_layout
 

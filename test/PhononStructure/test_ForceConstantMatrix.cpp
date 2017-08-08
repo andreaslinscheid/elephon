@@ -34,7 +34,7 @@
 BOOST_AUTO_TEST_CASE( build_Al_primitive )
 {
 	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive"/ "phonon_run" ;
 	auto phononDir = rootDir / "phonon";
 
 	//reference data - pulled from the file - for irreducible displacement 0
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE( build_Al_primitive )
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
 	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	elephon::LatticeStructure::LatticeModule  lattice;
 	//here we create the test input file
 	std::string content = std::string()+
@@ -115,6 +115,71 @@ BOOST_AUTO_TEST_CASE( build_Al_primitive )
 	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 0) - ref_forces_displ_0[ 0] , 0.01 );
 	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 1) - ref_forces_displ_0[ 1] , 0.01 );
 	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 2) - ref_forces_displ_0[ 2] , 0.01 );
+
+	//Now check an explicit comparison for a comparable calculation with phonopy
+	std::vector<double> referenceFC = {
+			 3.30215600e+00, -0.00000000e+00, -1.09366323e-17,
+			-0.00000000e+00,  3.30215600e+00,  2.36023354e-17,
+			 9.76370709e-18,  2.10464317e-17,  3.30215600e+00,
+
+			-2.46288933e+00,  6.93889390e-18, -6.93889390e-18,
+			-0.00000000e+00,  8.61649356e-01,  3.23182283e-01,
+			 8.08057785e-17,  3.23182283e-01,  6.33124972e-01,
+
+			 3.05146850e-02, -1.43956748e+00,  2.79884067e-01,
+			-1.43956748e+00, -1.63175466e+00, -1.61591142e-01,
+			 2.79884067e-01, -1.61591142e-01,  6.33124972e-01,
+
+			 3.05146850e-02,  1.43956748e+00, -2.79884067e-01,
+			 1.43956748e+00, -1.63175466e+00, -1.61591142e-01,
+			-2.79884067e-01, -1.61591142e-01,  6.33124972e-01,
+
+			 3.05146850e-02, -2.15978596e-01, -1.45053192e+00,
+			-2.15978596e-01,  2.79905287e-01, -8.37464996e-01,
+			-1.45053192e+00, -8.37464996e-01, -1.27853497e+00,
+
+			 3.05146850e-02,  2.15978596e-01,  1.45053192e+00,
+			 2.15978596e-01,  2.79905287e-01, -8.37464996e-01,
+			 1.45053192e+00, -8.37464996e-01, -1.27853497e+00,
+
+			 4.04600587e-01,  1.90819582e-17,  1.38777878e-17,
+			 1.73472348e-18, -9.41806158e-02,  1.67492999e+00,
+			-4.51177393e-19,  1.67492999e+00, -1.27853497e+00,
+
+			-1.36592600e+00, -1.38777878e-17,  4.70145175e-18,
+			-0.00000000e+00, -1.36592600e+00,  3.28600019e-20,
+			-1.50023900e-17,  1.15493329e-17, -1.36592600e+00
+	};
+
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 0) - referenceFC[  0] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 1) - referenceFC[  1] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 0, 2) - referenceFC[  2] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 1, 0) - referenceFC[  3] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 1, 1) - referenceFC[  4] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 1, 2) - referenceFC[  5] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 2, 0) - referenceFC[  6] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 2, 1) - referenceFC[  7] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 0, 0, 2, 2) - referenceFC[  8] , 0.001 );
+
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 0, 0) - referenceFC[  9] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 0, 1) - referenceFC[ 10] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 0, 2) - referenceFC[ 11] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 1, 0) - referenceFC[ 12] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 1, 1) - referenceFC[ 13] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 1, 2) - referenceFC[ 14] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 2, 0) - referenceFC[ 15] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 2, 1) - referenceFC[ 16] , 0.001 );
+	BOOST_CHECK_SMALL( phi(1, 0, 0, 2, 2) - referenceFC[ 17] , 0.001 );
+
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 0, 0) - referenceFC[ 18] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 0, 1) - referenceFC[ 19] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 0, 2) - referenceFC[ 20] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 1, 0) - referenceFC[ 21] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 1, 1) - referenceFC[ 22] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 1, 2) - referenceFC[ 23] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 2, 0) - referenceFC[ 24] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 2, 1) - referenceFC[ 25] , 0.001 );
+	BOOST_CHECK_SMALL( phi(0, 1, 0, 2, 2) - referenceFC[ 26] , 0.001 );
 }
 
 void load_data(
@@ -122,7 +187,7 @@ void load_data(
 		std::shared_ptr<elephon::IOMethods::VASPInterface> & loader,
 		std::vector<elephon::LatticeStructure::Atom> & atomsUC,
 		elephon::LatticeStructure::Symmetry & symmetry,
-		elephon::LatticeStructure::RegularGrid & kgrid,
+		elephon::LatticeStructure::RegularSymmetricGrid & kgrid,
 		elephon::LatticeStructure::LatticeModule & lattice)
 {
 	//here we create the test input file
@@ -147,7 +212,7 @@ void run_test(boost::filesystem::path rootDir ,
 		std::shared_ptr<elephon::IOMethods::VASPInterface> loader,
 		std::vector<elephon::LatticeStructure::Atom> const & atomsUC,
 		elephon::LatticeStructure::Symmetry const & symmetry,
-		elephon::LatticeStructure::RegularGrid  const& kgrid,
+		elephon::LatticeStructure::RegularSymmetricGrid  const& kgrid,
 		elephon::LatticeStructure::LatticeModule  const& lattice)
 {
 	elephon::LatticeStructure::UnitCell unitCell;
@@ -272,7 +337,7 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_no_symmetry )
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
 	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	elephon::LatticeStructure::LatticeModule  lattice;
 	load_data( rootDir, loader, atomsUC, symmetry, kgrid, lattice);
 
@@ -288,7 +353,7 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_partial_symmetry )
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
 	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	elephon::LatticeStructure::LatticeModule  lattice;
 	load_data( rootDir, loader, atomsUC, symmetry, kgrid, lattice);
 
@@ -316,7 +381,7 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_full_symmetry )
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
 	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	elephon::LatticeStructure::LatticeModule  lattice;
 	load_data( rootDir, loader, atomsUC, symmetry, kgrid, lattice);
 

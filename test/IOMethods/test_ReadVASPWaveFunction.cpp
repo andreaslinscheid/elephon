@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 
 	std::vector<int> kpts = {1,4};
 	std::vector<int> bands = {0,1,4};
-	std::vector< std::complex<float> > wfct;
+	std::vector< std::vector< std::complex<float> > > wfct;
 	std::vector<int> pwPerK;
 	wfctreader.read_wavefunction( kpts, bands, wfct, pwPerK );
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 	//...and compare the second k point (ik=4) and the zeroth band (ibnd = 0)
 	float diff = 0;
 	for ( int i = 0 ; i < npw ; ++i)
-		diff += std::abs(wfct[pwPerK[0]*int(bands.size())+i]-pwcoeff[i]);
+		diff += std::abs(wfct[1][i]-pwcoeff[i]);
 
 	//Note on realistic requirements for equivalence: we compare (float )->(float) and (float)->(text)->(float).
 	//The text is reasonably large so that we should roughly keep float precision but its not the _same_ number.
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 	BOOST_REQUIRE( diff/norm < 1e-5 );
 
 	std::vector< std::vector< int >  > fourier;
-	wfctreader.compute_fourier_map( k , fourier );
+	wfctreader.compute_fourier_map( k , fourier, 1e-6 );
 
 	std::getline( compareFile, buffer );
 	std::stringstream ss4(buffer);

@@ -22,6 +22,7 @@
 
 #include <vector>
 #include <cstdlib>
+#include "../LatticeStructure/RegularBareGrid.h"
 
 namespace elephon
 {
@@ -32,7 +33,7 @@ class TrilinearInterpolation
 {
 public:
 	TrilinearInterpolation(
-			std::vector<size_t> grid);
+			LatticeStructure::RegularBareGrid grid);
 
 	/**
 	 * requiredGridIndices will be given in a consecutively ordered grid index
@@ -40,41 +41,44 @@ public:
 	 */
 	void data_query(
 			std::vector<double> listOfPoints,
-			std::vector<size_t> & requiredGridIndices);
+			std::vector<int> & requiredGridIndices);
 	/**
 	 *
 	 */
 	void interpolate(
-			size_t nDataPtsPerPoint,
+			int nDataPtsPerPoint,
 			std::vector<double> const& gridDataForRequiredIndices,
 			std::vector<double> & pointsData) const;
 
+	template<typename T>
+	void interpolate_within_single_cube(
+			std::vector<double> const & ptsInCube,
+			std::vector<std::vector<T>> const & cornerData,
+			std::vector<T> & interpolData) const;
+
 private:
 
-	struct GridCube
-	{
-		GridCube( std::vector<size_t> cornerPoints )
-				: cornerPoints_( std::move(cornerPoints) ){};
-
-		std::vector<size_t> cornerPoints_;
-		mutable std::vector<size_t> containedIrregularPts_;
-
-		bool operator< (GridCube const& other) const;
-	};
-
-	std::vector<size_t> grid_;
+	LatticeStructure::RegularBareGrid  grid_;
 
 	std::vector<double> listOfPoints_;
 
-	std::vector<GridCube> usedGridCubes_;
+	std::vector<LatticeStructure::RegularBareGrid::GridCube> usedGridCubes_;
 
-	std::vector<size_t> conseqPtsRegularGrid_;
+	std::vector<int> conseqPtsRegularGrid_;
 
-	std::vector<size_t> get_cube_indices_surrounding(std::vector<double> const& v) const;
+	void get_cell_vectors( std::vector<double> const& k,
+			std::vector<double> & lowerCorner,
+			std::vector<double> & upperCorner ) const;
+
+	template<typename T>
+	inline T interpolate_single_cube_realtive(
+			double x, double y, double z,
+			T f000, T f100, T f110, T f010,
+			T f001, T f101, T f111, T f011) const;
 
 	template<typename T>
 	void interpolate(
-			size_t nDataPtsPerPoint,
+			int nDataPtsPerPoint,
 			std::vector<T> const& gridDataForRequiredIndices,
 			std::vector<T> & pointsData) const;
 

@@ -20,8 +20,8 @@
 #ifndef ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_
 #define ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_
 
-#include "LatticeStructure/RegularGrid.h"
 #include <vector>
+#include "LatticeStructure/RegularSymmetricGrid.h"
 
 namespace elephon
 {
@@ -32,11 +32,41 @@ class ElectronicBands
 {
 public:
 
+	/**
+	 * Set the data in the the band structure.
+	 *
+	 * The data is located by the k point coordinates.
+	 *
+	 * @param kpoints	K point in direct coordinates as [k0_x,k0_y,k0_z, k1_x,...,kN-1_z]
+	 * @param numBands	Number of bands
+	 * @param bandData	N, which is the number of k points, times number of bands data values
+	 * 					with 'bands' as the fast running dimension such as [(b=0,k=0),(b=1,k=0),...(b=num bands,k=N-1)]
+	 * @param grid		K point grid
+	 */
 	void initialize(
 			std::vector<double> const & kpoints,
 			int numBands,
 			std::vector<double> bandData,
-			LatticeStructure::RegularGrid grid);
+			LatticeStructure::RegularSymmetricGrid grid);
+
+	/**
+	 * Set the data in the the band structure.
+	 *
+	 * The data is assumed to match the shape of either the reducible or the irreducible grid.
+	 * Which one is picked depends on the size of \p bandData ; if it matches either one it will be chosen.
+	 *
+	 * @param numBands	Number of bands
+	 * @param bandData	N, which is the number of k points, times number of bands data values
+	 * 					with 'bands' as the fast running dimension such as [(b=0,k=0),(b=1,k=0),...(b=num bands,k=N-1)]
+	 * @param grid		K point grid
+	 */
+	void initialize(
+			int numBands,
+			std::vector<double> bandData,
+			LatticeStructure::RegularSymmetricGrid grid);
+
+	std::vector<int> get_bands_crossing_energy_lvls(
+			std::vector<double> const & energies ) const;
 
 	int get_nBnd() const;
 
@@ -44,14 +74,14 @@ public:
 			std::vector<int> const & bIndices,
 			std::vector<double> & bands) const;
 
-	LatticeStructure::RegularGrid const & get_grid() const;
+	LatticeStructure::RegularSymmetricGrid const & get_grid() const;
 private:
 
 	int nBnd_;
 
 	std::vector<double> dataIrred_;
 
-	LatticeStructure::RegularGrid grid_;
+	LatticeStructure::RegularSymmetricGrid grid_;
 };
 
 } /* namespace ElectronicStructure */

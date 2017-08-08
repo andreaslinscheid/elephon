@@ -181,15 +181,8 @@ void ReadVASPPoscar::read_file( std::string filename,
 			for (int xi = 0 ; xi < 3; ++xi)
 				tauI[xi] *= scale[xi];
 
-			//Get the reciprocal lattice matrix which is the inverse matrix to
-			//the lattice matrix - multiply them from the left to transform a
-			//Cartesian into a direct lattice vector
-			LatticeStructure::LatticeModule lattice;
-			lattice.initialize( latticeMatrix_ );
-			auto B = lattice.get_reciprocal_latticeMatrix();
-			auto tauICart = tauI;
-			for ( size_t j = 0; j < 3 ; ++j)
-				tauI[j] = B[j*3+0]*tauICart[0] + B[j*3+1]*tauICart[1] + B[j*3+2]*tauICart[2];
+			LatticeStructure::LatticeModule lattice( latticeMatrix_ );
+			lattice.cartesian_to_direct(tauI);
 		}
 
 		if ( selectiveDynamics )

@@ -21,6 +21,7 @@
 #define ELEPHON_IOMETHODS_VASPINTERFACE_H_
 
 #include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "ElectronicStructure/ElectronicBands.h"
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPWaveFunction.h"
@@ -40,6 +41,8 @@ public:
 
 	using ElectronicStructureCodeInterface::ElectronicStructureCodeInterface;
 
+	std::string code_tag() const;
+
 	void set_up_run(
 			std::string root_directory,
 			std::string target_directory,
@@ -58,22 +61,27 @@ public:
 			std::string root_directory,
 			std::vector<int> const & kpts,
 			std::vector<int> const & bandIndices,
-			std::vector< std::complex<float> > & wfctData,
+			std::vector< std::vector< std::complex<float> > > & wfctData,
 			std::vector< int > & npwPerKpt);
 
 	std::vector<int> get_max_fft_dims() const;
 
 	void compute_fourier_map(
 			std::vector<double> const & kpts,
-			std::vector< std::vector<int> > & fourierMap);
+			std::vector< std::vector<int> > & fourierMap,
+			double gridPrec);
 
 	void read_cell_paramters(
 			std::string root_directory,
 			double symPrec,
-			LatticeStructure::RegularGrid & kPointMesh,
+			LatticeStructure::RegularSymmetricGrid & kPointMesh,
 			LatticeStructure::LatticeModule & lattice,
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry);
+
+	void read_lattice_structure(
+			std::string root_directory,
+			LatticeStructure::LatticeModule & lattice);
 
 	void read_forces(
 			std::string root_directory,
@@ -88,6 +96,10 @@ public:
 			std::string root_directory,
 			std::vector<int> & kptSampling,
 			std::vector<double> & shifts) const;
+
+	void read_band_structure(
+			std::string root_directory,
+			ElectronicStructure::ElectronicBands & bands);
 
 	void read_electronic_structure(
 			std::string root_directory,

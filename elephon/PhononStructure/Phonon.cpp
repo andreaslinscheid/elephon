@@ -80,5 +80,11 @@ Phonon::get_num_modes() const
 	return fc_.get_num_modes();
 }
 
+std::vector<double> const &
+Phonon::get_masses() const
+{
+	return masses_;
+}
+
 } /* namespace PhononStructure */
 } /* namespace elephon */

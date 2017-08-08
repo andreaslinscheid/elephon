@@ -69,9 +69,9 @@ private:
 			std::vector<LatticeStructure::Atom> const & superCell,
 			std::vector<int> & R, int & mu);
 
-	int RVectorLayout(int iRz, int iRy, int iRx ) const;
+	int RVectorLayout(int iRd, int iRy, int iRz ) const;
 
-	int mem_layout(int iRz, int iRy, int iRx, int mu2, int mu1 ) const;
+	int mem_layout(int iRx, int iRy, int iRz, int mu2, int mu1 ) const;
 
 	int mem_layout( int ir, int mu2, int mu1 ) const;
 

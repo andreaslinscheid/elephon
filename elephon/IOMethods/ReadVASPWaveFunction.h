@@ -46,12 +46,13 @@ public:
 	void read_wavefunction(
 			std::vector<int> const& kptindices,
 			std::vector<int> const & bandIndices,
-			std::vector< std::complex<float> > & wfctData,
+			std::vector< std::vector< std::complex<float> > > & wfctData,
 			std::vector<int> & npwPerKpt ) const;
 
 	void compute_fourier_map(
-			std::vector<double> const& kptCoords,
-			std::vector< std::vector<int> > & fftMapPerK) const;
+			std::vector<double> kptCoords,
+			std::vector< std::vector<int> > & fftMapPerK,
+			double vaspGridPrec) const;
 
 	std::vector<int> get_fft_max_dims() const;
 
@@ -84,6 +85,13 @@ private:
 
 	bool spanRecords_ = false;
 
+	/// vector of k-point coordinates as (x1,y1,z1,x2,y2,...)
+	///
+	/// NOTE: elephon stores k points in the 'left major' 1.BZ so that k=(0.5 0.0 -0.5) will
+	/// be mapped to k_1BZ=(-0.5 0.0 -0.5) while VASP apparently uses k_1BZ=(0.5 0.0 0.5).
+	/// We have to keep track of this while reading in data and output only data in the
+	/// elephon convention! This affects also the Fourier mapping since since elephon's G vectors
+	/// for k points on the border are off by possibly 1 in each direction.
 	std::vector<double> kpoints_;
 
 	std::vector<int> fourierMax_;

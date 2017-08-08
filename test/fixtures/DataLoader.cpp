@@ -18,11 +18,11 @@
  */
 
 #include <boost/filesystem.hpp>
+#include <LatticeStructure/RegularSymmetricGrid.h>
 #include "fixtures/DataLoader.h"
 #include "fixtures/MockStartup.h"
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/Symmetry.h"
-#include "LatticeStructure/RegularGrid.h"
 #include "LatticeStructure/LatticeModule.h"
 #include "LatticeStructure/Atom.h"
 
@@ -56,7 +56,7 @@ DataLoader::load_unit_cell(		std::string const & contentInputFile,
 
 	std::vector<elephon::LatticeStructure::Atom> atomsUC;
 	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	elephon::LatticeStructure::LatticeModule  lattice;
 
 	loader->read_cell_paramters( options.get_root_dir(), options.get_gPrec(),

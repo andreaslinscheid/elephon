@@ -27,6 +27,7 @@
 #include "LatticeStructure/LatticeModule.h"
 #include "IOMethods/ReadVASPPoscar.h"
 #include "fixtures/MockStartup.h"
+#include "fixtures/DataLoader.h"
 
 BOOST_AUTO_TEST_CASE( Generate_Al_fcc_primitive_displacements )
 {
@@ -113,3 +114,31 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 	//how to test this?
 }
 
+
+BOOST_AUTO_TEST_CASE( Load_Al_vasp_fcc_primitve )
+{
+	using namespace elephon;
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "phonon_run";
+
+	std::string content = std::string("root_dir=")+rootDir.string()+"\n";
+	test::fixtures::DataLoader dl;
+	auto loader = dl.create_vasp_loader( content );
+
+	std::vector<elephon::LatticeStructure::Atom> atoms;
+	elephon::LatticeStructure::Symmetry symmetry;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
+	elephon::LatticeStructure::LatticeModule  lattice;
+	loader->read_cell_paramters(
+			rootDir.string(),
+			loader->get_optns().get_gPrec(),
+			kgrid,
+			lattice,
+			atoms,
+			symmetry);
+
+	LatticeStructure::UnitCell uc;
+	uc.initialize(atoms, lattice, symmetry);
+
+	BOOST_REQUIRE_EQUAL(uc.get_site_symmetry( 0 ).get_num_symmetries(), 48);
+}

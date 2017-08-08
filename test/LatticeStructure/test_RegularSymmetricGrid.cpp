@@ -22,7 +22,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/VASPInterface.h"
-#include "LatticeStructure/RegularGrid.h"
+#include <LatticeStructure/RegularSymmetricGrid.h>
 #include "fixtures/MockStartup.h"
 #include <iostream>
 
@@ -40,13 +40,14 @@ BOOST_AUTO_TEST_CASE( Al_fcc_UnitCell )
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	loader->read_cell_paramters( testd.string() ,1e-6,kgrid,lattice,atoms,sym);
 
 	sym.set_reciprocal_space_sym();
-	elephon::LatticeStructure::RegularGrid kgridDefaultIrredZone;
-	kgridDefaultIrredZone.initialize(1e-6,
+	elephon::LatticeStructure::RegularSymmetricGrid kgridDefaultIrredZone;
+	kgridDefaultIrredZone.initialize(
 			kgrid.get_grid_dim(),
+			1e-6,
 			kgrid.get_grid_shift(),
 			sym,
 			lattice);
@@ -120,13 +121,14 @@ BOOST_AUTO_TEST_CASE( FeSe_UnitCell )
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	loader->read_cell_paramters(testd.string(),1e-6,kgrid,lattice,atoms,sym);
 
 	sym.set_reciprocal_space_sym();
-	elephon::LatticeStructure::RegularGrid kgridDefaultIrredZone;
-	kgridDefaultIrredZone.initialize(1e-6,
+	elephon::LatticeStructure::RegularSymmetricGrid kgridDefaultIrredZone;
+	kgridDefaultIrredZone.initialize(
 			kgrid.get_grid_dim(),
+			1e-6,
 			kgrid.get_grid_shift(),
 			sym,
 			lattice);
@@ -182,6 +184,86 @@ BOOST_AUTO_TEST_CASE( FeSe_UnitCell )
 			sym.apply(symIrRe,kIrredRot);
 			for ( int i = 0 ; i < 3; ++i)
 				BOOST_CHECK_CLOSE( kIrredRot[i] , kRed[i],  1e-6 );
+		}
+	}
+}
+
+
+BOOST_AUTO_TEST_CASE( MgB2_k_points )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
+	elephon::LatticeStructure::LatticeModule lattice;
+	std::vector<elephon::LatticeStructure::Atom> atoms;
+	elephon::LatticeStructure::Symmetry sym;
+	loader->read_cell_paramters(
+			loader->get_optns().get_root_dir(),
+			loader->get_optns().get_gPrec(),
+			kgrid,
+			lattice,
+			atoms,
+			sym);
+
+	//The methodology is that we reproduce the irreducible zone of VASP exactly
+	//thus, we take from the output file, the coordinates and the weights:
+	std::vector<double> ref_irred_kpts_vec{
+		0.000000, 0.000000, 0.000000,
+		0.333333, 0.000000, 0.000000,
+		0.333333, 0.333333, 0.000000,
+		0.000000, 0.000000, 0.500000,
+		0.333333, 0.000000, 0.500000,
+		0.333333, 0.333333, 0.500000
+	};
+	std::vector<int> ref_k_vect_weights{1, 6, 2, 1, 6, 2};
+
+	int nptotal = 0;
+	for ( auto w : ref_k_vect_weights )
+		nptotal += w;
+
+	BOOST_CHECK_EQUAL(nptotal, 3*3*2);
+
+	BOOST_CHECK_EQUAL(kgrid.get_np_red(), nptotal);
+
+	BOOST_CHECK_EQUAL(kgrid.get_np_irred(), ref_k_vect_weights.size());
+
+	for ( int ikirred = 0; ikirred  < kgrid.get_np_irred(); ++ ikirred )
+	{
+		auto irtor = kgrid.get_maps_irreducible_to_reducible()[ikirred];
+		auto symirtor = kgrid.get_maps_sym_irred_to_reducible()[ikirred];
+		//confirm that the multiplicity of each k point is correct
+		BOOST_CHECK_EQUAL(irtor.size(), ref_k_vect_weights[ikirred]);
+
+		//The first element in the star is the irreducible vector. Confirm
+		//that this agrees with the zone used in VASP while taking into account the different conventions
+		auto irredvec = kgrid.get_vector_direct(irtor[0]);
+		std::vector<double> ref_irredvec(&ref_irred_kpts_vec[ikirred*3], &ref_irred_kpts_vec[ikirred*3]+3);
+		for ( int i = 0; i < 3; ++i)
+		{
+			ref_irredvec[i] -= std::floor(ref_irredvec[i]+0.5);
+			BOOST_CHECK_SMALL(irredvec[i]-ref_irredvec[i], kgrid.get_grid_prec());
+		}
+
+		for ( int is = 1; is < symirtor.size(); ++is )
+		{
+			int ikred = irtor[is];
+			auto redvec_by_index = kgrid.get_vector_direct(ikred);
+			int isym = symirtor[is];
+			auto redvec = irredvec;
+			kgrid.get_symmetry().apply(isym,redvec,true);
+			for ( int i = 0; i < 3; ++i)
+				BOOST_CHECK_SMALL(redvec[i]-redvec_by_index[i], kgrid.get_grid_prec());
 		}
 	}
 }

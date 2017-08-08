@@ -70,8 +70,10 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 	ph.compute_at_q( qVect, w, eigenmodes );
 	assert( w.size() == ph.get_num_modes()*nq );
 	for ( int iq = 0; iq < nq; ++iq)
+	{
 		for ( int mu = 0; mu < ph.get_num_modes() ; ++mu)
 			BOOST_CHECK_SMALL(refData[iq*ph.get_num_modes()+mu]-w[iq*ph.get_num_modes()+mu],0.1);
+		}
 
 	for ( int iq = 0; iq < nq; ++iq)
 	{

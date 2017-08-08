@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_primitive_folderstructure_VASP )
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
 	elephon::LatticeStructure::LatticeModule lattice;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	vi.read_cell_paramters(
 			rootDir.string(),
 			1e-6,
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
 	elephon::LatticeStructure::LatticeModule lattice;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	vi.read_cell_paramters(
 			rootDir.string(),
 			1e-6,

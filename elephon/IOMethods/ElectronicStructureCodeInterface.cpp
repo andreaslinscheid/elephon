@@ -30,6 +30,12 @@ ElectronicStructureCodeInterface::ElectronicStructureCodeInterface(
 {
 }
 
+IOMethods::InputOptions const &
+ElectronicStructureCodeInterface::get_optns() const
+{
+	return inputOPts_;
+}
+
 ElectronicStructureCodeInterface::~ElectronicStructureCodeInterface()
 {
 	// TODO this class could take care of keeping track of file

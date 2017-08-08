@@ -32,8 +32,8 @@ void
 DisplacementPotential::build(  LatticeStructure::UnitCell unitCell,
 		LatticeStructure::UnitCell const & superCell,
 		std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
-		LatticeStructure::RegularGrid unitcellGrid,
-		LatticeStructure::RegularGrid const & supercellGrid,
+		LatticeStructure::RegularSymmetricGrid unitcellGrid,
+		LatticeStructure::RegularSymmetricGrid const & supercellGrid,
 		std::vector<double> const & potentialUC,
 		std::vector< std::vector<double> > const & potentialDispl )
 {
@@ -275,7 +275,7 @@ DisplacementPotential::build(  LatticeStructure::UnitCell unitCell,
 void
 DisplacementPotential::compute_rot_map(
 		std::vector<double> const & shift,
-		LatticeStructure::RegularGrid const & supercellGrid,
+		LatticeStructure::RegularSymmetricGrid const & supercellGrid,
 		LatticeStructure::Symmetry const & siteSymmetry,
 		std::vector< std::vector<int> > & rotMap) const
 {
@@ -358,11 +358,6 @@ DisplacementPotential::compute_dvscf_q(
 		auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
 		auto dmat_ptr = &dynmatMass[0];
 		auto ftdp_ptr = &ftDisplPot[iq*numModes_*nptsRealSpace_];
-//		std::fill(r_ptr,r_ptr+numModes_*nptsRealSpace_, std::complex<float>(0));
-//		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
-//			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
-//				for ( int ir = 0 ; ir < nptsRealSpace_; ++ir)
-//					r_ptr[mu1*nptsRealSpace_+ir] += dmat_ptr[mu1*numModes_+mu2]*ftdp_ptr[mu2*nptsRealSpace_+ir];
 		linAlg.call_gemm( 'n', 'n',
 				numModes_, nptsRealSpace_ , numModes_,
 				std::complex<float>(1.0f), dmat_ptr, numModes_,
@@ -401,6 +396,12 @@ DisplacementPotential::RVectorLayout(int iRz, int iRy, int iRx ) const
 	return (iRz*superCellDim_[1]+iRy)*superCellDim_[0]+iRx;
 }
 
+LatticeStructure::RegularSymmetricGrid const &
+DisplacementPotential::get_real_space_grid() const
+{
+	return unitCellGrid_;
+}
+
 void
 DisplacementPotential::write_dvscf(
 		int atomIndex, int xi,
@@ -413,10 +414,11 @@ DisplacementPotential::write_dvscf(
 			+ (xi == 0 ? "x" : (xi == 1 ? "y" : "z") ) + "\n";
 	//This method write the potential in the supercell
 	auto sc = unitCell_.build_supercell( superCellDim_[0], superCellDim_[1], superCellDim_[2] );
-	elephon::LatticeStructure::RegularGrid scGrid;
+	elephon::LatticeStructure::RegularSymmetricGrid scGrid;
 	auto dim = unitCellGrid_.get_grid_dim();
-	scGrid.initialize( unitCellGrid_.get_grid_prec(),
+	scGrid.initialize(
 			std::vector<int>({dim[0]*superCellDim_[0],dim[1]*superCellDim_[1],dim[2]*superCellDim_[2]}),
+			unitCellGrid_.get_grid_prec(),
 			unitCellGrid_.get_grid_shift(),
 			sc.get_symmetry(),
 			sc.get_lattice() );
@@ -482,8 +484,8 @@ DisplacementPotential::write_dvscf_q(
 
 void
 DisplacementPotential::build_supercell_to_primite(
-		LatticeStructure::RegularGrid const & primitiveCellGrid,
-		LatticeStructure::RegularGrid const & supercellGrid,
+		LatticeStructure::RegularSymmetricGrid const & primitiveCellGrid,
+		LatticeStructure::RegularSymmetricGrid const & supercellGrid,
 		std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const
 {
 	int nRSC = supercellGrid.get_np_red();

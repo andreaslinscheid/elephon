@@ -1,0 +1,273 @@
+/*	This file FFTInterface.hpp is part of elephon.
+ *
+ *  elephon is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  elephon is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Created on: Jul 7, 2017
+ *      Author: A. Linscheid
+ */
+
+#include "Algorithms/FFTInterface.h"
+#include <assert.h>
+#include <stdexcept>
+#include <iostream>
+
+namespace elephon
+{
+namespace Algorithms
+{
+
+namespace detail
+{
+
+template<class To, class Ti>
+struct ComplexConversion
+{
+	To convert(Ti val) {
+		return To(val);
+	}
+
+	const bool complex_to_real = false;
+
+	//Not used here
+	To imagAccumalate = To(0);
+};
+
+template<class To, class Ti>
+struct ComplexConversion<std::complex<To>,std::complex<Ti> >
+{
+	std::complex<To> convert(std::complex<Ti> val) {
+		return std::complex<To>(val);
+	}
+
+	const bool complex_to_real = false;
+
+	//Not used here
+	To imagAccumalate = To(0);
+};
+
+template<class To, class Ti>
+struct ComplexConversion<To,std::complex<Ti> >
+{
+	To convert(std::complex<Ti> val) {
+		imagAccumalate += std::abs(std::imag(val));
+		return To(std::real(val));
+	}
+
+	const bool complex_to_real = true;
+
+	To imagAccumalate = To(0);
+};
+} /* namespace detail */
+
+template< typename TR>
+void
+FFTInterface::allocate(
+		std::vector<int> const & gridDims,
+		int nDataPerGridPt,
+		std::vector< TR > & dataResult,
+		bool & re_plan)
+{
+	int ngrid = 1;
+	for ( auto di : gridDims )
+		ngrid *= di;
+	int nTotal = nDataPerGridPt*ngrid;
+
+	re_plan = false;
+
+	if ( nTotal > nBuff_ )
+	{
+		if (FFTBuffer_ != 0)
+		{
+			fftw_free( FFTBuffer_ );
+			FFTBuffer_ = nullptr;
+		}
+		FFTBuffer_ = fftw_alloc_complex( nTotal );
+		nBuff_ = nTotal;
+		re_plan = true;
+	}
+	dataResult.resize( nTotal );
+}
+
+template<typename TI, typename TR>
+void
+FFTInterface::fft_sparse_data(
+		std::vector<int> const & mapFFTCoeff,
+		std::vector< TI > const & sparseInputData,
+		int nDataPerGridPt,
+		int exponentSign,
+		std::vector< TR > & dataResult,
+		std::vector<int> const & gridDimsOutputData,
+		bool dataLayoutRowMajor,
+		int hintHowOften )
+{
+	int spaceDim = gridDimsOutputData.size();
+	assert(mapFFTCoeff.size()/spaceDim == sparseInputData.size()/nDataPerGridPt);
+	int ngrid = 1;
+	for ( auto di : gridDimsOutputData )
+		ngrid *= di;
+
+	bool re_plan = false;;
+	this->allocate(gridDimsOutputData, nDataPerGridPt, dataResult, re_plan);
+
+	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
+
+	auto xyz_to_cnsq = [&] (
+			std::vector<int>::const_iterator toupleBegin,
+			std::vector<int>::const_iterator toupleEnd)
+	{
+		assert( std::distance(toupleBegin,toupleEnd) == gridDimsOutputData.size() );
+		auto const & d = gridDimsOutputData;
+		int conseq = 0;
+		if ( dataLayoutRowMajor )
+		{
+			//e.g. for d == 3 : ix*d[1]+iy)*d[2]+iz
+			for ( int i = 0 ; i < int(d.size())-1; ++i)
+			{
+				conseq += *(toupleBegin+i);
+				conseq *= d[i+1];
+			}
+			conseq += *(toupleBegin+int(d.size())-1);
+		}
+		else // Column major
+		{
+			//e.g. for d == 3 : ix+d[0]*(iy+d[1]*iz
+			for ( int i = int(d.size())-1 ; i > 0; --i)
+			{
+				conseq += *(toupleBegin+i);
+				conseq *= d[i-1];
+			}
+			conseq += *(toupleBegin);
+		}
+		return conseq;
+	};
+
+	auto fillBuffer = [&] () {
+		//Not all data may be accessed, so set it to zero explictely
+		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_);
+		std::fill(ptr,ptr+ngrid*nDataPerGridPt, std::complex<double>(0));
+
+		int nGridPointsNonZero = mapFFTCoeff.size()/spaceDim;
+
+		for (int ig = 0 ; ig < nGridPointsNonZero; ++ig)
+		{
+			auto it = mapFFTCoeff.begin()+ig*spaceDim;
+			int conseq_index = xyz_to_cnsq(it,it+spaceDim);
+			for (int id = 0 ; id < nDataPerGridPt; ++id)
+			{
+				reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + conseq_index ] =
+						converterFwd.convert( sparseInputData [ ig * nDataPerGridPt + id ] );
+			}
+		}
+	};
+
+	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
+	if ( exponentSign > 0 )
+	{
+		if ( (gridDimsOutputData != gridDimsBKWD_) or re_plan )
+		{
+			gridDimsBKWD_ = gridDimsOutputData;
+			this->plan_fft(gridDimsBKWD_, +1, nDataPerGridPt, hintHowOften, fftw3PlanBkwdKtoR_, dataLayoutRowMajor);
+		}
+
+		fillBuffer();
+		fftw_execute(fftw3PlanBkwdKtoR_);
+		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+	}
+	else
+	{
+		if ( (gridDimsOutputData != gridDimsFWD_) or re_plan )
+		{
+			gridDimsFWD_ = gridDimsOutputData;
+			this->plan_fft(gridDimsFWD_, -1, nDataPerGridPt, hintHowOften, fftw3PlanFowdRtoK_ , dataLayoutRowMajor);
+		}
+
+		fillBuffer();
+		fftw_execute(fftw3PlanFowdRtoK_);
+		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+	}
+};
+
+
+template< typename TR>
+void
+FFTInterface::fill_result(int ngrid, int nDataPerGridPt, std::vector<TR> & dataResult )
+{
+	detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
+	for (int ig = 0 ; ig < ngrid; ++ig)
+		for (int id = 0 ; id < nDataPerGridPt; ++id)
+			dataResult [ ig * nDataPerGridPt + id ] =
+					converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] );
+	if ( converterBkwd.complex_to_real )
+		if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
+			throw std::runtime_error(
+					std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
+					+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) + " on average per data point");
+};
+
+template<typename TI, typename TR>
+void
+FFTInterface::fft_data(
+		std::vector<int> const & gridDims,
+		std::vector< TI > const & data,
+		std::vector< TR > & dataResult,
+		int nDataPerGridPt,
+		int exponentSign,
+		bool dataLayoutRowMajor,
+		int hintHowOften )
+{
+	int ngrid = 1;
+	for ( auto di : gridDims )
+		ngrid *= di;
+
+	bool re_plan = false;;
+	this->allocate(gridDims, nDataPerGridPt, dataResult, re_plan);
+
+	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
+
+	auto fillBuffer = [&] () {
+		for (int ig = 0 ; ig < ngrid; ++ig)
+			for (int id = 0 ; id < nDataPerGridPt; ++id)
+				reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] =
+						converterFwd.convert( data [ ig * nDataPerGridPt + id ] );
+	};
+
+	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
+	if ( exponentSign > 0 )
+	{
+		if ( (gridDims != gridDimsBKWD_) or re_plan )
+		{
+			gridDimsBKWD_ = gridDims;
+			this->plan_fft(gridDimsBKWD_, +1, nDataPerGridPt, hintHowOften, fftw3PlanBkwdKtoR_, dataLayoutRowMajor);
+		}
+
+		fillBuffer();
+		fftw_execute(fftw3PlanBkwdKtoR_);
+		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+	}
+	else
+	{
+		if ( (gridDims != gridDimsFWD_) or re_plan )
+		{
+			gridDimsFWD_ = gridDims;
+			this->plan_fft(gridDimsFWD_, -1, nDataPerGridPt, hintHowOften, fftw3PlanFowdRtoK_ , dataLayoutRowMajor);
+		}
+
+		fillBuffer();
+		fftw_execute(fftw3PlanFowdRtoK_);
+		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+	}
+}
+
+} /* namespace Algorithms */
+} /* namespace elephon */

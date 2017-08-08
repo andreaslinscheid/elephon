@@ -23,8 +23,37 @@
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/Symmetry.h"
 #include "LatticeStructure/LatticeModule.h"
+#include "IOMethods/VASPInterface.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "fixtures/MockStartup.h"
+
+BOOST_AUTO_TEST_CASE( test_MgB2 )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd/"infile").string(),
+			std::string("root_dir=")+testd.string()+"\n",
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
+	elephon::LatticeStructure::LatticeModule lattice;
+	std::vector<elephon::LatticeStructure::Atom> atoms;
+	elephon::LatticeStructure::Symmetry sym;
+	loader->read_cell_paramters(
+			loader->get_optns().get_root_dir(),
+			loader->get_optns().get_gPrec(),
+			kgrid,
+			lattice,
+			atoms,
+			sym);
+
+	BOOST_REQUIRE( sym.get_num_symmetries() == 24 );
+}
 
 BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 {
@@ -105,4 +134,51 @@ BOOST_AUTO_TEST_CASE( Symemtry_reduction )
 
 	elephon::LatticeStructure::Symmetry sym;
 	sym.initialize( 1e-6, symReader.get_symmetries(), symReader.get_fractionTranslations(), lattice, true );
+}
+
+
+BOOST_AUTO_TEST_CASE( MgB2_vasp )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
+	elephon::LatticeStructure::LatticeModule lat;
+	std::vector<elephon::LatticeStructure::Atom> atoms;
+	elephon::LatticeStructure::Symmetry sym;
+	loader->read_cell_paramters(
+			testd.string(),
+			loader->get_optns().get_gPrec(),
+			kgrid,
+			lat,
+			atoms,
+			sym);
+
+	//Check that all k vectors in the star have the same length
+	auto itor = kgrid.get_maps_irreducible_to_reducible();
+	for ( int ik = 0 ; ik < kgrid.get_np_irred(); ++ik )
+	{
+		auto kvecirrd = kgrid.get_vector_direct( itor[ik][0] );
+		auto kvecIcart = kvecirrd;
+		kgrid.get_lattice().reci_direct_to_cartesian(kvecIcart);
+		double ni2 = std::sqrt(kvecIcart[0]*kvecIcart[0]+kvecIcart[1]*kvecIcart[1]+kvecIcart[2]*kvecIcart[2]);
+		for ( int istar = 0 ; istar < itor[ik].size(); ++istar )
+		{
+			auto kvecread = kgrid.get_vector_direct( itor[ik][istar] );
+			auto kvecRcart = kvecread;
+			kgrid.get_lattice().reci_direct_to_cartesian(kvecRcart);
+			double nr2 = std::sqrt(kvecRcart[0]*kvecRcart[0]+kvecRcart[1]*kvecRcart[1]+kvecRcart[2]*kvecRcart[2]);
+			BOOST_CHECK_SMALL( ni2-nr2, 0.00001 );
+		}
+	}
 }

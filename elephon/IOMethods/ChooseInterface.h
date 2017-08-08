@@ -1,4 +1,4 @@
-/*	This file WriteVASPRealSpaceData.h is part of elephon.
+/*	This file ChooseInterface.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,36 +13,25 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Jul 2, 2017
+ *  Created on: Jul 24, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_WRITEVASPREALSPACEDATA_H_
-#define ELEPHON_IOMETHODS_WRITEVASPREALSPACEDATA_H_
+#ifndef ELEPHON_IOMETHODS_CHOOSEINTERFACE_H_
+#define ELEPHON_IOMETHODS_CHOOSEINTERFACE_H_
 
-#include "LatticeStructure/UnitCell.h"
-#include <string>
-#include <vector>
-
+#include "IOMethods/InputOptions.h"
+#include "IOMethods/ElectronicStructureCodeInterface.h"
+#include <memory>
 namespace elephon
 {
 namespace IOMethods
 {
 
-class WriteVASPRealSpaceData
-{
-public:
-
-	void write_file(std::string const & filename,
-			std::string  comment,
-			std::vector<int> const & dataDims,
-			LatticeStructure::UnitCell const & unitCell,
-			std::vector<double> const & data,
-			bool spin_resolved = false,
-			bool xmajor = true) const;
-};
+std::shared_ptr<ElectronicStructureCodeInterface>
+choose_interface( InputOptions inputOPts );
 
 } /* namespace IOMethods */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_WRITEVASPREALSPACEDATA_H_ */
+#endif /* ELEPHON_IOMETHODS_CHOOSEINTERFACE_H_ */

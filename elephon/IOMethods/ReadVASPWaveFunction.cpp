@@ -133,6 +133,11 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 	ecutoff_ = viewAsFloat[2];
 
 	std::vector<double> latticeMatrix(&(viewAsFloat[3]),&(viewAsFloat[3])+9);
+	//In the wavecar, the lattice matrix is transposed ...
+	auto tmpT = latticeMatrix;
+	for ( int i = 0; i < 3 ; ++i)
+		for ( int j = 0; j < 3 ; ++j)
+			latticeMatrix[i*3+j] = tmpT[j*3+i];
 	lattice_.initialize( latticeMatrix );
 
 	this->set_up_fourier_max( );
@@ -169,6 +174,10 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 			npwSpinKpt_[ik*nspin_+ispin] = nint(viewAsFloat[0]);
 			//Position 2-4 is the k vector.
 			std::copy(&viewAsFloat[1],&viewAsFloat[1]+3,&kpoints_[ik*3]);
+
+			//convert to the elephon 1.BZ convention
+			for ( int i = 0 ; i < 3; ++i)
+				kpoints_[ik*3+i] -= std::floor(kpoints_[ik*3+i]+0.5);
 
 			size_t startBandsLoop = 4;
 			//now we loop the bands and copy the energies
@@ -207,22 +216,17 @@ void ReadVASPWaveFunction::set_up_fourier_max()
 		return V({matrix3x3[3*0+bv],matrix3x3[3*1+bv],matrix3x3[3*2+bv]});
 	};
 
-	//Get the lattice basis and scale to their natural units
-	auto A = lattice_.get_latticeMatrix();
-	for ( auto &aij : A )
-		aij *= lattice_.get_alat();
-	auto B = lattice_.get_reciprocal_latticeMatrix();
-	for ( auto &bij : B )
-		bij *= 2*M_PI/lattice_.get_alat();
-
 	//Check the possible G vectors for plane wave coefficient
 	//We compare 4 values - the simple guess below and a modifier
 	//where we project on the reciprocal lattice direction.
 	double gc = std::sqrt(ecutoff_*energyConverionFactorVASP_);
 	std::vector<int> nGmxyz(4, std::floor(gc) + 2 );
 	for ( int i = 0 ; i < 3 ; ++i)
-		nGmxyz[i] = std::floor(2.0*gc/std::abs(d_prod(sliceBV(A,i),sliceBV(B,i)))
-				*sqrt( d_prod(sliceBV(A,i),sliceBV(A,i)))+0.5);
+	{
+		double s1 = d_prod(lattice_.get_lattice_vector(i),lattice_.get_reci_lattice_vector(i));
+		nGmxyz[i] = std::floor(2.0*gc/std::abs(2*M_PI*s1)
+				*lattice_.get_alat()*sqrt(s1)+0.5);
+	}
 	int nGm = *std::max_element( nGmxyz.begin(),nGmxyz.end() );
 
 	//nGm should now be a lattice vector that is larger than the maximum plane
@@ -234,8 +238,10 @@ void ReadVASPWaveFunction::set_up_fourier_max()
 		for ( int igy = -nGm; igy <= nGm; ++ igy)
 			for ( int igz = -nGm; igz <= nGm; ++ igz)
 			{
-				for ( int i = 0 ; i < 3; ++i)
-					G[i] = B[i*3+0]*igx+B[i*3+1]*igy+B[i*3+2]*igz;
+				G[0]=igx;
+				G[1]=igy;
+				G[2]=igz;
+				lattice_.reci_direct_to_cartesian_2pibya(G);
 				if ( d_prod(G,G)/energyConverionFactorVASP_ < ecutoff_ )
 				{
 					fourierMax_[0] = std::max(fourierMax_[0],std::abs(igx));
@@ -253,15 +259,11 @@ void ReadVASPWaveFunction::set_up_fourier_max()
 void ReadVASPWaveFunction::read_wavefunction(
 		std::vector<int> const& kptindices,
 		std::vector<int> const & bandIndices,
-		std::vector< std::complex<float> > & wfctData,
+		std::vector< std::vector< std::complex<float> > > & wfctData,
 		std::vector< int > & npwPerKpt) const
 {
 	if ( not wavecarfile_.is_open() )
 		throw std::logic_error( "Can only read wavefunction from an open file " );
-
-	std::vector<double> B = lattice_.get_reciprocal_latticeMatrix();
-	for ( auto &bij : B )
-		bij *= 2*M_PI/lattice_.get_alat();
 
 	int numKIrred = static_cast<int>(kpoints_.size())/3;
 	int Nk = static_cast<int>(kptindices.size());
@@ -271,20 +273,16 @@ void ReadVASPWaveFunction::read_wavefunction(
 
 	//Determine the total amount of storage and the locator for the
 	//beginning of each set of plane waves
-	int pwPerBandAndSpin = 0;
-	if ( int(npwPerKpt.size()) != Nk )
-		npwPerKpt.resize(Nk);
-	std::vector<int> bandAndKptToPos(nspin_*Nk,0);
+	npwPerKpt.resize( Nk );
+	wfctData.resize( Nk );
 	for ( int i = 0 ; i < Nk; ++i)
 		for ( int is = 0 ; is < nspin_; ++is)
 		{
 			int ik = kptindices[i];
 			assert( (ik < numKIrred) && ( ik >= 0 ) );
 			npwPerKpt[i] = npwSpinKpt_[ik*nspin_+is];
-			bandAndKptToPos[i*nspin_+is] = pwPerBandAndSpin*Nb;
-			pwPerBandAndSpin += npwSpinKpt_[ik*nspin_+is];
+			wfctData[i].resize( npwSpinKpt_[ik*nspin_+is]*Nb*nspin_ );
 		}
-	wfctData.resize( pwPerBandAndSpin*Nb*nspin_ );
 
 	int maxSizePW = *std::max_element(npwPerKpt.begin(),npwPerKpt.end());
 	std::vector<char> buffer( maxSizePW*sizeof(VASPDprec)*2 );
@@ -323,7 +321,7 @@ void ReadVASPWaveFunction::read_wavefunction(
 				typedef std::complex<VASPSprec> const * VPS;
 
 				for ( int ipw = 0 ; ipw < npwSpinKpt_[ik*nspin_+is]; ++ipw)
-					wfctData[bandAndKptToPos[i*nspin_+is]+j*npwSpinKpt_[ik*nspin_+is]+ipw ] = wavefuncDouble_ ?
+					wfctData[i*nspin_+is][j*npwSpinKpt_[ik*nspin_+is]+ipw ] = wavefuncDouble_ ?
 								static_cast< std::complex<float> >(reinterpret_cast<VPD>( &buffer[0] )[ipw] ) :
 								static_cast< std::complex<float> >(reinterpret_cast<VPS>( &buffer[0] )[ipw] ) ;
 			}
@@ -332,19 +330,26 @@ void ReadVASPWaveFunction::read_wavefunction(
 
 void
 ReadVASPWaveFunction::compute_fourier_map(
-		std::vector<double> const& kptCoords,
-		std::vector< std::vector<int> > & fftMapPerK) const
+		std::vector<double> kptCoords,
+		std::vector< std::vector<int> > & fftMapPerK,
+		double vaspGridPrec) const
 {
 	assert( kptCoords.size() % 3 == 0 );
 	int Nk = static_cast<int>(kptCoords.size()/3);
 	if ( static_cast<int>(fftMapPerK.size()) != Nk )
 		fftMapPerK=std::vector< std::vector<int> >(Nk);
+	assert( (*std::min_element(kptCoords.begin(),kptCoords.end()) >= -0.5) &&
+			(*std::max_element(kptCoords.begin(),kptCoords.end()) < 0.5) );
+
+	//convert k points to the VASP convention
+	for ( auto & kxi : kptCoords )
+		if ( std::abs(kxi+0.5) < vaspGridPrec )
+			kxi = 0.5;
+		else if ( std::abs(kxi-0.5) < vaspGridPrec )
+			kxi = -0.5;
 
 	//here we generate the fourier map
 	std::vector<double> kPlusG = { 0.0, 0.0, 0.0 };
-	std::vector<double> B = lattice_.get_reciprocal_latticeMatrix();
-	for ( auto &bij : B )
-		bij *= 2*M_PI/lattice_.get_alat();
 	for ( int is = 0 ; is < nspin_; ++is)
 		for ( int ik = 0 ; ik < Nk; ++ik)
 		{
@@ -359,10 +364,10 @@ ReadVASPWaveFunction::compute_fourier_map(
 					for ( int igx = 0 ; igx < fourierMax_[0]; ++igx)
 					{
 						int igxf = igx < fourierMax_[0]/2 ? igx : igx - fourierMax_[0];
-						for ( int xi = 0 ; xi < 3; ++xi)
-							kPlusG[xi] = B[xi*3+0]*(kptCoords[ik*3+0]+igxf)
-										+B[xi*3+1]*(kptCoords[ik*3+1]+igyf)
-										+B[xi*3+2]*(kptCoords[ik*3+2]+igzf);
+						kPlusG[0] = kptCoords[ik*3+0]+igxf;
+						kPlusG[1] = kptCoords[ik*3+1]+igyf;
+						kPlusG[2] = kptCoords[ik*3+2]+igzf;
+						lattice_.reci_direct_to_cartesian_2pibya(kPlusG);
 						if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
 							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff_ )
 						{

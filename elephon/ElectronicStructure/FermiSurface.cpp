@@ -43,23 +43,13 @@ FermiSurface::FermiSurface()
 }
 
 void FermiSurface::triangulate_surface(
-		std::vector<size_t> kgrid,
-		std::vector<double> const& reciprocalLatticeMatrix,
-		size_t nbnd,
+		std::vector<int> kgrid,
+		LatticeStructure::LatticeModule const& lattice,
+		int nbnd,
 		std::vector<double> const& energies,
-		size_t numTargetPoints,
+		int numTargetPoints,
 		double energyVal)
 {
-	assert(reciprocalLatticeMatrix.size() == 9 );
-	std::vector<double> const& B = reciprocalLatticeMatrix;
-	auto to_cart = [&] (double pt[3])
-	{
-		double ptmp[3];
-		std::copy(pt,pt+3,ptmp);
-		for ( size_t i = 0; i < 3 ; ++i)
-			pt[i] = (B[i*3+0]*ptmp[0]+B[i*3+1]*ptmp[1]+B[i*3+2]*ptmp[2]);
-	};
-
 	kgrid_ = std::move(kgrid);
 	if ( kgrid_.size() != 3 )
 		throw std::logic_error("Can only triangulate 3D Fermi surfaces!");
@@ -81,24 +71,24 @@ void FermiSurface::triangulate_surface(
 	//Loop the bands and compute the points, weights and gradient
 	bandsMap_ = std::vector<int>( nbnd, -1 );
 	vtkSmartPointer<vtkPolyData> * marched = new vtkSmartPointer<vtkPolyData> [nbnd] ;
-	size_t totalNumberOfPointsFirstIteration = 0;
-	for ( size_t ib = 0 ; ib < nbnd; ib++)
+	int totalNumberOfPointsFirstIteration = 0;
+	for ( int ib = 0 ; ib < nbnd; ib++)
 	{
-		size_t surfaceGridDim = SurfaceGrid[0]*SurfaceGrid[1]*SurfaceGrid[2];
+		int surfaceGridDim = SurfaceGrid[0]*SurfaceGrid[1]*SurfaceGrid[2];
 		//Set data onto grid. Use the periodicity for the last point in each dimension.
 		vtkSmartPointer<vtkDoubleArray> doubleArray =
 			  vtkSmartPointer<vtkDoubleArray>::New();
 		doubleArray->SetNumberOfValues(surfaceGridDim);
-		for (size_t i = 0 ; i < SurfaceGrid[0]; ++i)
-			for (size_t j = 0 ; j < SurfaceGrid[1]; ++j)
-				for (size_t k = 0 ; k < SurfaceGrid[2]; ++k)
+		for (int k = 0 ; k < SurfaceGrid[2]; ++k)
+			for (int j = 0 ; j < SurfaceGrid[1]; ++j)
+				for (int i = 0 ; i < SurfaceGrid[0]; ++i)
 				{
 					//Note that vtk stores x,y,z in fast to slow running variables
-					size_t consq = (k*SurfaceGrid[1]+j)*SurfaceGrid[0]+i;
-					size_t ii = i%kgrid_[0];
-					size_t jj = j%kgrid_[1];
-					size_t kk = k%kgrid_[2];
-					size_t consqEnergies = (ii*kgrid_[1]+jj)*kgrid_[2]+kk;
+					int consq = (k*SurfaceGrid[1]+j)*SurfaceGrid[0]+i;
+					int ii = i%kgrid_[0];
+					int jj = j%kgrid_[1];
+					int kk = k%kgrid_[2];
+					int consqEnergies = (kk*kgrid_[1]+jj)*kgrid_[0]+ii;
 					doubleArray->SetValue(consq,energies[consqEnergies*nbnd+ib]);
 				}
 		grid->GetPointData()->SetScalars( doubleArray );
@@ -118,13 +108,16 @@ void FermiSurface::triangulate_surface(
 		marched[ib] = mc->GetOutput();
 	}
 
-	for ( size_t ib = 0 ; ib < nbnd; ib++)
+	for ( int ib = 0 ; ib < nbnd; ib++)
 		totalNumberOfPointsFirstIteration += marched[ib]->GetNumberOfPoints();
 
-	double reductionRatio = 1.0-double(numTargetPoints)/double(totalNumberOfPointsFirstIteration);
-	reductionRatio -= std::floor(reductionRatio);
+	double reductionRatio = 0.0;
+	if ( totalNumberOfPointsFirstIteration > numTargetPoints )
+	{
+		reductionRatio = 1-double(numTargetPoints)/double(totalNumberOfPointsFirstIteration);
+	}
 
-	for ( size_t ib = 0 ; ib < nbnd; ib++)
+	for ( int ib = 0 ; ib < nbnd; ib++)
 	{
 		if ( marched[ib]->GetNumberOfPoints() == 0 )
 			continue;
@@ -156,9 +149,9 @@ void FermiSurface::triangulate_surface(
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(2),p2);
 
 			//transform to Cartesian coordinates
-			to_cart(p0);
-			to_cart(p1);
-			to_cart(p2);
+			lattice.reci_direct_to_cartesian_2pibya(p0,3);
+			lattice.reci_direct_to_cartesian_2pibya(p1,3);
+			lattice.reci_direct_to_cartesian_2pibya(p2,3);
 
 			for (int xi = 0 ; xi < 3; xi++)
 			{
@@ -202,21 +195,29 @@ void FermiSurface::triangulate_surface(
 	delete [] marched;
 }
 
-size_t FermiSurface::get_npts_total() const
+int FermiSurface::get_npts_total() const
 {
 	return kfWeights_.size();
 }
 
-void FermiSurface::get_pt(size_t i, std::vector<double> & p) const
+void FermiSurface::get_pt(int i, std::vector<double> & p) const
 {
 	if ( p.size() != 3 )
 		p = std::vector<double>(3);
 	std::copy(&kfPoints_[i*3],&kfPoints_[i*3]+3,p.data());
 }
 
-void FermiSurface::get_pt_weight(size_t i, double & pw) const
+void
+FermiSurface::get_pt_weight(int i, double & pw) const
 {
 	pw = kfWeights_[i];
+}
+
+int
+FermiSurface::get_band_offset(int ib) const
+{
+	assert( (ib >= 0) && (ib < bandsMap_.size()) );
+	return bandsMap_[ib];
 }
 
 std::vector<double> const&
@@ -225,28 +226,34 @@ FermiSurface::get_Fermi_vectors() const
 	return kfPoints_;
 }
 
-std::vector<double>
-FermiSurface::get_Fermi_vectors_for_band(size_t ib) const
+std::vector<double> const&
+FermiSurface::get_Fermi_weights() const
 {
-	size_t indexBandStart,indexBandEnd;
+	return kfWeights_;
+}
+
+std::vector<double>
+FermiSurface::get_Fermi_vectors_for_band(int ib) const
+{
+	int indexBandStart,indexBandEnd;
 	this->band_index_range(ib,indexBandStart,indexBandEnd);
 	std::vector<double> result( &kfPoints_[ indexBandStart*3 ], &kfPoints_[ indexBandEnd*3 ] );
 	return result;
 }
 
 std::vector<double>
-FermiSurface::get_Fermi_weights_for_band(size_t ib) const
+FermiSurface::get_Fermi_weights_for_band(int ib) const
 {
-	size_t indexBandStart,indexBandEnd;
+	int indexBandStart,indexBandEnd;
 	this->band_index_range(ib,indexBandStart,indexBandEnd);
 	std::vector<double> result( &kfWeights_[ indexBandStart ], &kfWeights_[ indexBandEnd ] );
 	return result;
 }
 
 void FermiSurface::band_index_range(
-		size_t ib, size_t &start, size_t &end) const
+		int ib, int &start, int &end) const
 {
-	size_t numTotal = kfWeights_.size();
+	int numTotal = kfWeights_.size();
 	start = end = 0;
 	if ( bandsMap_[ib] >= 0 )
 	{
@@ -254,7 +261,7 @@ void FermiSurface::band_index_range(
 		end = numTotal;
 		if ( ib+1 < bandsMap_.size() )
 			if (  bandsMap_[ib+1] > 0 )
-				end = static_cast<size_t>(bandsMap_[ib+1]);
+				end = static_cast<int>(bandsMap_[ib+1]);
 	}
 }
 

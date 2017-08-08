@@ -40,6 +40,7 @@ void UnitCell::initialize(
 {
 	atoms_ = std::move(atoms);
 	lattice_ = std::move(lattice);
+	assert( not sym.is_reci() );
 	symmetry_ = std::move(sym);
 	//synchronize symmetries and lattice
 	this->set_symmetry_to_lattice( symmetry_);
@@ -49,7 +50,11 @@ void UnitCell::initialize(
 void
 UnitCell::set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const
 {
-	symmetry.reset_lattice( lattice_ );
+	//This is not a trivial process because the symmetries are given in the lattice basis
+	// and thus depend on the lattice. We first remove incompatible symmetries in the
+	// lattice representation and then reset the cartesian representation.
+	// TODO clean up and disentangle the symmetries. In principle the lattice could change the symmetries,
+	//		too. We do not allow nor check for this at this point.
 	const double d = symmetry.get_symmetry_prec();
 
 	typedef std::vector<double> V;
@@ -84,6 +89,7 @@ UnitCell::set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const
 	//Check if we need to update the symmetry set
 	if ( not dropSym.empty() )
 		symmetry.symmetry_reduction( dropSym );
+	symmetry.reset_lattice( lattice_ );
 }
 
 UnitCell UnitCell::build_supercell(int scx, int scy, int scz) const
@@ -450,24 +456,20 @@ UnitCell::compute_supercell_dim(
 		std::vector<int> & supercellDim ) const
 {
 	//Locate the unit cell in the supercell
-	auto A = this->get_lattice().get_latticeMatrix();
-	for ( auto &aij : A )
-		aij *= this->get_alat();
-
-	auto As = superCell.get_lattice().get_latticeMatrix();
-	for ( auto &aij : As )
-		aij *= superCell.get_alat();
-
-	auto slice = [] (std::vector<double> const & A, int i) {
-			return std::vector<double>({A[0*3+i],A[1*3+i],A[2*3+i]});
-		};
 	auto dot_p = [] (std::vector<double> const & a, std::vector<double> const & b) {
 		return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 	};
 
-	double scaleX  = dot_p(slice(A,0),slice(As,0))/dot_p(slice(A,0),slice(A,0));
-	double scaleY  = dot_p(slice(A,1),slice(As,1))/dot_p(slice(A,1),slice(A,1));
-	double scaleZ  = dot_p(slice(A,2),slice(As,2))/dot_p(slice(A,2),slice(A,2));
+	auto a1 = lattice_.get_lattice_vector(0);
+	auto a2 = lattice_.get_lattice_vector(1);
+	auto a3 = lattice_.get_lattice_vector(2);
+
+	double scaleX  = superCell.get_lattice().get_alat()/lattice_.get_alat()
+			*dot_p(a1,superCell.get_lattice().get_lattice_vector(0))/dot_p(a1,a1);
+	double scaleY  = superCell.get_lattice().get_alat()/lattice_.get_alat()
+			*dot_p(a2,superCell.get_lattice().get_lattice_vector(1))/dot_p(a2,a2);
+	double scaleZ  = superCell.get_lattice().get_alat()/lattice_.get_alat()
+			*dot_p(a3,superCell.get_lattice().get_lattice_vector(2))/dot_p(a3,a3);
 
 	supercellDim = std::vector<int> {
 								int(std::floor( scaleX + 0.5 )),

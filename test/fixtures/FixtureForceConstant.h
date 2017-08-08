@@ -21,6 +21,7 @@
 #define TEST_FIXTURES_FIXTUREFORCECONSTANT_H_
 
 #include "PhononStructure/ForceConstantMatrix.h"
+#include "PhononStructure/DisplacementPotential.h"
 
 namespace test
 {
@@ -32,6 +33,8 @@ class FixtureForceConstant
 public:
 
 	elephon::PhononStructure::ForceConstantMatrix compute_fc_for_Al_gamma();
+
+	elephon::PhononStructure::DisplacementPotential build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2();
 };
 
 } /* namespace fixtures */

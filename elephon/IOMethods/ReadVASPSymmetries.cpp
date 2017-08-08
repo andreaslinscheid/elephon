@@ -84,8 +84,9 @@ void ReadVASPSymmetries::read_file(std::string filename )
 		boost::match_results<std::string::const_iterator> res;
 		boost::regex_search(blocks[isym], res, symmetryRegex );
 	    assert( res.size() == 9+1 );
-	    for ( int i = 1 ; i < 10 ; ++i)
-	    	symmetries_[isym*9+i-1] = std::stoi( std::string(res[i].first,res[i].second) );
+	    for ( int i = 0 ; i < 3 ; ++i)
+		    for ( int j = 0 ; j < 3 ; ++j)
+		    	symmetries_[(isym*3+i)*3+j] = std::stoi( std::string(res[i*3+j+1].first,res[i*3+j+1].second) );
 
 		std::vector< std::string > fractStr;
 		boost::regex_search(blocks[isym], res, fractionalTransRegex );

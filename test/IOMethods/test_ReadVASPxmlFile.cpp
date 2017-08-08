@@ -82,3 +82,14 @@ BOOST_AUTO_TEST_CASE( Read_VASP_xml_kpoints )
 
 }
 
+BOOST_AUTO_TEST_CASE( Read_VASP_xml_kpoints_fcc_Al )
+{
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "phonon_run";
+	elephon::IOMethods::ReadVASPxmlFile filerreader;
+	filerreader.parse_file( (rootDir / "vasprun.xml").string() );
+
+	auto p = std::minmax_element( filerreader.get_k_points().begin(), filerreader.get_k_points().end() );
+	BOOST_CHECK( (*p.first >= -0.5) and (*p.second < 0.5) );
+
+}

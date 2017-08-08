@@ -19,6 +19,7 @@
 
 #include "ElectronicBands.h"
 #include <stdexcept>
+#include <set>
 
 namespace elephon
 {
@@ -30,7 +31,7 @@ ElectronicBands::initialize(
 		std::vector<double> const & kpoints,
 		int numBands,
 		std::vector<double> bandData,
-		LatticeStructure::RegularGrid grid)
+		LatticeStructure::RegularSymmetricGrid grid)
 {
 	grid_ = std::move(grid);
 	assert( grid_.is_reci() );
@@ -39,7 +40,7 @@ ElectronicBands::initialize(
 	nBnd_ = numBands;
 
 	//Check for errors
-	int npIrr = static_cast<int>(pointIndices.size());
+	int npIrr = pointIndices.size();
 	if( not ( npIrr ==  grid_.get_np_irred() ) )
 		throw std::runtime_error("Initialization data must be complete in the irreducible zone.");
 
@@ -50,6 +51,34 @@ ElectronicBands::initialize(
 	for ( int irr = 0 ; irr < npIrr; ++irr )
 		for ( int ibnd = 0 ; ibnd < nBnd_; ++ibnd )
 			dataIrred_[ pointIndices[irr]*nBnd_ + ibnd ] = bandData[ irr*nBnd_ + ibnd ];
+}
+
+void
+ElectronicBands::initialize(
+		int numBands,
+		std::vector<double> bandData,
+		LatticeStructure::RegularSymmetricGrid grid)
+{
+	grid_ = std::move(grid);
+	assert( grid_.is_reci() );
+	nBnd_ = numBands;
+
+	if ( bandData.size() == grid_.get_np_irred()*nBnd_ )
+		dataIrred_ = std::move(bandData);
+	else if ( bandData.size() == grid_.get_np_red()*nBnd_ )
+	{
+		dataIrred_.resize( grid_.get_np_irred()*nBnd_ );
+		for ( int ired = 0 ; ired < grid_.get_np_red(); ++ired )
+		{
+			int irr = grid_.get_maps_red_to_irreducible()[ired];
+			for ( int ibnd = 0 ; ibnd < nBnd_; ++ibnd )
+			{
+				dataIrred_[ irr*nBnd_ + ibnd ] = bandData[ ired*nBnd_ + ibnd ];
+			}
+		}
+	}
+	else
+		throw std::runtime_error("Problem in ElectronicBands::initialize : input data does not match grid");
 }
 
 int
@@ -80,7 +109,25 @@ ElectronicBands::generate_reducible_grid_bands(
 		}
 }
 
-LatticeStructure::RegularGrid const &
+std::vector<int>
+ElectronicBands::get_bands_crossing_energy_lvls(
+		std::vector<double> const & energies ) const
+{
+	std::set<int> bandset;
+	for ( int ib = 0 ; ib < nBnd_; ++ib )
+	{
+		double refEne = dataIrred_[ib];
+		for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik )
+			if ( refEne*dataIrred_[ik*nBnd_ + ib] < 0 )
+			{
+				bandset.insert(ib);
+				break;
+			}
+	}
+	return std::vector<int>(bandset.begin(),bandset.end());
+}
+
+LatticeStructure::RegularSymmetricGrid const &
 ElectronicBands::get_grid() const
 {
 	return grid_;

@@ -31,6 +31,12 @@ namespace elephon
 namespace IOMethods
 {
 
+std::string
+VASPInterface::code_tag() const
+{
+	return "vasp";
+}
+
 void VASPInterface::set_up_run(
 		std::string root_directory,
 		std::string target_directory,
@@ -96,7 +102,7 @@ VASPInterface::read_wavefunctions(
 		std::string root_directory,
 		std::vector<int> const & kpts,
 		std::vector<int> const & bandIndices,
-		std::vector< std::complex<float> > & wfctData,
+		std::vector< std::vector< std::complex<float> > > & wfctData,
 		std::vector< int > & npwPerKpt)
 {
 	boost::filesystem::path rootdir(root_directory);
@@ -107,10 +113,11 @@ VASPInterface::read_wavefunctions(
 void
 VASPInterface::compute_fourier_map(
 		std::vector<double> const & kpts,
-		std::vector< std::vector<int> > & fourierMap)
+		std::vector< std::vector<int> > & fourierMap,
+		double gridPrec)
 {
 	//VASP does not store these mapping on disk.
-	wfcReader_.compute_fourier_map(kpts,fourierMap);
+	wfcReader_.compute_fourier_map(kpts, fourierMap, gridPrec);
 }
 
 std::vector<int>
@@ -123,7 +130,7 @@ void
 VASPInterface::read_cell_paramters(
 		std::string root_directory,
 		double symPrec,
-		LatticeStructure::RegularGrid & kPointMesh,
+		LatticeStructure::RegularSymmetricGrid & kPointMesh,
 		LatticeStructure::LatticeModule & lattice,
 		std::vector<LatticeStructure::Atom> & atoms,
 		LatticeStructure::Symmetry & symmetry)
@@ -148,15 +155,28 @@ VASPInterface::read_cell_paramters(
 	if ( boost::filesystem::exists( rootdir / "WAVECAR" ) )
 	{
 		wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
-		std::vector<double> irreducibleKPoints = wfcReader_.get_k_points();
+		irreducibleKPoints = wfcReader_.get_k_points();
 	}
 	else
 	{
 		xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
-		std::vector<double> irreducibleKPoints = xmlReader_.get_k_points();
+		irreducibleKPoints = xmlReader_.get_k_points();
 	}
+for (int ik = 0 ; ik < irreducibleKPoints.size()/3; ++ik)
+	std::cout << irreducibleKPoints[ik*3+0] << '\t' << irreducibleKPoints[ik*3+1] <<
+	'\t' << irreducibleKPoints[ik*3+2] << '\n';
+std::cout <<std::endl;
 	kpointSymmetry.set_reciprocal_space_sym();
-	kPointMesh.initialize( symPrec, kDim, shifts, kpointSymmetry, lattice, irreducibleKPoints );
+	kPointMesh.initialize( kDim, symPrec, shifts, kpointSymmetry, lattice, irreducibleKPoints );
+}
+
+void
+VASPInterface::read_lattice_structure(
+		std::string root_directory,
+		LatticeStructure::LatticeModule & lattice)
+{
+	this->check_open_poscar(root_directory);
+	lattice.initialize( posReader_.get_lattice_matrix() );
 }
 
 void
@@ -186,6 +206,42 @@ void VASPInterface::read_electronic_potential(
 {
 	boost::filesystem::path rootdir(root_directory);
 	potReader_.read_scf_potential( (rootdir / "LOCPOT").string(), dims, output );
+}
+
+void
+VASPInterface::read_band_structure(
+		std::string root_directory,
+		ElectronicStructure::ElectronicBands & bands)
+{
+	//Load the irreducible data
+	int nkIrred = 0;
+	int nband = 0;
+	double eFermi = 0.0;
+	std::vector<double> irredData;
+	this->read_electronic_structure(
+			root_directory,
+			nband,
+			nkIrred,
+			irredData,
+			eFermi);
+
+	//expand to the reducible zone
+	LatticeStructure::RegularSymmetricGrid kPointMesh;
+	LatticeStructure::LatticeModule lattice;
+	std::vector<LatticeStructure::Atom> atoms;
+	LatticeStructure::Symmetry symmetry;
+	this->read_cell_paramters(
+			root_directory,
+			this->get_optns().get_gPrec(),
+			kPointMesh,
+			lattice,
+			atoms,
+			symmetry);
+
+	if ( kPointMesh.get_np_irred() != nkIrred )
+		throw std::runtime_error("Number of k point in the energy grid and the loaded k point grid disagree.");
+
+	bands.initialize( nband, irredData, kPointMesh );
 }
 
 void
@@ -257,15 +313,14 @@ void VASPInterface::overwrite_POSCAR_file( std::string filename,
 	fileContent += std::to_string(unitcell.get_alat())+"\n";
 
 	//Lattice matrix
-	auto A = unitcell.get_lattice().get_latticeMatrix();
 	std::string a1str =
-			floatAccLine( std::vector<double>( { A[3*0+0], A[3*1+0], A[3*2+0]} ) , 6 );
+			floatAccLine( unitcell.get_lattice().get_lattice_vector(0) , 6 );
 	fileContent += a1str+"\n";
 	std::string a2str =
-			floatAccLine( std::vector<double>( { A[3*0+1], A[3*1+1], A[3*2+1]} ) , 6 );
+			floatAccLine( unitcell.get_lattice().get_lattice_vector(1) , 6 );
 	fileContent += a2str+"\n";
 	std::string a3str =
-			floatAccLine( std::vector<double>( { A[3*0+2], A[3*1+2], A[3*2+2]} ) , 6 );
+			floatAccLine( unitcell.get_lattice().get_lattice_vector(2) , 6 );
 	fileContent += a3str+"\n";
 
 	//atom types - here it gets tricky, because we need to match the order in the POTCAR file

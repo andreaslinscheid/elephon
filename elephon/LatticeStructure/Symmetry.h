@@ -38,6 +38,7 @@ public:
 		int ptgroup[9];
 		double ptgCart[9];
 		double fracTrans[3];
+		void rotate( std::vector<int> & v ) const;
 		void apply( std::vector<double> & v, bool latticePeriodic = true) const;
 		void rotate_cart( std::vector<double> & v ) const;
 	} SymmetryOperation;
@@ -129,6 +130,8 @@ private:
 	std::vector<int> multiplicationTable_;
 
 	std::vector<int> symmetries_;
+
+	std::vector<int> symmetriesReciprocal_;
 
 	std::vector<double> symmetriesCartesian_;
 

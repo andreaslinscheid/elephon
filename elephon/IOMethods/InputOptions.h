@@ -95,10 +95,27 @@ class InputOptions : public InputBase<InputOptions>
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			gPrec,
-			"The grid precision which decides component-wise up to which value two grid vectors are considered equal.",
+			"The grid precision which decides component-wise up to which value two grid vectors are considered equal.\n",
 			"1e-6",
 			1e-6,
 			double);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			f_ldos,
+			"If this string is set, the code will compute and print the local density of states to this file.\n"
+			"Default format is the code that produced the input data.",
+			"",
+			"",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			eldos,
+			"The energies relative to the Fermi level at which the ldos will be calculated.\n"
+			"If more than one number is given, the 'f_ldos' will be preceded by an integer number indicating the position\n"
+			"In the list.",
+			"0.0",
+			{ 0.0 },
+			std::vector<double>);
 };
 
 } /* namespace IOMethods */

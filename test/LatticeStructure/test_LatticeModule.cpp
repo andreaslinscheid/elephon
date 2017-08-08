@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE( LatticeModule_BasisRelation )
 	for ( int i = 0 ; i < 3; ++i)
 		for ( int j = 0 ; j < 3; ++j)
 			for ( int k = 0 ; k < 3; ++k)
-				prod[i*3+j] += B[i*3+k]*A[k*3+j];
+				prod[i*3+j] += B[k*3+i]*A[k*3+j];
 
 	for ( int i = 0 ; i < 3; ++i)
 		for ( int j = 0 ; j < 3; ++j)
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE( LatticeModule_Al_fcc_vasp )
 	for ( int i = 0 ; i < 3; ++i)
 		for ( int j = 0 ; j < 3; ++j)
 			for ( int k = 0 ; k < 3; ++k)
-				prod[i*3+j] += B[i*3+k]*A[k*3+j];
+				prod[i*3+j] += B[k*3+i]*A[k*3+j];
 
 	for ( int i = 0 ; i < 3; ++i)
 		for ( int j = 0 ; j < 3; ++j)

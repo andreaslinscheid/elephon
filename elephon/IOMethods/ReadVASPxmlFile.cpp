@@ -100,6 +100,8 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						for ( int i = 0 ; i < 3 ; ++i)
 						{
 							ss >> tmp;
+							//apply the elephon 1.BZ convention [-0.5,0.5[. NOTE: VASP uses ]-0.5,0.5]
+							tmp -= std::floor(tmp+0.5);
 							newKpts.push_back( tmp );
 						}
 					}

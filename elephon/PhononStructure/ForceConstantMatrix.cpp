@@ -235,7 +235,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 				std::vector<int> R = atomSuperCellToPrimitve[iaSC].second;
 				for ( int i = 0 ; i < 3 ; ++i)
 					R[i] = R[i] < 0 ? R[i] + supercellDim_[i] : R[i];
-				int ir = this->RVectorLayout(R[2],R[1],R[0]);
+				int ir = this->RVectorLayout(R[0],R[1],R[2]);
 				for ( int xj = 0 ; xj < 3; ++xj)
 					for ( int xi = 0 ; xi < 3; ++xi)
 						data_[this->mem_layout(ir,ia1*3+xj,iaDispl*3+xi)] = matForceSlice[iaSC*9+xj*3+xi];
@@ -288,13 +288,13 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 }
 
 double
-ForceConstantMatrix::operator() (int Rz, int Ry, int Rx, int mu2, int mu1) const
+ForceConstantMatrix::operator() (int Rx, int Ry, int Rz, int mu2, int mu1) const
 {
-	return data_[ this->mem_layout(Rz,Ry,Rx,mu2,mu1) ];
+	return data_[ this->mem_layout(Rx,Ry,Rz,mu2,mu1) ];
 }
 
 int
-ForceConstantMatrix::RVectorLayout(int iRz, int iRy, int iRx ) const
+ForceConstantMatrix::RVectorLayout(int iRx, int iRy, int iRz ) const
 {
 	assert( (iRx >= 0) && (iRx < supercellDim_[0]) );
 	assert( (iRy >= 0) && (iRy < supercellDim_[1]) );
@@ -303,9 +303,9 @@ ForceConstantMatrix::RVectorLayout(int iRz, int iRy, int iRx ) const
 }
 
 int
-ForceConstantMatrix::mem_layout(int Rz, int Ry, int Rx, int mu1, int mu2) const
+ForceConstantMatrix::mem_layout(int Rx, int Ry, int Rz, int mu1, int mu2) const
 {
-	return this->mem_layout(this->RVectorLayout(Rz,Ry,Rx),mu2,mu1);
+	return this->mem_layout(this->RVectorLayout(Rx,Ry,Rz),mu2,mu1);
 };
 
 

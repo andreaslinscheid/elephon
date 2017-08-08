@@ -85,6 +85,8 @@ void InputFile::parse_input(std::string const & input)
 
     std::vector<std::pair<std::string,std::string> > keyValuePairs;
     auto it = elements.begin();
+    if ( it == elements.end() )
+    	return;
     std::string value,key = *it;
     for ( ++it; it != (--elements.end()); ++it )
     {

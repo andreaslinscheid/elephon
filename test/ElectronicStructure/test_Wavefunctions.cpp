@@ -25,25 +25,65 @@
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/VASPInterface.h"
+#include "LatticeStructure/RegularBareGrid.h"
 #include "ElectronicStructure/Wavefunctions.h"
 #include "fixtures/MockStartup.h"
+#include "fixtures/DataLoader.h"
 #include <vector>
 #include <complex>
 #include <cmath>
+#include <set>
+
+BOOST_AUTO_TEST_CASE( wavefunctions_partial_load )
+{
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
+
+	std::vector<double> kvec = {0.0, 0.0, 0.0};
+	//Here we test the use case where we look up the cube around a point and compute those wavefunction
+	//Wave functions are on a regular grid and in G (reciprocal) space
+	//First, load the cubes of wave functions for linear interpolation
+
+	std::string content = std::string("root_dir=")+rootDir.string()+"\n";
+	test::fixtures::DataLoader dl;
+	auto loader = dl.create_vasp_loader( content );
+
+	elephon::ElectronicStructure::Wavefunctions wfcts;
+	wfcts.initialize( 1e-6, rootDir.string(), loader);
+
+	std::vector<int> kAToCube;
+	std::vector<elephon::LatticeStructure::RegularBareGrid::GridCube> gridCubes;
+	wfcts.get_k_grid().compute_grid_cubes_surrounding_nongrid_points(
+			kvec,kAToCube,gridCubes);
+
+	//Generate a list of all occurring reducible grid vectors.
+	std::vector<int> npwPerKAllRedPts;
+	std::vector<std::vector< std::complex<float> > > wfctAllRedPts;
+	std::set<int> redIndicesSet;
+	for ( auto c : gridCubes )
+		redIndicesSet.insert( c.cornerIndices_.begin(),  c.cornerIndices_.end() );
+	std::vector<int> redIndices(redIndicesSet.begin(), redIndicesSet.end());
+	wfcts.generate_reducible_grid_wfcts(
+			std::vector<int>{1,2}, //bands
+			redIndices,
+			wfctAllRedPts,
+			npwPerKAllRedPts);
+}
 
 BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 {
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "FeSe" / "vasp" / "wfct";
 
-	elephon::IOMethods::InputOptions noop;
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input((testd/"infile").string(),"\n",opts);
 
 	//introduce the VASP data loader
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loaderSym =
-			std::make_shared< elephon::IOMethods::VASPInterface >(noop);
+			std::make_shared< elephon::IOMethods::VASPInterface >(opts);
 
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loaderNoSym =
-			std::make_shared< elephon::IOMethods::VASPInterface >(noop);
+			std::make_shared< elephon::IOMethods::VASPInterface >(opts);
 
 	elephon::ElectronicStructure::Wavefunctions wfct_sym;
 	wfct_sym.initialize( 1e-6, (testd / "symmetric").string(), loaderSym );
@@ -54,7 +94,7 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	loaderSym->read_cell_paramters( (testd / "symmetric").string() ,1e-6,kgrid,lattice,atoms,sym);
 
 	//compare band 0
@@ -63,23 +103,18 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 	for (int ik = 0 ; ik < kgrid.get_np_red(); ++ik)
 		kptInd[ik] = ik;
 
-	std::vector<std::complex<float>> wfctnosym;
+	std::vector<std::vector<std::complex<float>>> wfctnosym;
 	std::vector<int> npPerKNoSym;
 	wfct_nosym.generate_reducible_grid_wfcts(bndInd,kptInd,wfctnosym,npPerKNoSym);
 
-	std::vector<std::complex<float>> wfctsym;
+	std::vector<std::vector<std::complex<float>>> wfctsym;
 	std::vector<int> npPerKSym;
 	wfct_sym.generate_reducible_grid_wfcts(bndInd,kptInd,wfctsym,npPerKSym);
 
 	BOOST_REQUIRE( wfctnosym.size() == wfctsym.size() );
 	BOOST_REQUIRE( npPerKSym == npPerKNoSym );
 
-	int nK = int(kptInd.size());
 	int nB = int(bndInd.size());
-	std::vector<int> posOffset( nK, 0 );
-	for ( int ik = 1 ; ik < nK; ++ik)
-		posOffset[ik] = posOffset[ik-1]+npPerKNoSym[ik-1]*nB;
-	assert(posOffset.back()+npPerKNoSym.back()*nB == int(wfctsym.size()) );
 
 	std::vector<int> fftMax = loaderSym->get_max_fft_dims();
 
@@ -101,7 +136,7 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 
 		auto kIrred = kgrid.get_vector_direct( irToRed[0] );
 		std::vector<std::vector<int>> fftMapIrred;
-		loaderNoSym->compute_fourier_map(kIrred,fftMapIrred);
+		loaderNoSym->compute_fourier_map(kIrred, fftMapIrred, loaderNoSym->get_optns().get_gPrec());
 
 		for (int istar = 0 ; istar < int(symIrToRed.size()) ; ++istar)
 		{
@@ -110,7 +145,7 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 
 			auto kRed = kgrid.get_vector_direct( ikRed );
 			std::vector<std::vector<int>> fftMapRed;
-			loaderNoSym->compute_fourier_map(kRed,fftMapRed);
+			loaderNoSym->compute_fourier_map(kRed, fftMapRed, loaderNoSym->get_optns().get_gPrec());
 
 			auto symOp = kgrid.get_symmetry().get_sym_op( symIrToRed[istar] );
 			auto tau = kgrid.get_symmetry().get_fractional_translation( symIrToRed[istar] );
@@ -122,10 +157,10 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 			 */
 			for ( int i = 0; i < nB; ++i )
 			{
-				auto irred_ptr = &wfctnosym[posOffset[irToRed[0]] + i*npw];
+				auto irred_ptr = &wfctnosym[irToRed[0]][i*npw];
 				std::vector< std::complex<float> > wfc1( irred_ptr, irred_ptr + npw);
 
-				auto red_ptr = &wfctnosym[posOffset[ikRed] + i*npw];
+				auto red_ptr = &wfctnosym[ikRed][i*npw];
 				std::vector< std::complex<float> > wfc2( red_ptr, red_ptr + npw);
 
 				std::map<int,int> nlm;
@@ -205,11 +240,10 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 			 */
 			for ( int i = 0; i < nB; ++i )
 			{
-				int index = posOffset[ikRed] + i*npw;
-				auto ptrFromSym = &wfctsym[index];
+				auto ptrFromSym = &wfctsym[ikRed][i*npw];
 				std::vector< std::complex<float> > wfc1( ptrFromSym, ptrFromSym + npw);
 
-				auto ptrFromNoSym = &wfctnosym[index];
+				auto ptrFromNoSym = &wfctnosym[ikRed][i*npw];
 				std::vector< std::complex<float> > wfc2 ( ptrFromNoSym, ptrFromNoSym + npw);
 
 				//Choose the same phase convention
@@ -259,7 +293,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::RegularGrid kgrid;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	loader->read_cell_paramters(phonyDir.string(),1e-6,kgrid,lattice,atoms,sym);
 	sym.set_reciprocal_space_sym();
 
@@ -408,13 +442,9 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	std::vector<int> bandIndices( nBnd );
 	for ( int ibnd = 0 ; ibnd < nBnd; ++ibnd)
 		bandIndices[ibnd] = ibnd;
-	std::vector<std::complex<float>> wfcts;
+	std::vector<std::vector< std::complex<float> >> wfcts;
 	std::vector<int> npwPerK;
 	loader->read_wavefunctions( phonyDir.string(), kpts, bandIndices, wfcts, npwPerK );
-
-	std::vector<int> offset(nkpIrred,0);
-	for ( int i = 1 ; i < nkpIrred; ++i)
-		offset[i] = offset[i-1]+npwPerK[i-1]*nBnd;
 
 	//Compare if we have read in the same thing we wrote to disk
 	BOOST_REQUIRE( npwPerK == npwK);
@@ -424,7 +454,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 		float diff = 0;
 		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
 			for (int ipw = 0 ; ipw < nBnd; ++ipw)
-				diff += std::abs(wavefunctions[ik][ibnd*npwK[ik]+ipw]-wfcts[offset[ik]+ibnd*npwK[ik]+ipw]);
+				diff += std::abs(wavefunctions[ik][ibnd*npwK[ik]+ipw]-wfcts[ik][ibnd*npwK[ik]+ipw]);
 		BOOST_REQUIRE( diff < 1e-5);
 	}
 
@@ -432,11 +462,11 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	auto compare_float = [] (float a, float b){
 		return std::fabs(a-b) < 1e-5;
 	};
-	BOOST_REQUIRE( compare_float(std::real(wfcts[0]),0.0) && compare_float(std::imag(wfcts[0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[1]),1.0) && compare_float(std::imag(wfcts[0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[2]),2.0) && compare_float(std::imag(wfcts[0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[3]),3.0) && compare_float(std::imag(wfcts[0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[4]),4.0) && compare_float(std::imag(wfcts[0]),0.0) );
+	BOOST_REQUIRE( compare_float(std::real(wfcts[0][0]),0.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_REQUIRE( compare_float(std::real(wfcts[0][1]),1.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_REQUIRE( compare_float(std::real(wfcts[0][2]),2.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_REQUIRE( compare_float(std::real(wfcts[0][3]),3.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_REQUIRE( compare_float(std::real(wfcts[0][4]),4.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
 
 	//Seems so ... lets check the rotation
 	elephon::ElectronicStructure::Wavefunctions phonyWave;
@@ -445,11 +475,8 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	std::vector<int> reducibleIndices(kgrid.get_np_red());
 	for (int i = 0 ; i < kgrid.get_np_red(); ++i)
 		reducibleIndices[i] = i;
-	phonyWave.generate_reducible_grid_wfcts(bandIndices,reducibleIndices,wfcts,npwPerK);
-
-	std::vector<int> offsetReducible(kgrid.get_np_red(),0);
-	for ( int i = 1 ; i < kgrid.get_np_red(); ++i)
-		offsetReducible[i] = offsetReducible[i-1]+npwPerK[i-1]*nBnd;
+	std::vector<std::vector<std::complex<float>>> wfctsPerK;
+	phonyWave.generate_reducible_grid_wfcts(bandIndices,reducibleIndices,wfctsPerK,npwPerK);
 
 	for ( int ikir = 0 ; ikir < nkpIrred; ++ikir)
 	{
@@ -466,19 +493,52 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 			//Check our particular example
 			if ( (ikir == 0) and (isym == 3) )
 			{
-				BOOST_REQUIRE( compare_float(std::real(wfcts[offsetReducible[ikreducible]]),0.0)
-						&& compare_float(std::imag(wfcts[offsetReducible[ikreducible]]),0.0) );
-				BOOST_REQUIRE( compare_float(std::real(wfcts[offsetReducible[ikreducible]+1]),2.0)
-						&& compare_float(std::imag(wfcts[offsetReducible[ikreducible]+1]),0.0) );
-				BOOST_REQUIRE( compare_float(std::real(wfcts[offsetReducible[ikreducible]+2]),1.0)
-						&& compare_float(std::imag(wfcts[offsetReducible[ikreducible]+2]),0.0) );
-				BOOST_REQUIRE( compare_float(std::real(wfcts[offsetReducible[ikreducible]+3]),4.0)
-						&& compare_float(std::imag(wfcts[offsetReducible[ikreducible]+3]),0.0) );
-				BOOST_REQUIRE( compare_float(std::real(wfcts[offsetReducible[ikreducible]+4]),3.0)
-						&& compare_float(std::imag(wfcts[offsetReducible[ikreducible]+4]),0.0) );
+				BOOST_REQUIRE( compare_float(std::real(wfctsPerK[ikreducible][0]),0.0)
+						&& compare_float(std::imag(wfctsPerK[ikreducible][0]),0.0) );
+				BOOST_REQUIRE( compare_float(std::real(wfctsPerK[ikreducible][1]),2.0)
+						&& compare_float(std::imag(wfctsPerK[ikreducible][1]),0.0) );
+				BOOST_REQUIRE( compare_float(std::real(wfctsPerK[ikreducible][2]),1.0)
+						&& compare_float(std::imag(wfctsPerK[ikreducible][2]),0.0) );
+				BOOST_REQUIRE( compare_float(std::real(wfctsPerK[ikreducible][3]),4.0)
+						&& compare_float(std::imag(wfctsPerK[ikreducible][3]),0.0) );
+				BOOST_REQUIRE( compare_float(std::real(wfctsPerK[ikreducible][4]),3.0)
+						&& compare_float(std::imag(wfctsPerK[ikreducible][4]),0.0) );
 			}
 		}
 	}
-
 }
 
+BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+	auto outfile = testd / "ldos.dat";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::ElectronicStructure::Wavefunctions wfcts;
+	wfcts.initialize(
+			loader->get_optns().get_gPrec(),
+			testd.string(),
+			loader);
+
+	std::vector<std::vector<std::complex<float>>> wfctsArbK;
+	std::vector<std::vector<int>> fftMap;
+	std::vector<double> k{0.0, 0.0, 0.0};
+	std::vector<int> bands{0,1};
+	wfcts.generate_wfcts_at_arbitray_kp(
+			k,
+			bands,
+			wfctsArbK,
+			fftMap);
+
+
+}

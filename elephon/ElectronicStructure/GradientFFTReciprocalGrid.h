@@ -20,6 +20,7 @@
 #ifndef ELEPHON_ELECTRONICSTRUCTURE_GRADIENTFFTRECIPROCALGRID_H_
 #define ELEPHON_ELECTRONICSTRUCTURE_GRADIENTFFTRECIPROCALGRID_H_
 
+#include "LatticeStructure/LatticeModule.h"
 #include <vector>
 #include <cstdlib>
 
@@ -33,20 +34,20 @@ public:
 	GradientFFTReciprocalGrid();
 
 	void compute_gradient(
-			std::vector<size_t> grid,
-			std::vector<double> const& latticeMatrix,
-			size_t nDataBlock,
+			std::vector<int> grid,
+			LatticeStructure::LatticeModule const& lattice,
+			int nDataBlock,
 			std::vector<double> const& dataOnGrid);
 
-	void copy_data(std::vector<size_t> const& conseqGridIndices,
-			std::vector<size_t> bands,
+	void copy_data(std::vector<int> const& conseqGridIndices,
+			std::vector<int> bands,
 			std::vector<double> & dataAtIndices) const;
 
 	std::vector<double> const& get_data() const;
 private:
-	std::vector<size_t> grid_;
+	std::vector<int> grid_;
 
-	size_t nBlockData_ = 0;
+	int nBlockData_ = 0;
 
 	std::vector<double> gradientDataOnGrid_;
 

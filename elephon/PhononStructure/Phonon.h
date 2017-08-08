@@ -39,6 +39,8 @@ public:
 			std::vector< std::complex<double> > & eigenModes) const;
 
 	int get_num_modes() const;
+
+	std::vector<double> const & get_masses() const;
 private:
 
 	ForceConstantMatrix fc_;

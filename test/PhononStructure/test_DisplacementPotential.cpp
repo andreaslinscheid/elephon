@@ -27,84 +27,12 @@
 #include "PhononStructure/DisplacementPotential.h"
 #include "PhononStructure/Phonon.h"
 
-void build_displ_pot_Al_fcc_primitive_vasp(
-		elephon::PhononStructure::DisplacementPotential & dvscf)
-{
-	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
-	auto phononDir = rootDir / "phonon";
-
-	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
-	std::vector<elephon::LatticeStructure::Atom> atomsUC;
-	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularGrid kgrid;
-	elephon::LatticeStructure::LatticeModule  lattice;
-	//here we create the test input file
-	std::string content = std::string()+
-			"scell=2 2 2\n"
-			"root_dir="+rootDir.string()+"\n"
-			"elphd="+phononDir.string()+"\n"
-			"";
-
-	test::fixtures::DataLoader dl;
-	loader = dl.create_vasp_loader( content );
-
-	loader->read_cell_paramters( rootDir.string(),
-			1e-6,kgrid, lattice, atomsUC, symmetry);
-
-	elephon::LatticeStructure::UnitCell unitCell;
-	unitCell.initialize(atomsUC,lattice, symmetry);
-
-	//here we build the supercell that was used to generate the test data.
-	auto supercell = unitCell.build_supercell( 2, 2, 2 );
-
-	//Here, we regenerate the displacement
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDispl;
-	unitCell.generate_displacements(0.01,
-			true,
-			irreducibleDispl);
-
-	//Here, we read the potential from the vasp output
-	int nIrdDispl = int(irreducibleDispl.size());
-	std::vector<std::vector<double>> displPot( nIrdDispl );
-	std::vector<double> thisDisplPot;
-	std::vector<int> dims;
-	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
-	{
-		loader->read_electronic_potential(
-				(phononDir / (std::string("displ_")+std::to_string(idispl))).string(),
-				dims,
-				thisDisplPot);
-
-		displPot[idispl] = std::move(thisDisplPot);
-	}
-	elephon::LatticeStructure::RegularGrid rsGridSC;
-	rsGridSC.initialize( 1e-6,
-			dims,
-			std::vector<double>({0.0,0.0,0.0}), //no shift
-			supercell.get_symmetry(),
-			supercell.get_lattice() );
-
-	//Read the normal periodic potential
-	loader->read_electronic_potential(
-			rootDir.string(),
-			dims,
-			thisDisplPot);
-	elephon::LatticeStructure::RegularGrid rsGridUC;
-	rsGridUC.initialize( 1e-6,
-			dims,
-			std::vector<double>({0.0,0.0,0.0}), //no shift
-			unitCell.get_symmetry(),
-			unitCell.get_lattice() );
-
-	dvscf.build( unitCell, supercell, irreducibleDispl, rsGridUC, rsGridSC,
-			thisDisplPot, displPot);
-}
 
 BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 {
-	elephon::PhononStructure::DisplacementPotential dvscf;
-	build_displ_pot_Al_fcc_primitive_vasp(dvscf);
+	test::fixtures::FixtureForceConstant ff;
+	elephon::PhononStructure::DisplacementPotential dvscf
+		= ff.build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2();
 
 	BOOST_REQUIRE( dvscf.get_num_modes() == 3 );
 
@@ -117,8 +45,10 @@ BOOST_AUTO_TEST_CASE( plot_dvscf_q_Al_fcc_primitive )
 {
 	test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
-	elephon::PhononStructure::DisplacementPotential dvscf;
-	build_displ_pot_Al_fcc_primitive_vasp(dvscf);
+
+	test::fixtures::FixtureForceConstant ff;
+	elephon::PhononStructure::DisplacementPotential dvscf
+		= ff.build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2();
 
 	//Write the real space variant
 	dvscf.write_dvscf(0,0,(rootDir / "dvscf.dat").string());

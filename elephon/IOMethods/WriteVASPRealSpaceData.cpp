@@ -24,6 +24,7 @@
 #include <map>
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 
 namespace elephon
 {
@@ -36,7 +37,8 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 		std::vector<int> const & dataDims,
 		LatticeStructure::UnitCell const & unitCell,
 		std::vector<double> const & data,
-		bool spin_resolved) const
+		bool spin_resolved,
+		bool xmajor) const
 {
 	assert( data.size() == dataDims[0]*dataDims[1]*dataDims[2]*( spin_resolved ? 2 : 1 ) );
 
@@ -53,14 +55,17 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 	file << comment << '\n';
 
 	//Now comes the unit cell.
-	auto A = unitCell.get_lattice().get_latticeMatrix();
+	auto floatAccLine = [] (std::vector<double> v, int digits) {
+		std::stringstream s;
+		s << " "<< std::fixed  << std::setprecision(6) << std::setw(12) << v[0]  << std::setw(12) << v[1]
+				<< std::setw(12) << v[2];
+		return s.str();
+	};
+
 	file << std::fixed << std::setprecision(16) << "   " << unitCell.get_lattice().get_alat() << '\n';
-	file << " "<< std::fixed  << std::setprecision(6) << std::setw(12) << A[0*3+0]  << std::setw(12) << A[1*3+0]//a1
-			 << std::setw(12) << A[2*3+0] << '\n';
-	file << " "<< std::fixed  << std::setprecision(6) << std::setw(12) << A[0*3+1]  << std::setw(12) << A[1*3+1]//a2
-			 << std::setw(12) << A[2*3+1] << '\n';
-	file << " "<< std::fixed  << std::setprecision(6) << std::setw(12) << A[0*3+2]  << std::setw(12) << A[1*3+2]//a2
-			 << std::setw(12) << A[2*3+2] << '\n';
+	file << floatAccLine( unitCell.get_lattice().get_lattice_vector(0) , 6 ) << '\n';
+	file << floatAccLine( unitCell.get_lattice().get_lattice_vector(1) , 6 ) << '\n';
+	file << floatAccLine( unitCell.get_lattice().get_lattice_vector(2) , 6 ) << '\n';
 
 	//List with atom types
 	std::string line;
@@ -160,6 +165,8 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 				dataLines += '\n';
 			int nWrite = std::snprintf(buff.data(),buff.size(),"%.10E",dataPtr[i]);
 			//Annoyingly, c/c++ requires a leading digit such as -0.023 while VASP does not put it (-.023)
+			if ( std::isnan(dataPtr[i]) )
+				throw std::logic_error("Values to be printed in WriteVASPRealSpaceData::write_file are NaN");
 			if ( dataPtr[i] != 0 )
 				parser_headache(buff.data(),nWrite+1);
 			if ( dataPtr[i] <= 0 )
@@ -170,9 +177,28 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 		return dataLines + '\n';
 	};
 
-	std::string cntnt = w_data( &data[0] , dataDims );
-	if ( spin_resolved )
-		cntnt += "\n"+w_data( &data[dataDims[0]*dataDims[1]*dataDims[2]] , dataDims );
+	std::string cntnt;
+	if ( xmajor )
+	{
+		cntnt = w_data( &data[0] , dataDims );
+		if ( spin_resolved )
+			cntnt += "\n"+w_data( &data[dataDims[0]*dataDims[1]*dataDims[2]] , dataDims );
+	}
+	else
+	{
+		std::vector<double> xmajorData(data.size());
+		int ns = spin_resolved?2:1;
+		for (int is = 0 ; is < ns; ++is)
+			for (int iz = 0 ; iz < dataDims[2]; ++iz )
+				for (int iy = 0 ; iy < dataDims[1]; ++iy )
+					for (int ix = 0 ; ix < dataDims[0]; ++ix )
+						xmajorData[((is*dataDims[2]+iz)*dataDims[1]+iy)*dataDims[0]+ix]
+								   = data[((is*dataDims[0]+ix)*dataDims[1]+iy)*dataDims[2]+iz];
+		cntnt = w_data( &xmajorData[0] , dataDims );
+		if ( spin_resolved )
+			cntnt += "\n"+w_data( &xmajorData[dataDims[0]*dataDims[1]*dataDims[2]] , dataDims );
+	}
+
 
 	file << cntnt;
 }

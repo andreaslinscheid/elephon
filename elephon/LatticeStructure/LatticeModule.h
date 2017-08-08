@@ -31,6 +31,10 @@ class LatticeModule
 {
 public:
 
+	LatticeModule();
+
+	LatticeModule( std::vector<double> latticeMatrix );
+
 	/**
 	 * latticeMatrix : Cartesian, units are in Angstrom
 	 */
@@ -40,15 +44,40 @@ public:
 
 	std::vector<double> const & get_reciprocal_latticeMatrix() const;
 
+	double get_volume() const;
+
 	double get_alat() const;
+
+	std::vector<double> get_lattice_vector(int n) const;
+
+	std::vector<double> get_reci_lattice_vector(int n) const;
+
+	void direct_to_cartesian_matrix(double * mat, int nelem) const;
+
+	void reci_cartesian_to_direct_matrix(double * mat, int nelem) const;
+
+	void direct_to_cartesian(double p[3]) const;
+
+	void direct_to_cartesian(double * p, int nelem) const;
 
 	void direct_to_cartesian(std::vector<double> & v) const;
 
 	void direct_to_cartesian_angstroem(std::vector<double> & v) const;
 
+	void direct_to_cartesian_angstroem(double * mat, int nelem) const;
+
 	void cartesian_to_direct(std::vector<double> & v) const;
 
+	void reci_direct_to_cartesian(std::vector<double> & v) const;
+
+	void reci_direct_to_cartesian(double * p , int nelem) const;
+
+	void reci_direct_to_cartesian_2pibya(double * p , int nelem) const;
+
+	void reci_direct_to_cartesian_2pibya(std::vector<double> & v) const;
 private:
+
+	double vol_ = 0;
 
 	double alat_ = 0;
 

@@ -20,11 +20,11 @@
 #ifndef ELEPHON_ELECTRONICSTRUCTURE_WAVEFUNCTIONS_H_
 #define ELEPHON_ELECTRONICSTRUCTURE_WAVEFUNCTIONS_H_
 
-#include "LatticeStructure/RegularGrid.h"
 #include "IOMethods/ElectronicStructureCodeInterface.h"
 #include <vector>
 #include <complex>
 #include <memory>
+#include "LatticeStructure/RegularSymmetricGrid.h"
 
 namespace elephon
 {
@@ -42,8 +42,21 @@ public:
 	void generate_reducible_grid_wfcts(
 			std::vector<int> const & bndIndices,
 			std::vector<int> const & redKptIndices,
-			std::vector< std::complex<float> > & wfcts,
+			std::vector< std::vector<std::complex<float>> > & wfcts,
 			std::vector<int> & npwPerKAndSpin) const;
+
+	int get_num_bands() const;
+
+	LatticeStructure::RegularSymmetricGrid const & get_k_grid() const;
+
+	void compute_Fourier_maps(std::vector<double> const & kvectors,
+			std::vector<std::vector<int>> & fftMapsPerK) const;
+
+	void generate_wfcts_at_arbitray_kp(
+			std::vector<double> kList,
+			std::vector<int> const & bandList,
+			std::vector< std::vector< std::complex<float> > > & wfctsArbitrayKp,
+			std::vector<std::vector<int>> & fftMapsArbitrayKp) const;
 private:
 
 	typedef class KPGVect
@@ -71,7 +84,7 @@ private:
 
 	std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface_;
 
-	LatticeStructure::RegularGrid grid_;
+	LatticeStructure::RegularSymmetricGrid grid_;
 
 	mutable std::vector< std::vector<int> > gSymBuffer_;
 

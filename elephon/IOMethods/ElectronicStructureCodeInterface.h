@@ -21,8 +21,9 @@
 #define ELEPHON_IOMETHODS_ELECTRONICSTRUCTURECODEINTERFACE_H_
 
 #include "LatticeStructure/UnitCell.h"
+#include "ElectronicStructure/ElectronicBands.h"
 #include "IOMethods/InputOptions.h"
-#include "LatticeStructure/RegularGrid.h"
+#include "LatticeStructure/RegularSymmetricGrid.h"
 #include <vector>
 #include <string>
 #include <complex>
@@ -37,6 +38,10 @@ class ElectronicStructureCodeInterface
 public:
 
 	ElectronicStructureCodeInterface( IOMethods::InputOptions inputOPts );
+
+	IOMethods::InputOptions const & get_optns() const;
+
+	virtual std::string code_tag() const = 0;
 
 	virtual ~ElectronicStructureCodeInterface();
 
@@ -60,25 +65,34 @@ public:
 			std::string root_directory,
 			std::vector<int> const & kpts,
 			std::vector<int> const & bandIndices,
-			std::vector< std::complex<float> > & wfctData,
+			std::vector< std::vector< std::complex<float> > > & wfctData,
 			std::vector< int > & npwPerKpt) = 0;
 
 	virtual void compute_fourier_map(
 			std::vector<double> const & kpts,
-			std::vector< std::vector<int> > & fourierMap) = 0;
+			std::vector< std::vector<int> > & fourierMap,
+			double gridPrec) = 0;
 
 	virtual void read_cell_paramters(
 			std::string root_directory,
 			double symPrec,
-			LatticeStructure::RegularGrid & kPointMesh,
+			LatticeStructure::RegularSymmetricGrid & kPointMesh,
 			LatticeStructure::LatticeModule & lattice,
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry) = 0;
+
+	virtual void read_lattice_structure(
+			std::string root_directory,
+			LatticeStructure::LatticeModule & lattice) = 0;
 
 	virtual void read_electronic_potential(
 			std::string root_directory,
 			std::vector<int> & dims,
 			std::vector<double> & output) = 0;
+
+	virtual void read_band_structure(
+			std::string root_directory,
+			ElectronicStructure::ElectronicBands & bands) = 0;
 
 	//The returned forces must be in the same order as the atoms in the unperturbed supercell!
 	virtual void read_forces(
@@ -92,7 +106,7 @@ public:
 
 	std::vector<std::string> gen_input_file_list( std::string directory ) const;
 
-protected:
+private:
 
 	IOMethods::InputOptions inputOPts_;
 };

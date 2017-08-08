@@ -22,9 +22,9 @@
 
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/AtomDisplacement.h"
-#include "LatticeStructure/RegularGrid.h"
 #include <vector>
 #include <complex>
+#include "../LatticeStructure/RegularSymmetricGrid.h"
 
 namespace elephon
 {
@@ -38,8 +38,8 @@ public:
 	void build(  LatticeStructure::UnitCell unitCell,
 			LatticeStructure::UnitCell const & superCell,
 			std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
-			LatticeStructure::RegularGrid unitcellGrid,
-			LatticeStructure::RegularGrid const & supercellGrid,
+			LatticeStructure::RegularSymmetricGrid unitcellGrid,
+			LatticeStructure::RegularSymmetricGrid const & supercellGrid,
 			std::vector<double> const & potentialUC,
 			std::vector< std::vector<double> > const & potentialDispl );
 
@@ -50,6 +50,8 @@ public:
 			std::vector<std::complex<float>> & dvscf) const;
 
 	int RVectorLayout(int iRz, int iRy, int iRx ) const;
+
+	LatticeStructure::RegularSymmetricGrid const & get_real_space_grid() const;
 
 	int get_num_R() const;
 
@@ -68,7 +70,7 @@ private:
 
 	int nptsRealSpace_ = 0;
 
-	LatticeStructure::RegularGrid unitCellGrid_;
+	LatticeStructure::RegularSymmetricGrid unitCellGrid_;
 
 	LatticeStructure::UnitCell unitCell_;
 
@@ -84,15 +86,15 @@ private:
 
 	void compute_rot_map(
 			std::vector<double> const & shift,
-			LatticeStructure::RegularGrid const & supercellGrid,
+			LatticeStructure::RegularSymmetricGrid const & supercellGrid,
 			LatticeStructure::Symmetry const & siteSymmetry,
 			std::vector< std::vector<int> > & rotMap) const;
 
 	int mem_layout(int ir, int mu, int iR ) const;
 
 	void build_supercell_to_primite(
-			LatticeStructure::RegularGrid const & primitiveCellGrid,
-			LatticeStructure::RegularGrid const & supercellGrid,
+			LatticeStructure::RegularSymmetricGrid const & primitiveCellGrid,
+			LatticeStructure::RegularSymmetricGrid const & supercellGrid,
 			std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const;
 };
 
