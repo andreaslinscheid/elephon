@@ -177,9 +177,24 @@ FFTInterface::fft_sparse_data(
 			for (int id = 0 ; id < nDataPerGridPt; ++id)
 			{
 				reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + conseq_index ] =
-						converterFwd.convert( sparseInputData [ ig * nDataPerGridPt + id ] );
+						converterFwd.convert( sparseInputData [id*ngrid + ig] );
 			}
 		}
+	};
+
+	auto fillResult = [&] () {
+		detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
+		for (int id = 0 ; id < nDataPerGridPt; ++id)
+			for (int ig = 0 ; ig < ngrid; ++ig)
+				dataResult [ id*ngrid + ig] =
+						converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] );
+		if ( converterBkwd.complex_to_real )
+			if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
+				throw std::runtime_error(
+						std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
+						+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) +
+						" on average per data point");
+
 	};
 
 	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
@@ -193,7 +208,7 @@ FFTInterface::fft_sparse_data(
 
 		fillBuffer();
 		fftw_execute(fftw3PlanBkwdKtoR_);
-		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+		fillResult();
 	}
 	else
 	{
@@ -205,7 +220,7 @@ FFTInterface::fft_sparse_data(
 
 		fillBuffer();
 		fftw_execute(fftw3PlanFowdRtoK_);
-		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+		fillResult();
 	}
 };
 

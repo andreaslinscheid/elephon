@@ -360,7 +360,7 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 
 	//reserve space for the results
 	wfctsArbitrayKp.resize(nkA);
-	fftMapsArbitrayKp.resize(nkA);
+	this->compute_Fourier_maps(kList, fftMapsArbitrayKp);
 
 	//Wave functions are on a regular grid and in G (reciprocal) space
 	//First, load the cubes of wave functions for linear interpolation
@@ -402,16 +402,19 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 	int iIrrKCounter = 0;
 	for ( int ic = 0 ; ic < gridCubes.size(); ++ic)
 	{
-		//fetch the wave functions at the corner points
-		for ( int iCorner = 0 ; iCorner < 8; ++iCorner )
-		{
-			npwPerK[iCorner] = npwPerKAllRedPts[redIndicesTokptset[ic*8+iCorner]];
-			wfctCornerPoints[iCorner] = wfctAllRedPts[redIndicesTokptset[ic*8+iCorner]];
-		}
-
-		//Possibly adjust the size to the largest common set of plane waves
-		std::vector<int> commonFFTMap;
-		//First get the fft maps for the corner points
+		//Step 1.: cast the wave functions at the corner points into a map for fast plane wave retrieval
+		//Helper ft G Vector struct
+		struct GVector {
+			GVector( int x, int y, int z) : xi {x, y, z} { };
+			int xi[3];
+			bool operator<(GVector const & other) const
+			{
+				for ( int i = 0 ; i < 3; ++i)
+					if ( xi[i] != other.xi[i] )
+						return xi[i]<other.xi[i];
+				return false;
+			}
+		};
 		std::vector<double> cornerVectors(8*3);
 		for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
 		{
@@ -421,128 +424,59 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 		std::vector< std::vector<int> > cornerVecFFTMaps;
 		this->compute_Fourier_maps(cornerVectors, cornerVecFFTMaps);
 
-		//If they do not all coincide, we must generate a new FFT map the includes all occurring plane waves
-		bool newMap = false;
-		for ( int iCorner = 1 ; iCorner < 8 ; ++iCorner )
-			if ( cornerVecFFTMaps[0] != cornerVecFFTMaps[iCorner] )
+		auto fftMax = this->get_max_fft_dims();
+		std::vector< std::map<GVector,int> >cmaps(8);
+		for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
+			for ( int ipw = 0 ; ipw < cornerVecFFTMaps[iCorner].size()/3; ++ipw)
 			{
-				newMap = true;
-				break;
+				int iGx = cornerVecFFTMaps[iCorner][ipw*3+0];
+				int iGy = cornerVecFFTMaps[iCorner][ipw*3+1];
+				int iGz = cornerVecFFTMaps[iCorner][ipw*3+2];
+				cmaps[iCorner].insert( std::make_pair(GVector(iGx, iGy, iGz), ipw) );
 			}
 
-		if ( newMap )
-		{
-			//Helper ft G Vector struct
-			struct GVector {
-				GVector( int x, int y, int z) : xi {x, y, z} { };
-				int xi[3];
-				bool operator<(GVector const & other) const
-				{
-					for ( int i = 0 ; i < 3; ++i)
-						if ( xi[i] != other.xi[i] )
-							return xi[i]<other.xi[i];
-					return false;
-				}
-			};
-			//get the respective min/max values among the corner points in x,y and z
-			auto fftMax = this->get_max_fft_dims();
-			std::vector<int> max{0,0,0};
-			auto min = fftMax;
-			std::vector< std::map<GVector,int> >cmaps(8);
-			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-				for ( int ipw = 0 ; ipw < cornerVecFFTMaps[iCorner].size(); ++ipw)
-				{
-					int iGx = cornerVecFFTMaps[iCorner][ipw*3+0];
-					int iGy = cornerVecFFTMaps[iCorner][ipw*3+1];
-					int iGz = cornerVecFFTMaps[iCorner][ipw*3+2];
-					iGx = iGx < fftMax[0]/2 ? iGx : iGx - fftMax[0];
-					iGy = iGy < fftMax[1]/2 ? iGy : iGy - fftMax[1];
-					iGz = iGz < fftMax[2]/2 ? iGz : iGz - fftMax[2];
-					max[0] = std::max(max[0],iGx);
-					max[1] = std::max(max[1],iGy);
-					max[2] = std::max(max[2],iGz);
-					min[0] = std::min(min[0],iGx);
-					min[1] = std::min(min[1],iGy);
-					min[2] = std::min(min[2],iGz);
-					cmaps[iCorner].insert( std::make_pair(GVector(iGx,iGy,iGz),ipw) );
-				}
-
-			commonFFTMap.reserve(3*fftMax[0]*fftMax[1]*fftMax[2]);
-
-			std::vector< std::vector<std::complex<float> > > wfctCornerPointsBuffer(8);
-			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-				wfctCornerPointsBuffer[iCorner].reserve(fftMax[0]*fftMax[1]*fftMax[2]);
-
-			//Now expand each corner wavefunction with zeros such that all corners are
-			//given on the same set of G vector - even though some coefficients are zero of cause
-			for ( int iGz = min[2] ; iGz <= max[2]; ++iGz)
-				for ( int iGy = min[1] ; iGy <= max[1]; ++iGy)
-					for ( int iGx = min[0] ; iGx <= max[0]; ++iGx)
-					{
-						std::vector<int> occursAtPWIndex(8,-1);
-						for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-						{
-							auto ret = cmaps[iCorner].find( GVector(iGx,iGy,iGz) );
-							if ( ret != cmaps[iCorner].end() )
-								occursAtPWIndex[iCorner] = ret->second ;
-						}
-
-						if ( *std::max_element(occursAtPWIndex.begin(),occursAtPWIndex.end()) == -1 )
-							//This plane wave does not occur anywhere ...
-							continue;
-
-						// Since this plane wave occurs at some of the corner wavefunctions it goes into
-						// the map
-						int iGxf = iGx < 0 ? iGx + fftMax[0] : iGx;
-						int iGyf = iGy < 0 ? iGy + fftMax[1] : iGy;
-						int iGzf = iGz < 0 ? iGz + fftMax[2] : iGz;
-						assert((iGxf >= 0) && (iGxf < fftMax[0]) && (iGyf >= 0) && (iGyf < fftMax[1])
-							&& (iGzf >= 0) && (iGzf < fftMax[2]));
-						commonFFTMap.push_back(iGxf);
-						commonFFTMap.push_back(iGyf);
-						commonFFTMap.push_back(iGzf);
-
-						//Elements that do not occur are set to zero.
-						for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-							for ( int ib = 0 ; ib < bandList.size() ; ++ib)
-							{
-								int indexOldPWSet = occursAtPWIndex[iCorner]*bandList.size()+ib;
-								wfctCornerPointsBuffer[iCorner].push_back(
-										occursAtPWIndex[iCorner] < 0 ? std::complex<float>(0) :
-												wfctCornerPoints[iCorner][indexOldPWSet] );
-							}
-					}
-
-			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-				wfctCornerPoints[iCorner] = wfctCornerPointsBuffer[iCorner];
-		}
-		else
-			commonFFTMap = cornerVecFFTMaps[0];
-
-		int npw = wfctCornerPoints[0].size()/bandList.size();
-		int nB = bandList.size();
-
-		//v0 is the vector pointing to the lowest x,y and z corner point in direct coordinates
-		auto v0 = grid_.get_vector_direct( gridCubes[ic].cornerIndices_[0] );
-		std::vector<double> relIrregularKCoords( gridCubes[ic].containedIrregularPts_.size()*3 );
+		// Step 2.: Fetch the coefficients needed at this very k point.
+		//			Coefficients that do not appear are set to zero.
 		for ( int ikAC = 0 ; ikAC < gridCubes[ic].containedIrregularPts_.size(); ++ikAC )
 		{
+			//ikA is the index of the k point in kList in this cube
 			int ikA = gridCubes[ic].containedIrregularPts_[ikAC];
-			std::copy(&kList[ ikA*3 ], &kList[ ikA*3 ]+3 , &relIrregularKCoords[ikAC*3] );
+			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
+			{
+				if ( fftMapsArbitrayKp[ikA] == cornerVecFFTMaps[iCorner] )
+				{
+					wfctCornerPoints[iCorner] = wfctAllRedPts[redIndicesTokptset[ic*8+iCorner]];
+				}
+				else
+				{
+					int npw = fftMapsArbitrayKp[ikA].size()/3;
+					int npwC = cornerVecFFTMaps[iCorner].size()/3;
+					wfctCornerPoints[iCorner].resize( npw*bandList.size() );
+					for ( int ib = 0 ; ib < bandList.size() ; ++ib )
+					{
+						for ( int ipw = 0 ; ipw < npw ; ++ipw )
+						{
+							int iGx = cornerVecFFTMaps[iCorner][ipw*3+0];
+							int iGy = cornerVecFFTMaps[iCorner][ipw*3+1];
+							int iGz = cornerVecFFTMaps[iCorner][ipw*3+2];
+							auto it = cmaps[iCorner].find(GVector(iGx, iGy, iGz));
+							std::complex<float> val(0);
+							if ( it != cmaps[iCorner].end() )
+								val = wfctAllRedPts[redIndicesTokptset[ic*8+iCorner]][ib*npwC+it->second];
+							wfctCornerPoints[iCorner][ib*npw+ipw] = val;
+						}
+					}
+				}
+			}
+
+			// Step 3.: Perform a trilinear interpolation.
+			std::vector< std::complex<float> > buffer;
+			std::vector<double> kv = {kList[ikA*3+0], kList[ikA*3+1], kList[ikA*3+2]};
+	 		interpol.interpolate_within_single_cube(
+	 				kv,
+					wfctCornerPoints,
+					wfctsArbitrayKp[ikA]);
 		}
-
-		std::vector< std::complex<float> > buffer;
- 		interpol.interpolate_within_single_cube(
-				relIrregularKCoords,
-				wfctCornerPoints, buffer);
-
- 		for ( int ikAt = 0 ; ikAt < gridCubes[ic].containedIrregularPts_.size(); ++ikAt)
- 		{
- 			int i = iIrrKCounter+ikAt; //the total index in the list of irregular k points
- 	 		wfctsArbitrayKp[i].insert( wfctsArbitrayKp[i].end(), &buffer[ikAt*npw*nB] , &buffer[ikAt*npw*nB] + npw*nB );
- 	 		fftMapsArbitrayKp[i] = commonFFTMap;
- 		}
-		iIrrKCounter += gridCubes[ic].containedIrregularPts_.size();
 	}
 }
 

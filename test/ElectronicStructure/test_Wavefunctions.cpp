@@ -284,8 +284,8 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 {
 	//We start by reading parameters of other files in this directory for lattice matrices and kpoints
-	boost::filesystem::path phonyDir = boost::filesystem::path(__FILE__).parent_path()
-											/ "../data_for_testing/phony/vasp_sym/";
+	test::fixtures::MockStartup ms;
+	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
 
 	elephon::IOMethods::InputOptions noop;
 
@@ -298,7 +298,6 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	std::vector<elephon::LatticeStructure::Atom> atoms;
 	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
 	loader->read_cell_paramters(phonyDir.string(),1e-6,kgrid,lattice,atoms,sym);
-	sym.set_reciprocal_space_sym();
 
 	const int nBnd = 1;
 	const double eCut = 10;
@@ -417,7 +416,106 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 			}
 		}
 	}
+	boost::filesystem::remove(phonyDir / "WAVECAR");
+}
 
+BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
+{
+	//We start by reading parameters of other files in this directory for lattice matrices and kpoints
+	test::fixtures::MockStartup ms;
+	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
+
+	std::string input = std::string()+
+			"root_dir = "+phonyDir.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(phonyDir / "infile").string(),
+			input,
+			opts);
+
+	//introduce the VASP data loader
+	std::shared_ptr<elephon::IOMethods::VASPInterface> loader =
+			std::make_shared< elephon::IOMethods::VASPInterface >(opts);
+
+	elephon::LatticeStructure::LatticeModule lattice;
+	elephon::LatticeStructure::Symmetry sym;
+	std::vector<elephon::LatticeStructure::Atom> atoms;
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
+	loader->read_cell_paramters(
+			phonyDir.string(),
+			loader->get_optns().get_gPrec(),
+			kgrid,
+			lattice,
+			atoms,
+			sym);
+
+
+	const int nBnd = 1;
+	const double eCut = 10;
+	std::vector<double> bandData(kgrid.get_np_irred(), 0.0);
+	elephon::ElectronicStructure::ElectronicBands bands;
+	bands.initialize(nBnd, bandData, kgrid);
+
+	elephon::IOMethods::ReadVASPWaveFunction reader;
+	std::vector<int> mFFT;
+	reader.compute_fourier_max(eCut, lattice, mFFT);
+	std::vector<std::vector<std::complex<float>>> wavefunctions(kgrid.get_np_irred());
+	std::vector<std::vector<int>> fftMap;
+	std::vector<double> kvectors(3*kgrid.get_np_irred());
+	for (int ikir = 0 ; ikir < kgrid.get_np_irred(); ++ikir)
+	{
+		auto k = kgrid.get_vector_direct(kgrid.get_maps_irreducible_to_reducible()[ikir][kgrid.get_symmetry().get_identity_index()]);
+		kvectors[ikir*3+0] = k[0];
+		kvectors[ikir*3+1] = k[1];
+		kvectors[ikir*3+2] = k[2];
+	}
+	reader.compute_fourier_map(
+			kvectors,
+			fftMap,
+			kgrid.get_grid_prec(),
+			1,
+			mFFT,
+			eCut,
+			lattice);
+
+	std::vector<int> npwK(kgrid.get_np_irred());
+	for (int ikir = 0 ; ikir < kgrid.get_np_irred(); ++ikir)
+	{
+		npwK[ikir] = fftMap[ikir].size()/3;
+		wavefunctions[ikir].resize(npwK[ikir]*nBnd);
+		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
+			for ( int ipw = 0 ; ipw < npwK[ikir]; ++ipw)
+			{
+				int cnsq = fftMap[ikir][ipw*3+0] + mFFT[0]*(fftMap[ikir][ipw*3+0]+mFFT[1]*fftMap[ikir][ipw*3+2]);
+				wavefunctions[ikir][ibnd*npwK[ikir] + ipw] = std::complex<float>(1.0, cnsq);
+			}
+	}
+
+	elephon::IOMethods::write_VASP_wavefunctions(
+			(phonyDir / "WAVECAR" ).string(),
+			eCut,
+			lattice,
+			bands,
+			wavefunctions,
+			fftMap);
+
+	std::vector<double> k{//0.0, 0.0, 0.0,
+						  1.0/3.0, 1.0/3.0, 0.0};
+	std::vector<int> bandsList{0};
+
+	elephon::ElectronicStructure::Wavefunctions wfcts;
+	wfcts.initialize(
+			loader->get_optns().get_gPrec(),
+			phonyDir.string(),
+			loader);
+
+	std::vector<std::vector<std::complex<float>>> wfctsArbK;
+	std::vector<std::vector<int>> fftMapArbK;
+	wfcts.generate_wfcts_at_arbitray_kp(
+	                k,
+	                bandsList,
+	                wfctsArbK,
+					fftMapArbK);
 	boost::filesystem::remove(phonyDir / "WAVECAR");
 }
 
@@ -442,9 +540,10 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 			testd.string(),
 			loader);
 
-	std::vector<double> k{//0.0, 0.0, 0.0,
-						  1.0/3.0, 1.0/3.0, -1.0/2.0};
-	std::vector<int> bands{3};
+	std::vector<double> k{0.0, 0.0, 0.0,
+						//  1.0/3.0, 1.0/3.0, -1.0/2.0
+						};
+	std::vector<int> bands{3, 4};
 	std::vector<std::vector<std::complex<float>>> wfctsArbK;
 	std::vector<std::vector<int>> fftMap;
 	wfcts.generate_wfcts_at_arbitray_kp(
@@ -461,7 +560,7 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 			fftMap[0],
 			wfcts.get_max_fft_dims(),
 			wfctsArbK[0],
-			1,
+			bands.size(),
 			-1,
 			wfctsGammaFullGrid,
 			chargeDim,
