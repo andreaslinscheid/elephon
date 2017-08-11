@@ -71,10 +71,10 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 	std::string line;
 	std::map<std::string,int> ntypes;
 	for ( auto a : unitCell.get_atoms_list() )
-	{
-		line += a.get_kind() + " ";
 		ntypes[a.get_kind()]++;
-	}
+	for ( auto at : ntypes )
+		line += at.first + " ";
+
 	file << line + "\n";
 
 	// Number of atoms per type
@@ -92,9 +92,14 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 
 	//Positions of atoms
 	for ( auto a : unitCell.get_atoms_list() )
-		file << std::fixed << std::setprecision(6)  << std::setw(10) << a.get_position()[0]
-									   << std::setw(10) << a.get_position()[1]
-									   << std::setw(10) << a.get_position()[2] << '\n';
+	{
+		auto pos = a.get_position();
+		//map to the cell [0,1[
+		for ( auto &pi : pos )
+			pi -= std::floor(pi);
+		file << std::fixed << std::setprecision(6)  << std::setw(10)
+			 << pos[0]  << std::setw(10) << pos[1]  << std::setw(10) << pos[2] << '\n';
+	}
 
 	//Empty line
 	file << '\n';

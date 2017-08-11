@@ -23,10 +23,31 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/WriteVASPRealSpaceData.h"
+#include "IOMethods/ReadVASPLocpot.h"
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
 #include <string>
 #include <vector>
+
+BOOST_AUTO_TEST_CASE( MgB2_realspace_data_format )
+{
+	test::fixtures::MockStartup ms;
+	auto testf = ms.get_data_for_testing_dir() / "vasp_realspace_data.dat";
+
+	auto loadD = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+	std::string content = std::string("root_dir=")+loadD.string()+"\n";
+	test::fixtures::DataLoader dl;
+	auto unitCell = dl.load_unit_cell( content );
+
+	elephon::IOMethods::WriteVASPRealSpaceData wd;
+	std::vector<int> dims{20,20,24};
+	std::vector<double> data(dims[0]*dims[1]*dims[2], 0.0);
+
+	wd.write_file( testf.string(), "Test file comment", dims, unitCell, data );
+
+	elephon::IOMethods::ReadVASPLocpot locpot;
+	locpot.read_scf_potential(testf.string(), dims, data);
+}
 
 BOOST_AUTO_TEST_CASE( write_VASP_realspace_output )
 {

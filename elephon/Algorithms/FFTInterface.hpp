@@ -103,6 +103,7 @@ template<typename TI, typename TR>
 void
 FFTInterface::fft_sparse_data(
 		std::vector<int> const & mapFFTCoeff,
+		std::vector<int> const & gridDimsInputData,
 		std::vector< TI > const & sparseInputData,
 		int nDataPerGridPt,
 		int exponentSign,
@@ -126,6 +127,15 @@ FFTInterface::fft_sparse_data(
 			std::vector<int>::const_iterator toupleBegin,
 			std::vector<int>::const_iterator toupleEnd)
 	{
+		auto output_aligned = [] (int iG, int maxGIn, int maxGOut)
+		{
+			//Convert to the negative-positive frequency scheme
+			int iGAct = iG < maxGIn/2 ? iG : iG - maxGIn;
+			//alias back in case ...
+			iGAct = iGAct % maxGOut;
+			//Convert back to the positive index scheme with the second half being the negative freqs
+			return iGAct < 0 ? iGAct + maxGOut : iGAct;
+		};
 		assert( std::distance(toupleBegin,toupleEnd) == gridDimsOutputData.size() );
 		auto const & d = gridDimsOutputData;
 		int conseq = 0;
@@ -134,20 +144,21 @@ FFTInterface::fft_sparse_data(
 			//e.g. for d == 3 : ix*d[1]+iy)*d[2]+iz
 			for ( int i = 0 ; i < int(d.size())-1; ++i)
 			{
-				conseq += *(toupleBegin+i);
+				conseq += output_aligned(*(toupleBegin+i), gridDimsInputData[i], d[i]);
 				conseq *= d[i+1];
 			}
-			conseq += *(toupleBegin+int(d.size())-1);
+			int im = int(d.size())-1;
+			conseq += output_aligned(*(toupleBegin+im), gridDimsInputData[im], d[im]);
 		}
 		else // Column major
 		{
 			//e.g. for d == 3 : ix+d[0]*(iy+d[1]*iz
 			for ( int i = int(d.size())-1 ; i > 0; --i)
 			{
-				conseq += *(toupleBegin+i);
+				conseq += output_aligned(*(toupleBegin+i), gridDimsInputData[i], d[i]);
 				conseq *= d[i-1];
 			}
-			conseq += *(toupleBegin);
+			conseq += output_aligned(*(toupleBegin), gridDimsInputData[0], d[0]);
 		}
 		return conseq;
 	};

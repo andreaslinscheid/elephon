@@ -434,7 +434,7 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 		{
 			//Helper ft G Vector struct
 			struct GVector {
-				GVector( int x, int y, int z) : xi {x,y,z} { };
+				GVector( int x, int y, int z) : xi {x, y, z} { };
 				int xi[3];
 				bool operator<(GVector const & other) const
 				{
@@ -444,8 +444,10 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 					return false;
 				}
 			};
-			//get the respective max values among the corner points in x,y and z
+			//get the respective min/max values among the corner points in x,y and z
+			auto fftMax = this->get_max_fft_dims();
 			std::vector<int> max{0,0,0};
+			auto min = fftMax;
 			std::vector< std::map<GVector,int> >cmaps(8);
 			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
 				for ( int ipw = 0 ; ipw < cornerVecFFTMaps[iCorner].size(); ++ipw)
@@ -453,21 +455,29 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 					int iGx = cornerVecFFTMaps[iCorner][ipw*3+0];
 					int iGy = cornerVecFFTMaps[iCorner][ipw*3+1];
 					int iGz = cornerVecFFTMaps[iCorner][ipw*3+2];
+					iGx = iGx < fftMax[0]/2 ? iGx : iGx - fftMax[0];
+					iGy = iGy < fftMax[1]/2 ? iGy : iGy - fftMax[1];
+					iGz = iGz < fftMax[2]/2 ? iGz : iGz - fftMax[2];
 					max[0] = std::max(max[0],iGx);
 					max[1] = std::max(max[1],iGy);
 					max[2] = std::max(max[2],iGz);
+					min[0] = std::min(min[0],iGx);
+					min[1] = std::min(min[1],iGy);
+					min[2] = std::min(min[2],iGz);
 					cmaps[iCorner].insert( std::make_pair(GVector(iGx,iGy,iGz),ipw) );
 				}
 
-			commonFFTMap.reserve(3*max[0]*max[1]*max[2]);
+			commonFFTMap.reserve(3*fftMax[0]*fftMax[1]*fftMax[2]);
 
 			std::vector< std::vector<std::complex<float> > > wfctCornerPointsBuffer(8);
 			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-				wfctCornerPointsBuffer[iCorner].reserve(max[0]*max[1]*max[2]);
+				wfctCornerPointsBuffer[iCorner].reserve(fftMax[0]*fftMax[1]*fftMax[2]);
 
-			for ( int iGz = 0 ; iGz < max[2]; ++iGz)
-				for ( int iGy = 0 ; iGy < max[1]; ++iGy)
-					for ( int iGx = 0 ; iGx < max[0]; ++iGx)
+			//Now expand each corner wavefunction with zeros such that all corners are
+			//given on the same set of G vector - even though some coefficients are zero of cause
+			for ( int iGz = min[2] ; iGz <= max[2]; ++iGz)
+				for ( int iGy = min[1] ; iGy <= max[1]; ++iGy)
+					for ( int iGx = min[0] ; iGx <= max[0]; ++iGx)
 					{
 						std::vector<int> occursAtPWIndex(8,-1);
 						for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
@@ -481,17 +491,26 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 							//This plane wave does not occur anywhere ...
 							continue;
 
-						commonFFTMap.push_back(iGx);
-						commonFFTMap.push_back(iGy);
-						commonFFTMap.push_back(iGz);
+						// Since this plane wave occurs at some of the corner wavefunctions it goes into
+						// the map
+						int iGxf = iGx < 0 ? iGx + fftMax[0] : iGx;
+						int iGyf = iGy < 0 ? iGy + fftMax[1] : iGy;
+						int iGzf = iGz < 0 ? iGz + fftMax[2] : iGz;
+						assert((iGxf >= 0) && (iGxf < fftMax[0]) && (iGyf >= 0) && (iGyf < fftMax[1])
+							&& (iGzf >= 0) && (iGzf < fftMax[2]));
+						commonFFTMap.push_back(iGxf);
+						commonFFTMap.push_back(iGyf);
+						commonFFTMap.push_back(iGzf);
 
 						//Elements that do not occur are set to zero.
 						for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
 							for ( int ib = 0 ; ib < bandList.size() ; ++ib)
+							{
+								int indexOldPWSet = occursAtPWIndex[iCorner]*bandList.size()+ib;
 								wfctCornerPointsBuffer[iCorner].push_back(
-										occursAtPWIndex[iCorner] < 0 ?
-											std::complex<float>(0.0f)
-											: wfctCornerPoints[iCorner][occursAtPWIndex[iCorner]*bandList.size()+ib] );
+										occursAtPWIndex[iCorner] < 0 ? std::complex<float>(0) :
+												wfctCornerPoints[iCorner][indexOldPWSet] );
+							}
 					}
 
 			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
@@ -521,10 +540,17 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
  		{
  			int i = iIrrKCounter+ikAt; //the total index in the list of irregular k points
  	 		wfctsArbitrayKp[i].insert( wfctsArbitrayKp[i].end(), &buffer[ikAt*npw*nB] , &buffer[ikAt*npw*nB] + npw*nB );
- 	 		fftMapsArbitrayKp[i] = std::move(commonFFTMap);
+ 	 		fftMapsArbitrayKp[i] = commonFFTMap;
  		}
 		iIrrKCounter += gridCubes[ic].containedIrregularPts_.size();
 	}
 }
+
+std::vector<int>
+Wavefunctions::get_max_fft_dims() const
+{
+	return wfctInterface_->get_max_fft_dims();
+}
+
 } /* namespace ElectronicStructure */
 } /* namespace elephon */

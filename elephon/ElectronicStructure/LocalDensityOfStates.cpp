@@ -105,12 +105,13 @@ LocalDensityOfStates::compute_ldos(
 				//Compute the wavefunction part |psi(r)|^2
 				fft.fft_sparse_data(
 						fftMapsWfctsFs[bandOffset+ikf],
+						wfcts.get_max_fft_dims(),
 						wfctsOneBand,
 						1,
 						-1,
 						wfctsRealSpace,
 						rsDims_,
-						true, //we want Fortran data order
+						false, //we want C data order
 						nkpointsPerSurface);
 
 				double modGradE = std::sqrt(std::pow(FermiVelocities[ikf*3+0],2)
@@ -193,7 +194,9 @@ LocalDensityOfStates::write_file( std::string const & filename, bool binary ) co
 				std::string("LDOS at E=")+std::to_string(isoEnergies_[ie]),
 				rsDims_,
 				uc_,
-				std::vector<double>(&ldos_[ie*nrs],&ldos_[ie*nrs]+nrs));
+				std::vector<double>(&ldos_[ie*nrs],&ldos_[ie*nrs]+nrs),
+				false,
+				true);
 	}
 }
 

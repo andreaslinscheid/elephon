@@ -87,6 +87,12 @@ ElectronicBands::get_nBnd() const
 	return nBnd_;
 }
 
+int
+ElectronicBands::get_nspin() const
+{
+	return 1;
+}
+
 void
 ElectronicBands::generate_reducible_grid_bands(
 		std::vector<int> const & bIndices,
@@ -131,6 +137,13 @@ LatticeStructure::RegularSymmetricGrid const &
 ElectronicBands::get_grid() const
 {
 	return grid_;
+}
+
+double
+ElectronicBands::operator() (int ikIrred, int ib, int ispin) const
+{
+	assert(ikIrred*nBnd_ + ib < dataIrred_.size());
+	return dataIrred_[ikIrred*nBnd_ + ib];
 }
 
 } /* namespace ElectronicStructure */

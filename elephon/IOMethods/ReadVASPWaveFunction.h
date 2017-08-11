@@ -54,7 +54,21 @@ public:
 			std::vector< std::vector<int> > & fftMapPerK,
 			double vaspGridPrec) const;
 
-	std::vector<int> get_fft_max_dims() const;
+	void compute_fourier_map(
+			std::vector<double> kptCoords,
+			std::vector< std::vector<int> > & fftMapPerK,
+			double vaspGridPrec,
+			int nspin,
+			std::vector<int> const & fourierMax,
+			double ecutoff,
+			LatticeStructure::LatticeModule const & lattice) const;
+
+	std::vector<int> const & get_fft_max_dims() const;
+
+	void compute_fourier_max(
+			double ecutoff,
+			LatticeStructure::LatticeModule const & lattice,
+			std::vector<int> & fourierMax) const;
 
 	std::vector<double> const & get_energies() const;
 

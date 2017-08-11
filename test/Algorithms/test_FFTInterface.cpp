@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE( sparse_data_test )
 	data[1] = 0.5;
 
 	std::vector< std::complex<double> > result;
-	fft.fft_sparse_data( fftmap, data, nBands, -1, result, grid, false, 10 );
+	fft.fft_sparse_data( fftmap, grid, data, nBands, -1, result, grid, false, 10 );
 
 	int ngrid = grid[0]*grid[1]*grid[2];
 	BOOST_REQUIRE_EQUAL( result.size() , ngrid*nBands);

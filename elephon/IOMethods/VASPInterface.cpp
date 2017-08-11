@@ -162,10 +162,7 @@ VASPInterface::read_cell_paramters(
 		xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
 		irreducibleKPoints = xmlReader_.get_k_points();
 	}
-for (int ik = 0 ; ik < irreducibleKPoints.size()/3; ++ik)
-	std::cout << irreducibleKPoints[ik*3+0] << '\t' << irreducibleKPoints[ik*3+1] <<
-	'\t' << irreducibleKPoints[ik*3+2] << '\n';
-std::cout <<std::endl;
+
 	kpointSymmetry.set_reciprocal_space_sym();
 	kPointMesh.initialize( kDim, symPrec, shifts, kpointSymmetry, lattice, irreducibleKPoints );
 }

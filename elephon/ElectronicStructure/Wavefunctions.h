@@ -57,6 +57,13 @@ public:
 			std::vector<int> const & bandList,
 			std::vector< std::vector< std::complex<float> > > & wfctsArbitrayKp,
 			std::vector<std::vector<int>> & fftMapsArbitrayKp) const;
+
+	/**
+	 * Obtain the Fourier grid sufficient to represent any wavefunction in the system.
+	 *
+	 * @return vector with max x, max y and max z reciprocal lattice vectors
+	 */
+	std::vector<int> get_max_fft_dims() const;
 private:
 
 	typedef class KPGVect
@@ -79,8 +86,6 @@ private:
 	int nBnd_;
 
 	std::string rootDir_;
-
-	std::vector< std::vector<int> > fourierMap_;
 
 	std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface_;
 

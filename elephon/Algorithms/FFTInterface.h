@@ -39,6 +39,7 @@ public:
 	template<typename TI, typename TR>
 	void fft_sparse_data(
 			std::vector<int> const & mapFFTCoeff,
+			std::vector<int> const & gridDimsInputData,
 			std::vector< TI > const & sparseInputData,
 			int nDataPerGridPt,
 			int exponentSign,

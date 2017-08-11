@@ -67,7 +67,15 @@ ElectronPhononCoupling::generate_gkkp(
 	for ( int ik = 0 ; ik < nK_; ++ik)
 	{
 		fft.fft_sparse_data(
-				fftMapsK[ik],wfcsk[ik],nB_,-1,bufferWfct1,potentialFFTGrid,false,nK_*nKp_);
+				fftMapsK[ik],
+				wfcts.get_max_fft_dims(),
+				wfcsk[ik],
+				nB_,
+				-1,
+				bufferWfct1,
+				potentialFFTGrid,
+				false,
+				nK_*nKp_);
 
 		for ( int ikp = 0 ; ikp < nKp_; ++ikp)
 		{
@@ -78,7 +86,15 @@ ElectronPhononCoupling::generate_gkkp(
 			dvscf.compute_dvscf_q( q, dynmat, ph.get_masses(), dvscfData);
 
 			fft.fft_sparse_data(
-					fftMapsKp[ik],wfcskp[ik],nBp_,-1,bufferWfct2,potentialFFTGrid,false,nK_*nKp_);
+					fftMapsKp[ik],
+					wfcts.get_max_fft_dims(),
+					wfcskp[ik],
+					nBp_,
+					-1,
+					bufferWfct2,
+					potentialFFTGrid,
+					false,
+					nK_*nKp_);
 
 			assert( bufferWfct1.size() == nr*nB_ );
 			assert( bufferWfct2.size() == nr*nBp_ );

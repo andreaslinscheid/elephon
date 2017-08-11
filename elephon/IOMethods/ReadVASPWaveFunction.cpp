@@ -126,6 +126,9 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 	//This contains the #kpts, #bands and then the 9 double values for the lattice matrix
 	//NOTE: This matrix is defined in the same order we use in elephon
 	wavecarfile_.seekg(recl_);
+	std::size_t remainderMax = static_cast<std::size_t>(
+			static_cast<std::int64_t>(total_size_)-static_cast<std::int64_t>(recl_));
+	saveSize = (1024 < remainderMax ? 1024: remainderMax); // should be enough to read the first line header
 	wavecarfile_.read( &buffer[0], saveSize);
 
 	int nkptsVASP =nint(viewAsFloat[0]);
@@ -207,53 +210,10 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 
 void ReadVASPWaveFunction::set_up_fourier_max()
 {
-	//Some helper function to deal with these 3x3 matrices and 3 vectors
-	typedef std::vector<double> V;
-	auto d_prod = [] (V const & v1, V const & v2 ) {
-		return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
-	};
-	auto sliceBV = [] (V const& matrix3x3, int bv ) {
-		return V({matrix3x3[3*0+bv],matrix3x3[3*1+bv],matrix3x3[3*2+bv]});
-	};
-
-	//Check the possible G vectors for plane wave coefficient
-	//We compare 4 values - the simple guess below and a modifier
-	//where we project on the reciprocal lattice direction.
-	double gc = std::sqrt(ecutoff_*energyConverionFactorVASP_);
-	std::vector<int> nGmxyz(4, std::floor(gc) + 2 );
-	for ( int i = 0 ; i < 3 ; ++i)
-	{
-		double s1 = d_prod(lattice_.get_lattice_vector(i),lattice_.get_reci_lattice_vector(i));
-		nGmxyz[i] = std::floor(2.0*gc/std::abs(2*M_PI*s1)
-				*lattice_.get_alat()*sqrt(s1)+0.5);
-	}
-	int nGm = *std::max_element( nGmxyz.begin(),nGmxyz.end() );
-
-	//nGm should now be a lattice vector that is larger than the maximum plane
-	//wave in any direction that is below the cutoff in energy.
-	//Now we actually walk through them determine the maximum in each direction.
-	fourierMax_ = std::vector<int>(3,0);
-	V G(3);
-	for ( int igx = -nGm; igx <= nGm; ++ igx)
-		for ( int igy = -nGm; igy <= nGm; ++ igy)
-			for ( int igz = -nGm; igz <= nGm; ++ igz)
-			{
-				G[0]=igx;
-				G[1]=igy;
-				G[2]=igz;
-				lattice_.reci_direct_to_cartesian_2pibya(G);
-				if ( d_prod(G,G)/energyConverionFactorVASP_ < ecutoff_ )
-				{
-					fourierMax_[0] = std::max(fourierMax_[0],std::abs(igx));
-					fourierMax_[1] = std::max(fourierMax_[1],std::abs(igy));
-					fourierMax_[2] = std::max(fourierMax_[2],std::abs(igz));
-				}
-			}
-
-	//We need to hold + and - direction (and zero). Also G+k can exceed this
-	// number in each direction by up to one so we compute
-	for ( auto & nGxi: fourierMax_ )
-		nGxi = 2*(nGxi+1)+2;
+	this->compute_fourier_max(
+			ecutoff_,
+			lattice_,
+			fourierMax_);
 }
 
 void ReadVASPWaveFunction::read_wavefunction(
@@ -322,8 +282,8 @@ void ReadVASPWaveFunction::read_wavefunction(
 
 				for ( int ipw = 0 ; ipw < npwSpinKpt_[ik*nspin_+is]; ++ipw)
 					wfctData[i*nspin_+is][j*npwSpinKpt_[ik*nspin_+is]+ipw ] = wavefuncDouble_ ?
-								static_cast< std::complex<float> >(reinterpret_cast<VPD>( &buffer[0] )[ipw] ) :
-								static_cast< std::complex<float> >(reinterpret_cast<VPS>( &buffer[0] )[ipw] ) ;
+								std::complex<float>(reinterpret_cast<VPD>( &buffer[0] )[ipw] ) :
+								std::complex<float>(reinterpret_cast<VPS>( &buffer[0] )[ipw] ) ;
 			}
 		}
 }
@@ -333,6 +293,26 @@ ReadVASPWaveFunction::compute_fourier_map(
 		std::vector<double> kptCoords,
 		std::vector< std::vector<int> > & fftMapPerK,
 		double vaspGridPrec) const
+{
+	this->compute_fourier_map(
+			kptCoords,
+			fftMapPerK,
+			vaspGridPrec,
+			nspin_,
+			fourierMax_,
+			ecutoff_,
+			lattice_);
+}
+
+void
+ReadVASPWaveFunction::compute_fourier_map(
+		std::vector<double> kptCoords,
+		std::vector< std::vector<int> > & fftMapPerK,
+		double vaspGridPrec,
+		int nspin,
+		std::vector<int> const & fourierMax,
+		double ecutoff,
+		LatticeStructure::LatticeModule const & lattice) const
 {
 	assert( kptCoords.size() % 3 == 0 );
 	int Nk = static_cast<int>(kptCoords.size()/3);
@@ -350,26 +330,26 @@ ReadVASPWaveFunction::compute_fourier_map(
 
 	//here we generate the fourier map
 	std::vector<double> kPlusG = { 0.0, 0.0, 0.0 };
-	for ( int is = 0 ; is < nspin_; ++is)
+	for ( int is = 0 ; is < nspin; ++is)
 		for ( int ik = 0 ; ik < Nk; ++ik)
 		{
-			fftMapPerK[ik] = std::vector<int>(fourierMax_[0]*fourierMax_[1]*fourierMax_[2]*3);
+			fftMapPerK[ik] = std::vector<int>(fourierMax[0]*fourierMax[1]*fourierMax[2]*3);
 			int ng = 0;
-			for ( int igz = 0 ; igz < fourierMax_[2]; ++igz)
+			for ( int igz = 0 ; igz < fourierMax[2]; ++igz)
 			{
-				int igzf = igz < fourierMax_[2]/2 ? igz : igz - fourierMax_[2];
-				for ( int igy = 0 ; igy < fourierMax_[1]; ++igy)
+				int igzf = igz < fourierMax[2]/2 ? igz : igz - fourierMax[2];
+				for ( int igy = 0 ; igy < fourierMax[1]; ++igy)
 				{
-					int igyf = igy < fourierMax_[1]/2 ? igy : igy - fourierMax_[1];
-					for ( int igx = 0 ; igx < fourierMax_[0]; ++igx)
+					int igyf = igy < fourierMax[1]/2 ? igy : igy - fourierMax[1];
+					for ( int igx = 0 ; igx < fourierMax[0]; ++igx)
 					{
-						int igxf = igx < fourierMax_[0]/2 ? igx : igx - fourierMax_[0];
+						int igxf = igx < fourierMax[0]/2 ? igx : igx - fourierMax[0];
 						kPlusG[0] = kptCoords[ik*3+0]+igxf;
 						kPlusG[1] = kptCoords[ik*3+1]+igyf;
 						kPlusG[2] = kptCoords[ik*3+2]+igzf;
-						lattice_.reci_direct_to_cartesian_2pibya(kPlusG);
+						lattice.reci_direct_to_cartesian_2pibya(kPlusG);
 						if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
-							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff_ )
+							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff )
 						{
 							fftMapPerK[ik][ng*3+0] = igx;
 							fftMapPerK[ik][ng*3+1] = igy;
@@ -383,10 +363,65 @@ ReadVASPWaveFunction::compute_fourier_map(
 		}
 }
 
-std::vector<int>
+std::vector<int> const &
 ReadVASPWaveFunction::get_fft_max_dims() const
 {
 	return fourierMax_;
+}
+
+void
+ReadVASPWaveFunction::compute_fourier_max(
+		double ecutoff,
+		LatticeStructure::LatticeModule const & lattice,
+		std::vector<int> & fourierMax) const
+{
+	//Some helper function to deal with these 3x3 matrices and 3 vectors
+	typedef std::vector<double> V;
+	auto d_prod = [] (V const & v1, V const & v2 ) {
+		return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
+	};
+	auto sliceBV = [] (V const& matrix3x3, int bv ) {
+		return V({matrix3x3[3*0+bv],matrix3x3[3*1+bv],matrix3x3[3*2+bv]});
+	};
+
+	//Check the possible G vectors for plane wave coefficient
+	//We compare 4 values - the simple guess below and a modifier
+	//where we project on the reciprocal lattice direction.
+	double gc = std::sqrt(ecutoff*energyConverionFactorVASP_);
+	std::vector<int> nGmxyz(4, std::floor(gc) + 2 );
+	for ( int i = 0 ; i < 3 ; ++i)
+	{
+		double s1 = d_prod(lattice.get_lattice_vector(i),lattice.get_reci_lattice_vector(i));
+		nGmxyz[i] = std::floor(2.0*gc/std::abs(2*M_PI*s1)
+				*lattice.get_alat()*sqrt(s1)+0.5);
+	}
+	int nGm = *std::max_element( nGmxyz.begin(),nGmxyz.end() );
+
+	//nGm should now be a lattice vector that is larger than the maximum plane
+	//wave in any direction that is below the cutoff in energy.
+	//Now we actually walk through them determine the maximum in each direction.
+	fourierMax.assign(3,0);
+	V G(3);
+	for ( int igx = -nGm; igx <= nGm; ++ igx)
+		for ( int igy = -nGm; igy <= nGm; ++ igy)
+			for ( int igz = -nGm; igz <= nGm; ++ igz)
+			{
+				G[0]=igx;
+				G[1]=igy;
+				G[2]=igz;
+				lattice.reci_direct_to_cartesian_2pibya(G);
+				if ( d_prod(G,G)/energyConverionFactorVASP_ < ecutoff )
+				{
+					fourierMax[0] = std::max(fourierMax[0],std::abs(igx));
+					fourierMax[1] = std::max(fourierMax[1],std::abs(igy));
+					fourierMax[2] = std::max(fourierMax[2],std::abs(igz));
+				}
+			}
+
+	//We need to hold + and - direction (and zero). Also G+k can exceed this
+	// number in each direction by up to one so we compute
+	for ( auto & nGxi: fourierMax )
+		nGxi = 2*(nGxi+1)+2;
 }
 
 int ReadVASPWaveFunction::num_records_spanned(std::size_t bytesToRead) const

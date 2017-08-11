@@ -70,11 +70,23 @@ public:
 
 	int get_nBnd() const;
 
+	int get_nspin() const;
+
 	void generate_reducible_grid_bands(
 			std::vector<int> const & bIndices,
 			std::vector<double> & bands) const;
 
 	LatticeStructure::RegularSymmetricGrid const & get_grid() const;
+
+	/**
+	 * Retrieve a band data value at a point in the grid.
+	 *
+	 * @param ikIrred	The irreducible index of the k grid point.
+	 * @param ib		The band index [0,nBnd[
+	 * @param ispin		The spin index
+	 * @return	Band energy value in eV relative to the Fermi level at E=0.
+	 */
+	double operator() (int ikIrred, int ib, int ispin = 0) const;
 private:
 
 	int nBnd_;

@@ -22,6 +22,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPWaveFunction.h"
+#include "IOMethods/WriteVASPWaveFunctions.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPPoscar.h"
 #include "IOMethods/VASPInterface.h"
@@ -29,9 +30,11 @@
 #include "ElectronicStructure/Wavefunctions.h"
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
+#include "Algorithms/FFTInterface.h"
+#include "IOMethods/WriteVASPRealSpaceData.h"
 #include <vector>
-#include <complex>
 #include <cmath>
+#include <complex>
 #include <set>
 
 BOOST_AUTO_TEST_CASE( wavefunctions_partial_load )
@@ -297,147 +300,55 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	loader->read_cell_paramters(phonyDir.string(),1e-6,kgrid,lattice,atoms,sym);
 	sym.set_reciprocal_space_sym();
 
-	//Now, we obtain some parameters from these function
-	//Get the lattice basis and scale to their natural units
-	auto B = lattice.get_reciprocal_latticeMatrix();
-	for ( auto &bij : B )
-		bij *= 2*M_PI/lattice.get_alat();
-	const double eCut = 10;
-
-	//Check the possible G vectors for plane wave coefficient
-
-	//nGm should now be a lattice vector that is larger than the maximum plane
-	//wave in any direction that is below the cutoff in energy.
-	//Now we actually walk through them determine the maximum in each direction.
-	int nGm = 100;
-	const double energyConverionFactorVASP = 0.262465831;
-	std::vector<int> fourierMax(3,0);
-	std::vector<double> G(3);
-	for ( int igx = -nGm; igx <= nGm; ++ igx)
-		for ( int igy = -nGm; igy <= nGm; ++ igy)
-			for ( int igz = -nGm; igz <= nGm; ++ igz)
-			{
-				for ( int i = 0 ; i < 3; ++i)
-					G[i] = B[i*3+0]*igx+B[i*3+1]*igy+B[i*3+2]*igz;
-				if ( (G[0]*G[0]+G[1]*G[1]+G[2]*G[2])/energyConverionFactorVASP < eCut )
-				{
-					fourierMax[0] = std::max(fourierMax[0],std::abs(igx));
-					fourierMax[1] = std::max(fourierMax[1],std::abs(igy));
-					fourierMax[2] = std::max(fourierMax[2],std::abs(igz));
-				}
-			}
-
-	//We need to hold + and - direction (and zero). Also G+k can exceed this
-	// number in each direction by up to one so we compute
-	for ( auto & nGxi: fourierMax )
-		nGxi = 2*(nGxi+1)+2;
-
-	//We create a file that has the format of the VASP wavecar
-	//but we control the input. VASP writes double precision (Fortran selected_real_kind(10))
-	//or single precision (Fortran selected_real_kind(5)) dependent on the version of the code.
-	typedef double VASPDP;
-	typedef float VASPSP;
-
-	std::ofstream file( (phonyDir / "WAVECAR" ).c_str() , std::ios_base::binary );
-	if ( not file.good() )
-		throw std::runtime_error( std::string("Error opening file ")+(phonyDir / "WAVECAR" ).string());
-
-	//Parameters in the file
 	const int nBnd = 1;
-	const int nkpIrred = kgrid.get_np_irred();
-	const int reclength = 100*sizeof(VASPDP);//In bytes
+	const double eCut = 10;
+	std::vector<double> bandData(kgrid.get_np_irred(), 0.0);
+	elephon::ElectronicStructure::ElectronicBands bands;
+	bands.initialize(nBnd, bandData, kgrid);
 
-	//Compute the total number of records in the file as
-	//the header plus per k point one record for bands ect and for each
-	//band one record for the wavefunction data
-	int numRecs = 2 + nkpIrred*(1+nBnd);
-	std::vector<char> binaryBuffer( numRecs*reclength );
-	VASPDP * buffAsFloat = reinterpret_cast<VASPDP * >( &binaryBuffer[0] );
-
-	//Write header
-	//First record
-	buffAsFloat[0] = reclength;
-	buffAsFloat[1] = 1; // #spin
-	buffAsFloat[2] = 45200;//Version tag
-
-	//second record
-	buffAsFloat = reinterpret_cast<VASPDP * >( &binaryBuffer[reclength] );
-	buffAsFloat[0] = nkpIrred;
-	buffAsFloat[1] = nBnd;
-	buffAsFloat[2] = eCut;
-	for ( int i = 0 ; i < 3; ++i )
-		for ( int j = 0 ; j < 3; ++j )
-			buffAsFloat[3+i*3+j] = lattice.get_alat()*lattice.get_latticeMatrix()[i*3+j];
-
-	//Header done. Now we create, write (and keep) the wavefunctions
-	std::vector<std::vector<std::complex<float>>> wavefunctions(nkpIrred);
-	std::vector<std::vector<int>> fftMaps(nkpIrred);
-	std::vector<int> npwK(nkpIrred);
-
-	for ( int ikir = 0 ; ikir < nkpIrred; ++ikir)
+	elephon::IOMethods::ReadVASPWaveFunction reader;
+	std::vector<int> mFFT;
+	reader.compute_fourier_max(eCut, lattice, mFFT);
+	std::vector<std::vector<std::complex<float>>> wavefunctions(kgrid.get_np_irred());
+	std::vector<std::vector<int>> fftMap;
+	std::vector<double> kvectors(3*kgrid.get_np_irred());
+	for (int ikir = 0 ; ikir < kgrid.get_np_irred(); ++ikir)
 	{
-		//Create the plane wave set at this k point
-		int ikred = kgrid.get_maps_irreducible_to_reducible()[ikir][ kgrid.get_symmetry().get_identity_index() ];
-		auto k = kgrid.get_vector_direct(ikred);
-		auto kPlusG = k;
-		fftMaps[ikir] = std::vector<int>(fourierMax[0]*fourierMax[1]*fourierMax[2]*3);
-		int ng = 0;
-		for ( int igz = 0 ; igz < fourierMax[2]; ++igz)
-		{
-			int igzf = igz < fourierMax[2]/2 ? igz : igz - fourierMax[2];
-			for ( int igy = 0 ; igy < fourierMax[1]; ++igy)
-			{
-				int igyf = igy < fourierMax[1]/2 ? igy : igy - fourierMax[1];
-				for ( int igx = 0 ; igx < fourierMax[0]; ++igx)
-				{
-					int igxf = igx < fourierMax[0]/2 ? igx : igx - fourierMax[0];
-
-					for ( int xi = 0 ; xi < 3; ++xi)
-						kPlusG[xi] = B[xi*3+0]*(k[0]+igxf) +B[xi*3+1]*(k[1]+igyf) +B[xi*3+2]*(k[2]+igzf);
-
-					if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
-						  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP < eCut )
-					{
-						fftMaps[ikir][ng*3+0] = igx;
-						fftMaps[ikir][ng*3+1] = igy;
-						fftMaps[ikir][ng*3+2] = igz;
-						ng++;
-					}
-				}
-			}
-		}
-		npwK[ikir] = ng;
-		fftMaps[ikir].resize(ng);
-
-		wavefunctions[ikir].resize(ng*nBnd);
-		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
-			for ( int ipw = 0 ; ipw < ng; ++ipw)
-				wavefunctions[ikir][ibnd*ng+ipw] = std::complex<float>(ipw,ibnd);
-
-		buffAsFloat = reinterpret_cast<VASPDP * >( &binaryBuffer[(2+ikir*(1+nBnd))*reclength] );
-		buffAsFloat[0] = ng;
-		buffAsFloat[1] = k[0];
-		buffAsFloat[2] = k[1];
-		buffAsFloat[3] = k[2];
-		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
-			buffAsFloat[4+ibnd] = ibnd; // We set the energies to the band index
-
-		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
-		{
-			VASPSP * buffAsSingle = reinterpret_cast<VASPSP * >( &binaryBuffer[(2+ikir*(1+nBnd)+1+ibnd)*reclength] );
-			for ( int ipw = 0 ; ipw < ng; ++ipw)
-			{
-				buffAsSingle[ipw*2+0] = std::real(wavefunctions[ikir][ibnd*ng+ipw]);
-				buffAsSingle[ipw*2+1] = std::imag(wavefunctions[ikir][ibnd*ng+ipw]);
-			}
-		}
+		auto k = kgrid.get_vector_direct(kgrid.get_maps_irreducible_to_reducible()[ikir][kgrid.get_symmetry().get_identity_index()]);
+		kvectors[ikir*3+0] = k[0];
+		kvectors[ikir*3+1] = k[1];
+		kvectors[ikir*3+2] = k[2];
 	}
-	file.write(binaryBuffer.data(),binaryBuffer.size());
-	file.close();
+	reader.compute_fourier_map(
+			kvectors,
+			fftMap,
+			kgrid.get_grid_prec(),
+			1,
+			mFFT,
+			eCut,
+			lattice);
+
+	std::vector<int> npwK(kgrid.get_np_irred());
+	for (int ikir = 0 ; ikir < kgrid.get_np_irred(); ++ikir)
+	{
+		npwK[ikir] = fftMap[ikir].size()/3;
+		wavefunctions[ikir].resize(npwK[ikir]*nBnd);
+		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
+			for ( int ipw = 0 ; ipw < npwK[ikir]; ++ipw)
+				wavefunctions[ikir][ibnd*npwK[ikir] + ipw] = std::complex<float>(ipw,ibnd);
+	}
+
+	elephon::IOMethods::write_VASP_wavefunctions(
+			(phonyDir / "WAVECAR" ).string(),
+			eCut,
+			lattice,
+			bands,
+			wavefunctions,
+			fftMap);
 
 	//Read in the file once more and check if the write/read works
-	std::vector<int> kpts( nkpIrred );
-	for ( int ik = 0 ; ik < nkpIrred; ++ik)
+	std::vector<int> kpts( kgrid.get_np_irred() );
+	for ( int ik = 0 ; ik < kgrid.get_np_irred(); ++ik)
 		kpts[ik] = ik;
 	std::vector<int> bandIndices( nBnd );
 	for ( int ibnd = 0 ; ibnd < nBnd; ++ibnd)
@@ -449,24 +360,24 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	//Compare if we have read in the same thing we wrote to disk
 	BOOST_REQUIRE( npwPerK == npwK);
 
-	for ( int ik = 0 ; ik < nkpIrred; ++ik)
+	for ( int ik = 0 ; ik < kgrid.get_np_irred(); ++ik)
 	{
 		float diff = 0;
 		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
 			for (int ipw = 0 ; ipw < nBnd; ++ipw)
 				diff += std::abs(wavefunctions[ik][ibnd*npwK[ik]+ipw]-wfcts[ik][ibnd*npwK[ik]+ipw]);
-		BOOST_REQUIRE( diff < 1e-5);
+		BOOST_CHECK_SMALL( diff, float(1e-5));
 	}
 
 	//Check if we have the irreducible wave function data as in our example
 	auto compare_float = [] (float a, float b){
 		return std::fabs(a-b) < 1e-5;
 	};
-	BOOST_REQUIRE( compare_float(std::real(wfcts[0][0]),0.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[0][1]),1.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[0][2]),2.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[0][3]),3.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
-	BOOST_REQUIRE( compare_float(std::real(wfcts[0][4]),4.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_CHECK( compare_float(std::real(wfcts[0][0]),0.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_CHECK( compare_float(std::real(wfcts[0][1]),1.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_CHECK( compare_float(std::real(wfcts[0][2]),2.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_CHECK( compare_float(std::real(wfcts[0][3]),3.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
+	BOOST_CHECK( compare_float(std::real(wfcts[0][4]),4.0) && compare_float(std::imag(wfcts[0][0]),0.0) );
 
 	//Seems so ... lets check the rotation
 	elephon::ElectronicStructure::Wavefunctions phonyWave;
@@ -478,7 +389,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	std::vector<std::vector<std::complex<float>>> wfctsPerK;
 	phonyWave.generate_reducible_grid_wfcts(bandIndices,reducibleIndices,wfctsPerK,npwPerK);
 
-	for ( int ikir = 0 ; ikir < nkpIrred; ++ikir)
+	for ( int ikir = 0 ; ikir < kgrid.get_np_irred(); ++ikir)
 	{
 		auto star = kgrid.get_maps_sym_irred_to_reducible();
 		auto irredToRed = kgrid.get_maps_irreducible_to_reducible();
@@ -506,6 +417,8 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 			}
 		}
 	}
+
+	boost::filesystem::remove(phonyDir / "WAVECAR");
 }
 
 BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
@@ -513,6 +426,70 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 	auto outfile = testd / "ldos.dat";
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::ElectronicStructure::Wavefunctions wfcts;
+	wfcts.initialize(
+			loader->get_optns().get_gPrec(),
+			testd.string(),
+			loader);
+
+	std::vector<double> k{//0.0, 0.0, 0.0,
+						  1.0/3.0, 1.0/3.0, -1.0/2.0};
+	std::vector<int> bands{3};
+	std::vector<std::vector<std::complex<float>>> wfctsArbK;
+	std::vector<std::vector<int>> fftMap;
+	wfcts.generate_wfcts_at_arbitray_kp(
+	                k,
+	                bands,
+	                wfctsArbK,
+					fftMap);
+
+	std::vector<std::complex<float>> wfctsGammaFullGrid;
+	elephon::Algorithms::FFTInterface fft;
+	std::vector<int> chargeDim = {40,40,48};
+
+	fft.fft_sparse_data(
+			fftMap[0],
+			wfcts.get_max_fft_dims(),
+			wfctsArbK[0],
+			1,
+			-1,
+			wfctsGammaFullGrid,
+			chargeDim,
+			false,
+			1);
+
+	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2]);
+	for ( int i = 0; i < chggam.size(); ++i )
+		chggam[i] = std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
+
+	test::fixtures::DataLoader dl;
+	auto uc = dl.load_unit_cell(input);
+	elephon::IOMethods::WriteVASPRealSpaceData writer;
+	writer.write_file(
+			(testd / "chgGam.dat").string(),
+			"charge due to wfcts at gamma",
+			chargeDim,
+			uc,
+			chggam,
+			false,
+			true);
+
+}
+
+BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_Gamma )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
@@ -530,15 +507,62 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 			testd.string(),
 			loader);
 
-	std::vector<std::vector<std::complex<float>>> wfctsArbK;
+	std::vector<std::vector<std::complex<float>>> wfctsGamma;
+	std::vector<int> npwPerK;
+	wfcts.generate_reducible_grid_wfcts(
+			std::vector<int>{3},
+			std::vector<int>{(1*3+1)*3+1},
+			wfctsGamma,
+			npwPerK);
+
 	std::vector<std::vector<int>> fftMap;
-	std::vector<double> k{0.0, 0.0, 0.0};
-	std::vector<int> bands{0,1};
-	wfcts.generate_wfcts_at_arbitray_kp(
-			k,
-			bands,
-			wfctsArbK,
+	wfcts.compute_Fourier_maps(
+			std::vector<double>{1.0/3.0, 1.0/3.0, -1.0/2.0},
 			fftMap);
 
+	BOOST_REQUIRE_EQUAL(npwPerK[0], fftMap[0].size()/3);
 
+	std::vector<int> chargeDim = {40,40,48};
+
+	std::vector<std::complex<float>> wfctsGammaFullGrid;
+	elephon::Algorithms::FFTInterface fft;
+
+	fft.fft_sparse_data(
+			fftMap[0],
+			wfcts.get_max_fft_dims(),
+			wfctsGamma[0],
+			1,
+			-1,
+			wfctsGammaFullGrid,
+			chargeDim,
+			false,
+			1);
+
+	double norm2_1 = 0;
+	for ( auto a : wfctsGamma[0])
+		norm2_1 += std::pow(std::abs(a),2);
+
+	double norm2_2 = 0;
+	for ( auto a :wfctsGammaFullGrid)
+		norm2_2 += std::pow(std::abs(a),2)/wfctsGammaFullGrid.size();
+
+	std::cout << norm2_1 << std::endl;
+	std::cout << norm2_2 << std::endl;
+	BOOST_CHECK_SMALL(norm2_1 - norm2_2, 1e-5);
+
+	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2]);
+	for ( int i = 0; i < chggam.size(); ++i )
+		chggam[i] = std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
+
+	test::fixtures::DataLoader dl;
+	auto uc = dl.load_unit_cell(input);
+	elephon::IOMethods::WriteVASPRealSpaceData writer;
+	writer.write_file(
+			(testd / "chgGam.dat").string(),
+			"charge due to wfcts at gamma",
+			chargeDim,
+			uc,
+			chggam,
+			false,
+			true);
 }
