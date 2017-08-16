@@ -52,7 +52,7 @@ public:
 			LatticeStructure::LatticeModule lattice,
 			bool hasTimeReversal);
 
-	void set_reciprocal_space_sym();
+	void set_reciprocal_space_sym(bool param = true);
 
 	void apply(int isym, std::vector<double> & field, bool latticePeriodic = true) const;
 

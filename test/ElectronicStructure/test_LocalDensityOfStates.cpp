@@ -52,3 +52,28 @@ BOOST_AUTO_TEST_CASE( ldos_MgB2_vasp )
 
 	BOOST_REQUIRE( boost::filesystem::exists(outfile) );
 }
+
+BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+	auto outfile = testd / "ldos.dat";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n"
+			"f_ldos = "+outfile.string()+"\n"
+			"eldos = 0.0\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::ElectronicStructure::LocalDensityOfStates ldos;
+	ldos.compute_ldos(opts.get_eldos(), loader);
+	ldos.write_file(opts.get_f_ldos());
+
+	BOOST_REQUIRE( boost::filesystem::exists(outfile) );
+}

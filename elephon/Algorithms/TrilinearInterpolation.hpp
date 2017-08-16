@@ -23,6 +23,7 @@
 #include "Algorithms/TrilinearInterpolation.h"
 #include <complex>
 #include <assert.h>
+#include <iostream>
 
 namespace elephon
 {
@@ -71,7 +72,7 @@ void TrilinearInterpolation::interpolate(
 	{
 		//use one representative k vector to compute the cell vectors
 		fill_k( usedGridCubes_[icube].containedIrregularPts_.front() );
-		this->get_cell_vectors(k,kcell1, kcell2);
+		this->get_cell_vectors(k, kcell1, kcell2);
 
 		auto g1it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[0]] );
 		auto g2it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[1]] );

@@ -29,18 +29,33 @@ namespace ElectronicStructure
 {
 
 void
-Wavefunctions::initialize( double gridPrec,
+Wavefunctions::initialize( LatticeStructure::RegularSymmetricGrid kgrid,
+		std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface)
+{
+	wfctInterface_ = wfctInterface;
+	rootDir_ = wfctInterface_->get_optns().get_root_dir();
+	grid_ = std::move(kgrid);
+}
+
+void
+Wavefunctions::initialize(
 		std::string rootDir,
 		std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface)
 {
-	wfctInterface_ = std::move( wfctInterface );
+	wfctInterface_ = wfctInterface;
 	rootDir_ = std::move(rootDir);
 
 	//Read and set up the symmetry module and the lattice module
 	LatticeStructure::LatticeModule lattice;
 	LatticeStructure::Symmetry sym;
 	std::vector<LatticeStructure::Atom> atoms;
-	wfctInterface_->read_cell_paramters(rootDir_, gridPrec, grid_, lattice, atoms, sym);
+	wfctInterface_->read_cell_paramters(
+			rootDir_,
+			wfctInterface->get_optns().get_gPrec(),
+			grid_,
+			lattice,
+			atoms,
+			sym);
 }
 
 void
@@ -145,10 +160,10 @@ Wavefunctions::generate_reducible_grid_wfcts(
 			wfctInterface_->compute_fourier_map( kRed, RedFFTMap, grid_.get_grid_prec());
 			assert( npw == RedFFTMap[0].size()/3 );
 
-			//Determine if there was a reciprocal lattice shift involved
-			//This umklapp vector has to be added to the plane wave vector
+			// Determine if there was a reciprocal lattice shift involved
+			// This umklapp vector has to be added to the plane wave vector
 			int isym = symIrredToRed[ikir][is];
-			auto kIrred = grid_.get_vector_direct(irredToRed[ikir][ 0 ]);
+			auto kIrred = grid_.get_vector_direct(irredToRed[ikir][ grid_.get_symmetry().get_identity_index() ]);
 			auto ktransformNoPeriodic = kIrred;
 			grid_.get_symmetry().apply(isym, ktransformNoPeriodic, false);
 			std::vector<int> umklappShift(3,0);
@@ -206,9 +221,9 @@ Wavefunctions::generate_reducible_grid_wfcts(
 						iGx = iGx < fftMaxDims[0]/2 ?  iGx : iGx - fftMaxDims[0];
 						iGy = iGy < fftMaxDims[1]/2 ?  iGy : iGy - fftMaxDims[1];
 						iGz = iGz < fftMaxDims[2]/2 ?  iGz : iGz - fftMaxDims[2];
-						iGx -= umklappShift[0];
-						iGy -= umklappShift[1];
-						iGz -= umklappShift[2];
+						iGx += umklappShift[0];
+						iGy += umklappShift[1];
+						iGz += umklappShift[2];
 						iGx = iGx < 0 ?  iGx + fftMaxDims[0] : iGx;
 						iGy = iGy < 0 ?  iGy + fftMaxDims[1] : iGy;
 						iGz = iGz < 0 ?  iGz + fftMaxDims[2] : iGz;
@@ -358,16 +373,12 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 {
 	int nkA = kList.size()/3; //In the following A is for arbitrary location
 
-	//reserve space for the results
-	wfctsArbitrayKp.resize(nkA);
-	this->compute_Fourier_maps(kList, fftMapsArbitrayKp);
-
 	//Wave functions are on a regular grid and in G (reciprocal) space
 	//First, load the cubes of wave functions for linear interpolation
 	std::vector<int> kAToCube;
 	std::vector<LatticeStructure::RegularSymmetricGrid::GridCube> gridCubes;
 	for ( auto &kxi : kList )
-		kxi -= std::floor(kxi);
+		kxi -= std::floor(kxi+0.5);
 	grid_.compute_grid_cubes_surrounding_nongrid_points(
 				kList, kAToCube, gridCubes);
 
@@ -383,6 +394,11 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 			redIndices,
 			wfctAllRedPts,
 			npwPerKAllRedPts);
+
+	// Set up the FFT maps. Note this must be called after generate_reducible_grid_wfcts
+	// since only then will the cutoffs and so on be read from the file.
+	wfctsArbitrayKp.resize(nkA);
+	this->compute_Fourier_maps(kList, fftMapsArbitrayKp);
 
 	//Generate map from a corner point to the location in the array redIndices
 	std::vector<int> redIndicesTokptset( gridCubes.size()*8 );
@@ -469,9 +485,19 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 				}
 			}
 
-			// Step 3.: Perform a trilinear interpolation.
+			// Step 3.: Perform a trilinear interpolation. While the wavefunction need the actual 1BZ
+			//			k vectors, here we have to map to the zone [0, 1[
 			std::vector< std::complex<float> > buffer;
+			auto d = grid_.get_grid_dim();
+			double dxi[] = {1.0/double(d[0]), 1.0/double(d[1]), 1.0/double(d[2])};
+			double kB[] = {cornerVectors[0], cornerVectors[1], cornerVectors[2]};
 			std::vector<double> kv = {kList[ikA*3+0], kList[ikA*3+1], kList[ikA*3+2]};
+			for ( int i = 0 ; i < 3 ; ++i )
+			{
+				kB[i] -= std::floor(kB[i]);
+				kv[i] -= std::floor(kv[i]);
+				kv[i] = (kv[i] - kB[i])/dxi[i];
+			}
 	 		interpol.interpolate_within_single_cube(
 	 				kv,
 					wfctCornerPoints,

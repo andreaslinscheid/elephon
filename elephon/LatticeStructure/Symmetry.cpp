@@ -216,14 +216,26 @@ Symmetry::initialize(
 }
 
 void
-Symmetry::set_reciprocal_space_sym()
+Symmetry::set_reciprocal_space_sym(bool param)
 {
-	if ( isReciprocalSpace_ )
-		return;
-	fractTransStore_ = fractTrans_;
-	std::fill(fractTrans_.begin(),fractTrans_.end(),0.0);
-	std::fill(fractTransCartesian_.begin(),fractTransCartesian_.end(),0.0);
-	isReciprocalSpace_ = true;
+	if ( param )
+	{
+		if ( isReciprocalSpace_ )
+			return;
+		fractTransStore_ = fractTrans_;
+		std::fill(fractTrans_.begin(),fractTrans_.end(),0.0);
+		std::fill(fractTransCartesian_.begin(),fractTransCartesian_.end(),0.0);
+		isReciprocalSpace_ = true;
+	}
+	else
+	{
+		if ( not isReciprocalSpace_ )
+			return;
+		fractTrans_ = fractTransStore_;
+		isReciprocalSpace_ = false;
+		fractTransCartesian_ = fractTrans_;
+		lattice_.direct_to_cartesian(fractTransCartesian_);
+	}
 }
 
 void

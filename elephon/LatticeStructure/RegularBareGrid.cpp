@@ -225,10 +225,6 @@ RegularBareGrid::compute_grid_cubes_surrounding_nongrid_points(
 	assert( nonGridPoints.size()%3 == 0 );
 	int nptsA = nonGridPoints.size()/3;
 
-	//We keep the coordinates in the zone [0,1[
-	assert( (*std::min_element(nonGridPoints.begin(),nonGridPoints.end() ) >= 0.0) &&
-			(*std::max_element(nonGridPoints.begin(),nonGridPoints.end() ) <  1.0) );
-
 	//here we compute all the indices of corner points of cubes in the regular grid
 	// and accumulate all irregular points in their respective cube
 	std::set< GridCube > cubeSet;

@@ -79,6 +79,8 @@ public:
 	int get_num_kpts() const;
 
 	std::vector<double> const & get_k_points() const;
+
+	std::string const & get_filename() const;
 private:
 
 	typedef double VASPDprec;
@@ -93,7 +95,7 @@ private:
 
 	double ecutoff_ = 0;
 
-	int nspin_ = 0;
+	int nspin_ = 1;
 
 	bool wavefuncDouble_ = false;
 

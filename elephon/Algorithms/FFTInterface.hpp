@@ -169,15 +169,14 @@ FFTInterface::fft_sparse_data(
 		std::fill(ptr,ptr+ngrid*nDataPerGridPt, std::complex<double>(0));
 
 		int nGridPointsNonZero = mapFFTCoeff.size()/spaceDim;
-
 		for (int ig = 0 ; ig < nGridPointsNonZero; ++ig)
 		{
 			auto it = mapFFTCoeff.begin()+ig*spaceDim;
 			int conseq_index = xyz_to_cnsq(it,it+spaceDim);
 			for (int id = 0 ; id < nDataPerGridPt; ++id)
 			{
-				reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + conseq_index ] =
-						converterFwd.convert( sparseInputData [id*ngrid + ig] );
+				ptr[ id*ngrid + conseq_index ] = converterFwd.convert( sparseInputData [id*nGridPointsNonZero + ig] );
+				assert( ptr[ id*ngrid + conseq_index ] == ptr[ id*ngrid + conseq_index ] );
 			}
 		}
 	};
@@ -186,8 +185,12 @@ FFTInterface::fft_sparse_data(
 		detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
 		for (int id = 0 ; id < nDataPerGridPt; ++id)
 			for (int ig = 0 ; ig < ngrid; ++ig)
+			{
 				dataResult [ id*ngrid + ig] =
 						converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] );
+				assert( dataResult [ id*ngrid + ig] == dataResult [ id*ngrid + ig] );
+			}
+
 		if ( converterBkwd.complex_to_real )
 			if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
 				throw std::runtime_error(

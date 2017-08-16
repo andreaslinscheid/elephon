@@ -35,7 +35,10 @@ class Wavefunctions
 {
 public:
 	void initialize(
-			double gridPrec,
+			LatticeStructure::RegularSymmetricGrid kgrid,
+			std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface);
+
+	void initialize(
 			std::string rootDir,
 			std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface);
 

@@ -42,10 +42,6 @@ void write_VASP_wavefunctions(
 	LatticeStructure::RegularSymmetricGrid const & kgrid = bands.get_grid();
 	int nBnd = bands.get_nBnd();
 
-	std::ofstream file( filename.c_str() , std::ios_base::binary );
-	if ( not file.good() )
-		throw std::runtime_error( std::string("Error opening file ")+filename);
-
 	//Header done. Now we write the wavefunctions, first we compute the VASP fft maps
 	std::vector<std::vector<int>> fftMapVASP(nkpIrred);
 	std::vector<int> npwK(nkpIrred);
@@ -63,11 +59,21 @@ void write_VASP_wavefunctions(
 		//Create the plane wave set at this k point
 		int ikred = kgrid.get_maps_irreducible_to_reducible()[ikir][ kgrid.get_symmetry().get_identity_index() ];
 		auto k = kgrid.get_vector_direct(ikred);
-		// use the vasp convention for k points
-		for ( int i = 0 ; i < 3; ++i)
-			kvectors[ikir*3+i] =  k[i] < -0.5 + 0.5*kgrid.get_grid_prec() ?
-					k[i] + 1.0 - 0.5*kgrid.get_grid_prec() : k[i];
+		for ( int i = 0 ; i < 3 ; ++i)
+			 kvectors[ikir*3 + i] = k[i];
 	}
+
+	// use the vasp convention for k points
+	auto GVectorShiftElephonToVasp = kvectors;
+	for ( int ikxi = 0; ikxi < kvectors.size(); ++ikxi )
+	{
+		double kxi = kvectors[ikxi];
+		kvectors[ikxi] =  kxi < -0.5 + 0.5*kgrid.get_grid_prec() ? 0.5 : kxi;
+		GVectorShiftElephonToVasp[ikxi] = std::floor(kxi - kvectors[ikxi]+0.5);
+		if ( std::abs(GVectorShiftElephonToVasp[ikxi] - (kxi - kvectors[ikxi])) > kgrid.get_grid_prec() )
+			throw std::runtime_error("Grid vector shift not an integer number");
+	}
+
 	reader.compute_fourier_map(
 			kvectors,
 			fftMapVASP,
@@ -112,7 +118,7 @@ void write_VASP_wavefunctions(
 	{
 		int npw = fftMapVASP[ikir].size()/3;
 
-		if ( npw != wavefunctions[ikir].size() )
+		if ( npw*nBnd != wavefunctions[ikir].size() )
 			throw std::runtime_error("Number of plane waves passed does not match the VASP number");
 		if ( fftMapVASP[ikir].size() != fftMap[ikir].size() )
 			throw std::runtime_error("Number of plane waves passed does not match");
@@ -133,9 +139,13 @@ void write_VASP_wavefunctions(
 		std::map< GVector, int > pwconversion;
 		auto hint = pwconversion.end();
 		for ( int ipw = 0 ; ipw < npw; ++ipw )
-			hint = pwconversion.insert(hint,
-					std::make_pair(GVector(fftMapVASP[ikir][ipw*3 + 0], fftMapVASP[ikir][ipw*3 + 1], fftMapVASP[ikir][ipw*3 + 2]),
-							ipw));
+		{
+			int G[3];
+			for ( int i = 0; i  < 3 ; ++i)
+				G[i] = fftMapVASP[ikir][ipw*3 + i] < fourierMax[i]/2
+					? fftMapVASP[ikir][ipw*3 + i] : fftMapVASP[ikir][ipw*3 + i] - fourierMax[i];
+			hint = pwconversion.insert(hint, std::make_pair(GVector(G[0], G[1], G[2]), ipw));
+		}
 
 		buffAsFloat = reinterpret_cast<VASPDP * >( &binaryBuffer[irecord*reclength] );
 		buffAsFloat[0] = npw;
@@ -154,8 +164,14 @@ void write_VASP_wavefunctions(
 			VASPSP * buffAsSingle = reinterpret_cast<VASPSP * >( &binaryBuffer[(irecord + ibnd + 1)*reclength] );
 			for ( int ipw = 0 ; ipw < npw; ++ipw)
 			{
-				auto it = pwconversion.find(
-						GVector(fftMap[ikir][ipw*3 + 0], fftMap[ikir][ipw*3 + 1], fftMap[ikir][ipw*3 + 2]));
+				int G[3];
+				for ( int i = 0; i  < 3 ; ++i)
+					G[i] = fftMap[ikir][ipw*3 + i] < fourierMax[i]/2
+						? fftMap[ikir][ipw*3 + i] : fftMap[ikir][ipw*3 + i] - fourierMax[i];
+				auto Gv = GVector(G[0] + GVectorShiftElephonToVasp[ikir*3 + 0],
+							 	  G[1] + GVectorShiftElephonToVasp[ikir*3 + 1],
+								  G[2] + GVectorShiftElephonToVasp[ikir*3 + 2]);
+				auto it = pwconversion.find(Gv);
 				if ( it == pwconversion.end() )
 					throw std::runtime_error("Problem locating the correct plane wave coefficient");
 				buffAsSingle[(it->second)*2+0] = std::real(wavefunctions[ikir][ibnd*npw+ipw]);
@@ -164,6 +180,10 @@ void write_VASP_wavefunctions(
 		}
 		irecord += 1 + nBnd;
 	}
+
+	std::ofstream file( filename.c_str() , std::ios_base::binary );
+	if ( not file.good() )
+		throw std::runtime_error( std::string("Error opening file ")+filename);
 	file.write(binaryBuffer.data(),binaryBuffer.size());
 	file.close();
 }

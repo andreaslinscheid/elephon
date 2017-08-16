@@ -119,8 +119,7 @@ LocalDensityOfStates::compute_ldos(
 										+std::pow(FermiVelocities[ikf*3+2],2));
 				if ( modGradE < 1e-6) //cutoff
 					modGradE = 1e-6;
-//				double contrib = kfw[ikf]/modGradE*unitcell.get_lattice().get_volume()/std::pow(2*M_PI,3);
-				double contrib = 1.0;
+				double contrib = kfw[ikf]/modGradE*unitcell.get_lattice().get_volume()/std::pow(2*M_PI,3);
 				for ( int ir = 0 ; ir < nrs; ++ir )
 				{
 					ldos_[ie*nrs+ir] += contrib*(std::pow(std::real(wfctsRealSpace[ir]), 2)
@@ -159,7 +158,6 @@ LocalDensityOfStates::compute_ldos(
 
 	Wavefunctions wfcts;
 	wfcts.initialize(
-			loader->get_optns().get_gPrec(),
 			loader->get_optns().get_root_dir(),
 			loader);
 

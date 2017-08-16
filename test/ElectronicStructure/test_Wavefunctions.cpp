@@ -36,8 +36,11 @@
 #include <cmath>
 #include <complex>
 #include <set>
+#include <stdlib.h>
+#include <time.h>
 
-BOOST_AUTO_TEST_CASE( wavefunctions_partial_load )
+elephon::ElectronicStructure::Wavefunctions
+load_Al_fcc_vasp_wfcts()
 {
 	test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
@@ -52,8 +55,18 @@ BOOST_AUTO_TEST_CASE( wavefunctions_partial_load )
 	auto loader = dl.create_vasp_loader( content );
 
 	elephon::ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize( 1e-6, rootDir.string(), loader);
+	wfcts.initialize(rootDir.string(), loader);
+	return wfcts;
+}
 
+BOOST_AUTO_TEST_CASE( wavefunctions_partial_load )
+{
+	//Here we test the use case where we look up the cube around a point and compute those wavefunction
+	//Wave functions are on a regular grid and in G (reciprocal) space
+	//First, load the cubes of wave functions for linear interpolation
+	auto wfcts = load_Al_fcc_vasp_wfcts();
+
+	std::vector<double> kvec = {0.0, 0.0, 0.0};
 	std::vector<int> kAToCube;
 	std::vector<elephon::LatticeStructure::RegularBareGrid::GridCube> gridCubes;
 	wfcts.get_k_grid().compute_grid_cubes_surrounding_nongrid_points(
@@ -89,10 +102,10 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 			std::make_shared< elephon::IOMethods::VASPInterface >(opts);
 
 	elephon::ElectronicStructure::Wavefunctions wfct_sym;
-	wfct_sym.initialize( 1e-6, (testd / "symmetric").string(), loaderSym );
+	wfct_sym.initialize((testd / "symmetric").string(), loaderSym );
 
 	elephon::ElectronicStructure::Wavefunctions wfct_nosym;
-	wfct_nosym.initialize( 1e-6, (testd / "no_symmetry").string(), loaderNoSym );
+	wfct_nosym.initialize((testd / "no_symmetry").string(), loaderNoSym );
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
@@ -287,11 +300,12 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	test::fixtures::MockStartup ms;
 	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
 
-	elephon::IOMethods::InputOptions noop;
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input((phonyDir/"infile").string(),"\n",opts);
 
 	//introduce the VASP data loader
 	std::shared_ptr<elephon::IOMethods::VASPInterface> loader =
-			std::make_shared< elephon::IOMethods::VASPInterface >(noop);
+			std::make_shared< elephon::IOMethods::VASPInterface >(opts);
 
 	elephon::LatticeStructure::LatticeModule lattice;
 	elephon::LatticeStructure::Symmetry sym;
@@ -380,7 +394,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 
 	//Seems so ... lets check the rotation
 	elephon::ElectronicStructure::Wavefunctions phonyWave;
-	phonyWave.initialize(1e-6,phonyDir.string(),loader);
+	phonyWave.initialize(phonyDir.string(), loader);
 
 	std::vector<int> reducibleIndices(kgrid.get_np_red());
 	for (int i = 0 ; i < kgrid.get_np_red(); ++i)
@@ -438,21 +452,20 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 			std::make_shared< elephon::IOMethods::VASPInterface >(opts);
 
 	elephon::LatticeStructure::LatticeModule lattice;
+	loader->read_lattice_structure(phonyDir.string(), lattice);
 	elephon::LatticeStructure::Symmetry sym;
-	std::vector<elephon::LatticeStructure::Atom> atoms;
+	sym.set_reciprocal_space_sym();
 	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
-	loader->read_cell_paramters(
-			phonyDir.string(),
-			loader->get_optns().get_gPrec(),
-			kgrid,
-			lattice,
-			atoms,
-			sym);
+	kgrid.initialize(
+			std::vector<int>{6, 6, 6},
+			1e-6,
+			std::vector<double>{0.0, 0.0, 0.0},
+			sym,
+			lattice);
 
-
-	const int nBnd = 1;
+	const int nBnd = 2;
 	const double eCut = 10;
-	std::vector<double> bandData(kgrid.get_np_irred(), 0.0);
+	std::vector<double> bandData(kgrid.get_np_irred()*nBnd, 0.0);
 	elephon::ElectronicStructure::ElectronicBands bands;
 	bands.initialize(nBnd, bandData, kgrid);
 
@@ -483,12 +496,14 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 	{
 		npwK[ikir] = fftMap[ikir].size()/3;
 		wavefunctions[ikir].resize(npwK[ikir]*nBnd);
-		for (int ibnd = 0 ; ibnd < nBnd; ++ibnd)
-			for ( int ipw = 0 ; ipw < npwK[ikir]; ++ipw)
-			{
-				int cnsq = fftMap[ikir][ipw*3+0] + mFFT[0]*(fftMap[ikir][ipw*3+0]+mFFT[1]*fftMap[ikir][ipw*3+2]);
-				wavefunctions[ikir][ibnd*npwK[ikir] + ipw] = std::complex<float>(1.0, cnsq);
-			}
+		for ( int ipw = 0 ; ipw < npwK[ikir]; ++ipw)
+		{
+			int ibnd = 0;
+			wavefunctions[ikir][ibnd*npwK[ikir] + ipw] =
+					std::complex<float>(kvectors[ikir*3+0], kvectors[ikir*3+2]);
+			ibnd = 1;
+			wavefunctions[ikir][ibnd*npwK[ikir] + ipw] = std::complex<float>(kvectors[ikir*3+1], ibnd);
+		}
 	}
 
 	elephon::IOMethods::write_VASP_wavefunctions(
@@ -499,14 +514,14 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 			wavefunctions,
 			fftMap);
 
-	std::vector<double> k{//0.0, 0.0, 0.0,
-						  1.0/3.0, 1.0/3.0, 0.0};
-	std::vector<int> bandsList{0};
+	std::vector<double> k{0.0, 0.0, 0.0,
+						  1.0/3.0, 0.275, 0.0,
+						  0.0, 0.1, 0.125,};
+	std::vector<int> bandsList{0, 1};
 
 	elephon::ElectronicStructure::Wavefunctions wfcts;
 	wfcts.initialize(
-			loader->get_optns().get_gPrec(),
-			phonyDir.string(),
+			kgrid,
 			loader);
 
 	std::vector<std::vector<std::complex<float>>> wfctsArbK;
@@ -516,10 +531,49 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 	                bandsList,
 	                wfctsArbK,
 					fftMapArbK);
+
+	BOOST_REQUIRE_EQUAL(int(fftMapArbK.size()), 3);
+
+	// k = 0 0 0
+	int npw = fftMapArbK[0].size()/3;
+	for ( int ipw = 0 ; ipw < npw; ++ipw)
+	{
+		int ibnd = 0;
+		BOOST_CHECK_SMALL( std::abs(wfctsArbK[0][ibnd*npw + ipw]
+									- std::complex<float>(0.0, 0.0)), float(1e-5) );
+		ibnd = 1;
+		BOOST_CHECK_SMALL( std::abs(wfctsArbK[0][ibnd*npw + ipw]
+									- std::complex<float>(0.0, 1.0)), float(1e-5) );
+	}
+
+	// k = 0.333... 0.275 0
+	npw = fftMapArbK[1].size()/3;
+	for ( int ipw = 0 ; ipw < npw; ++ipw)
+	{
+		int ibnd = 0;
+		BOOST_CHECK_SMALL( std::abs(wfctsArbK[1][ibnd*npw + ipw]
+									- std::complex<float>(1.0/3.0, 0.0)), float(1e-5) );
+		ibnd = 1;
+		BOOST_CHECK_SMALL( std::abs(wfctsArbK[1][ibnd*npw + ipw]
+									- std::complex<float>(0.275, 1.0)), float(1e-5) );
+	}
+
+	// k = 0.0, 0.1, 0.125
+	npw = fftMapArbK[2].size()/3;
+	for ( int ipw = 0 ; ipw < npw; ++ipw)
+	{
+		int ibnd = 0;
+		BOOST_CHECK_SMALL( std::abs(wfctsArbK[2][ibnd*npw + ipw]
+									- std::complex<float>(0.0, 0.125)), float(1e-5) );
+		ibnd = 1;
+		BOOST_CHECK_SMALL( std::abs(wfctsArbK[2][ibnd*npw + ipw]
+									- std::complex<float>(0.1, 1.0)), float(1e-5) );
+	}
+
 	boost::filesystem::remove(phonyDir / "WAVECAR");
 }
 
-BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
+elephon::ElectronicStructure::Wavefunctions get_MgB2_vasp_wfct()
 {
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
@@ -536,42 +590,20 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 
 	elephon::ElectronicStructure::Wavefunctions wfcts;
 	wfcts.initialize(
-			loader->get_optns().get_gPrec(),
 			testd.string(),
 			loader);
+	return wfcts;
+}
 
-	std::vector<double> k{0.0, 0.0, 0.0,
-						//  1.0/3.0, 1.0/3.0, -1.0/2.0
-						};
-	std::vector<int> bands{3, 4};
-	std::vector<std::vector<std::complex<float>>> wfctsArbK;
-	std::vector<std::vector<int>> fftMap;
-	wfcts.generate_wfcts_at_arbitray_kp(
-	                k,
-	                bands,
-	                wfctsArbK,
-					fftMap);
-
-	std::vector<std::complex<float>> wfctsGammaFullGrid;
-	elephon::Algorithms::FFTInterface fft;
-	std::vector<int> chargeDim = {40,40,48};
-
-	fft.fft_sparse_data(
-			fftMap[0],
-			wfcts.get_max_fft_dims(),
-			wfctsArbK[0],
-			bands.size(),
-			-1,
-			wfctsGammaFullGrid,
-			chargeDim,
-			false,
-			1);
-
-	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2]);
-	for ( int i = 0; i < chggam.size(); ++i )
-		chggam[i] = std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
-
+void write_MgB2_vasp_chg(
+		std::vector<int> const & chargeDim,
+		std::vector<double> const & chgData)
+{
 	test::fixtures::DataLoader dl;
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
 	auto uc = dl.load_unit_cell(input);
 	elephon::IOMethods::WriteVASPRealSpaceData writer;
 	writer.write_file(
@@ -579,44 +611,102 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 			"charge due to wfcts at gamma",
 			chargeDim,
 			uc,
-			chggam,
+			chgData,
 			false,
 			true);
+}
 
+double comp_symm_distortion(
+		std::vector<double> const & tobechecked, //must be x-major
+		std::vector<int> const & grid,
+		elephon::LatticeStructure::Symmetry const & symmetry)
+{
+	assert( not symmetry.is_reci() );
+	double result = 0.0;
+	double integral = 0.0;
+	for ( int k = 0; k < grid[2]; ++k)
+		for ( int j = 0; j < grid[1]; ++j)
+			for ( int i = 0; i < grid[0]; ++i)
+			{
+				double val = tobechecked[i+grid[0]*(j+grid[1]*k)];
+				std::vector<double> v = {double(i)/grid[0], double(j)/grid[1], double(k)/grid[2]};
+				for ( int is = 0; is < symmetry.get_num_symmetries(); ++is)
+				{
+					symmetry.apply(is, v, true);
+					int ii = std::floor((v[0]-std::floor(v[0]))*grid[0]+0.5);
+					int jj = std::floor((v[1]-std::floor(v[1]))*grid[1]+0.5);
+					int kk = std::floor((v[2]-std::floor(v[2]))*grid[2]+0.5);
+					int cnsq = ii+grid[0]*(jj+grid[1]*kk);
+					assert((cnsq >=0) && (cnsq < tobechecked.size()));
+					result += std::abs(val-tobechecked[cnsq]);
+					integral += tobechecked[cnsq];
+				}
+			}
+	return result/integral;
+}
+
+BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
+{
+	auto wfcts = get_MgB2_vasp_wfct();
+	auto siteSym = wfcts.get_k_grid().get_symmetry();
+	std::vector<double> k{0.01, 0.01, 0.01};
+	siteSym.small_group( k );
+	std::vector<double> ks( siteSym.get_num_symmetries()*3 );
+	for ( int isym = 0; isym < siteSym.get_num_symmetries(); ++isym)
+	{
+		std::copy(k.begin(), k.end(), &ks[isym*3]);
+		siteSym.apply(isym, ks.begin()+isym*3, ks.begin()+(isym+1)*3, true);
+	}
+	std::vector<int> bands{3};
+	std::vector<std::vector<std::complex<float>>> wfctsArbK;
+	std::vector<std::vector<int>> fftMap;
+	wfcts.generate_wfcts_at_arbitray_kp(
+			ks,
+			bands,
+			wfctsArbK,
+			fftMap);
+
+	std::vector<std::complex<float>> wfctsGammaFullGrid;
+	elephon::Algorithms::FFTInterface fft;
+	std::vector<int> chargeDim = {40,40,48};
+
+	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2], 0.0);
+	for ( int isym = 0; isym < siteSym.get_num_symmetries(); ++isym)
+	{
+
+		fft.fft_sparse_data(
+				fftMap[isym],
+				wfcts.get_max_fft_dims(),
+				wfctsArbK[isym],
+				bands.size(),
+				-1,
+				wfctsGammaFullGrid,
+				chargeDim,
+				false,
+				siteSym.get_num_symmetries());
+
+		for ( int i = 0; i < chggam.size(); ++i )
+			chggam[i] += std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
+	}
+
+	write_MgB2_vasp_chg(chargeDim, chggam);
 }
 
 BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_Gamma )
 {
-	test::fixtures::MockStartup ms;
-	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
-
-	std::string input = std::string()+
-			"root_dir = "+testd.string()+"\n";
-	elephon::IOMethods::InputOptions opts;
-	ms.simulate_elephon_input(
-			(testd / "infile").string(),
-			input,
-			opts);
-
-	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
-
-	elephon::ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize(
-			loader->get_optns().get_gPrec(),
-			testd.string(),
-			loader);
+	auto wfcts = get_MgB2_vasp_wfct();
 
 	std::vector<std::vector<std::complex<float>>> wfctsGamma;
 	std::vector<int> npwPerK;
 	wfcts.generate_reducible_grid_wfcts(
 			std::vector<int>{3},
-			std::vector<int>{(1*3+1)*3+1},
+			std::vector<int>{0},
 			wfctsGamma,
 			npwPerK);
 
 	std::vector<std::vector<int>> fftMap;
 	wfcts.compute_Fourier_maps(
-			std::vector<double>{1.0/3.0, 1.0/3.0, -1.0/2.0},
+			std::vector<double>{0.0, 0.0, 0.0},
 			fftMap);
 
 	BOOST_REQUIRE_EQUAL(npwPerK[0], fftMap[0].size()/3);
@@ -645,23 +735,137 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_Gamma )
 	for ( auto a :wfctsGammaFullGrid)
 		norm2_2 += std::pow(std::abs(a),2)/wfctsGammaFullGrid.size();
 
-	std::cout << norm2_1 << std::endl;
-	std::cout << norm2_2 << std::endl;
 	BOOST_CHECK_SMALL(norm2_1 - norm2_2, 1e-5);
 
 	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2]);
 	for ( int i = 0; i < chggam.size(); ++i )
 		chggam[i] = std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
 
-	test::fixtures::DataLoader dl;
-	auto uc = dl.load_unit_cell(input);
-	elephon::IOMethods::WriteVASPRealSpaceData writer;
-	writer.write_file(
-			(testd / "chgGam.dat").string(),
-			"charge due to wfcts at gamma",
-			chargeDim,
-			uc,
-			chggam,
-			false,
-			true);
+	write_MgB2_vasp_chg(chargeDim, chggam);
+}
+
+BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_star_k )
+{
+	// Compute the star of a k point and sum up the charge. It must be symmetric
+	auto wfcts = get_MgB2_vasp_wfct();
+	elephon::Algorithms::FFTInterface fft;
+
+	//We investigate band 3 + 4 because they are degenerate at the 1/3 1/3 x points
+	std::vector<int> chargeDim = {40,40,48};
+	auto kg = wfcts.get_k_grid();
+	auto rsSym = kg.get_symmetry();
+	rsSym.set_reciprocal_space_sym(false);
+	std::vector<std::complex<float>> wfctsRSStarFullGrid;
+	for ( int ikir = 0 ; ikir < kg.get_np_irred() ; ++ikir)
+	{
+		std::vector<double> chgStar(chargeDim[0]*chargeDim[1]*chargeDim[2], 0.0);
+		std::vector<int> kindicesRed;
+		for ( int is = 0; is < kg.get_maps_sym_irred_to_reducible()[ikir].size(); ++is)
+			kindicesRed.push_back( kg.get_maps_irreducible_to_reducible()[ikir][is]);
+		std::vector<std::vector<std::complex<float>>> wfctsStar;
+		std::vector<int> npwPerK;
+		wfcts.generate_reducible_grid_wfcts(
+				std::vector<int>{3, 4},
+				kindicesRed,
+				wfctsStar,
+				npwPerK);
+
+		for ( int is = 0; is < kg.get_maps_sym_irred_to_reducible()[ikir].size(); ++is)
+		{
+			std::vector<std::vector<int>> fftMap;
+			auto kv = kg.get_vector_direct(kindicesRed[is]);
+			wfcts.compute_Fourier_maps(kv, fftMap);
+
+			BOOST_REQUIRE_EQUAL(npwPerK[is], fftMap[0].size()/3);
+
+			fft.fft_sparse_data(
+					fftMap[0],
+					wfcts.get_max_fft_dims(),
+					wfctsStar[is],
+					2,
+					-1,
+					wfctsRSStarFullGrid,
+					chargeDim,
+					false,
+					1);
+
+			for ( int ib = 0; ib < 2; ++ib)
+				for ( int i = 0; i < chgStar.size(); ++i )
+				{
+					chgStar[i] += std::pow(std::real(wfctsRSStarFullGrid[ib*chgStar.size()+i]),2)
+								 + std::pow(std::imag(wfctsRSStarFullGrid[ib*chgStar.size()+i]),2);
+					assert( chgStar[i] == chgStar[i] );
+				}
+		}
+		auto r = comp_symm_distortion(chgStar, chargeDim, rsSym);
+		BOOST_CHECK_SMALL(r, 1e-5);
+	}
+}
+
+BOOST_AUTO_TEST_CASE( Al_vasp_wfct_star_k )
+{
+	// Compute the star of a k point and sum up the charge. It must be symmetric
+	auto wfcts = load_Al_fcc_vasp_wfcts();
+	elephon::Algorithms::FFTInterface fft;
+
+	//We investigate band 3 + 4 because they are degenerate at the 1/3 1/3 x points
+	std::vector<int> chargeDim = {32,32,32};
+	auto kg = wfcts.get_k_grid();
+	auto rsSym = kg.get_symmetry();
+	rsSym.set_reciprocal_space_sym(false);
+	std::vector<std::complex<float>> wfctsRSStarFullGrid;
+
+	//We don't test all stars, we test only 10 random samples
+	srand (time(NULL));
+	std::set<int> samples;
+	while( samples.size() < 10 )
+	{
+		samples.insert( rand() % kg.get_np_irred() );
+	}
+
+	for ( int ikir : samples )
+	{
+		std::cout << "Testing ikir = " << ikir << std::endl;
+		std::vector<double> chgStar(chargeDim[0]*chargeDim[1]*chargeDim[2], 0.0);
+		std::vector<int> kindicesRed;
+		for ( int is = 0; is < kg.get_maps_sym_irred_to_reducible()[ikir].size(); ++is)
+			kindicesRed.push_back( kg.get_maps_irreducible_to_reducible()[ikir][is]);
+		std::vector<std::vector<std::complex<float>>> wfctsStar;
+		std::vector<int> npwPerK;
+		wfcts.generate_reducible_grid_wfcts(
+				std::vector<int>{0},
+				kindicesRed,
+				wfctsStar,
+				npwPerK);
+
+		for ( int is = 0; is < kg.get_maps_sym_irred_to_reducible()[ikir].size(); ++is)
+		{
+			std::vector<std::vector<int>> fftMap;
+			auto kv = kg.get_vector_direct(kindicesRed[is]);
+			wfcts.compute_Fourier_maps(kv, fftMap);
+
+			BOOST_REQUIRE_EQUAL(npwPerK[is], fftMap[0].size()/3);
+
+			fft.fft_sparse_data(
+					fftMap[0],
+					wfcts.get_max_fft_dims(),
+					wfctsStar[is],
+					1,
+					-1,
+					wfctsRSStarFullGrid,
+					chargeDim,
+					false,
+					1);
+
+			for ( int ib = 0; ib < 1; ++ib)
+				for ( int i = 0; i < chgStar.size(); ++i )
+				{
+					chgStar[i] += std::pow(std::real(wfctsRSStarFullGrid[ib*chgStar.size()+i]),2)
+								 + std::pow(std::imag(wfctsRSStarFullGrid[ib*chgStar.size()+i]),2);
+					assert( chgStar[i] == chgStar[i] );
+				}
+		}
+		auto r = comp_symm_distortion(chgStar, chargeDim, rsSym);
+		BOOST_CHECK_SMALL(r, 1e-5);
+	}
 }

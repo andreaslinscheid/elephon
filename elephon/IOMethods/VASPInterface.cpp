@@ -116,6 +116,8 @@ VASPInterface::compute_fourier_map(
 		std::vector< std::vector<int> > & fourierMap,
 		double gridPrec)
 {
+	if ( wfcReader_.get_filename().empty() )
+		throw std::runtime_error("Cannot compute Fourier map without pointing to a WAVECAR file that specifies the cutoff");
 	//VASP does not store these mapping on disk.
 	wfcReader_.compute_fourier_map(kpts, fourierMap, gridPrec);
 }

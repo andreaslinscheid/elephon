@@ -83,6 +83,8 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 		throw std::runtime_error( std::string("File not readable: " + filename_));
 	wavecarfile_.seekg(0, std::ios::end);
 	total_size_ = wavecarfile_.tellg();
+	if (total_size_ == 0)
+		throw std::runtime_error("Problem with WAVECAR: zero file size detected.");
 	wavecarfile_.seekg(0);
 	//First, we read the header which is always small.
 	//The first three numbers are
@@ -318,15 +320,23 @@ ReadVASPWaveFunction::compute_fourier_map(
 	int Nk = static_cast<int>(kptCoords.size()/3);
 	if ( static_cast<int>(fftMapPerK.size()) != Nk )
 		fftMapPerK=std::vector< std::vector<int> >(Nk);
-	assert( (*std::min_element(kptCoords.begin(),kptCoords.end()) >= -0.5) &&
-			(*std::max_element(kptCoords.begin(),kptCoords.end()) < 0.5) );
+	assert(  (*std::min_element(kptCoords.begin(), kptCoords.end()) >= -0.5 )
+		  && (*std::max_element(kptCoords.begin(), kptCoords.end()) <=  0.5 ));
 
-	//convert k points to the VASP convention
-	for ( auto & kxi : kptCoords )
-		if ( std::abs(kxi+0.5) < vaspGridPrec )
-			kxi = 0.5;
-		else if ( std::abs(kxi-0.5) < vaspGridPrec )
-			kxi = -0.5;
+	// convert k points to the VASP convention, which can be up to 1 G different
+	// from the one of elephon. After completing the calculation of the mapping, we have to account
+	// for the different conventions in that C(k+G)=C(k'+G') with k'+G'=k+G
+	// NOTE: This may seem trivial at first since the set is exactly the same. However, the
+	//		 array may be ordered a little differently, so we have to emulate the VASP behavior exactly.
+	// 		Delta G = k - k' == G' - G
+	std::vector<double> umklappElephonToVasp = kptCoords;
+	for (int ikxi = 0; ikxi < kptCoords.size(); ++ikxi )
+	{
+		if ( std::abs(kptCoords[ikxi]+0.5) < vaspGridPrec )
+			kptCoords[ikxi] = 0.5;
+		umklappElephonToVasp[ikxi] -= kptCoords[ikxi];
+		assert( std::abs( umklappElephonToVasp[ikxi] - std::floor(umklappElephonToVasp[ikxi]+0.5)) < vaspGridPrec);
+	}
 
 	//here we generate the fourier map
 	std::vector<double> kPlusG = { 0.0, 0.0, 0.0 };
@@ -351,9 +361,13 @@ ReadVASPWaveFunction::compute_fourier_map(
 						if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
 							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff )
 						{
-							fftMapPerK[ik][ng*3+0] = igx;
-							fftMapPerK[ik][ng*3+1] = igy;
-							fftMapPerK[ik][ng*3+2] = igz;
+							// igx,y,zf is the VASP G vector. We add -(k - k')
+							int iGx = igxf - std::floor(umklappElephonToVasp[ik*3+0]+0.5);
+							int iGy = igyf - std::floor(umklappElephonToVasp[ik*3+1]+0.5);
+							int iGz = igzf - std::floor(umklappElephonToVasp[ik*3+2]+0.5);
+							fftMapPerK[ik][ng*3+0] = iGx < 0 ? iGx + fourierMax[0] : iGx;
+							fftMapPerK[ik][ng*3+1] = iGy < 0 ? iGy + fourierMax[1] : iGy;
+							fftMapPerK[ik][ng*3+2] = iGz < 0 ? iGz + fourierMax[2] : iGz;
 							ng++;
 						}
 					}
@@ -452,6 +466,12 @@ int ReadVASPWaveFunction::get_num_kpts() const
 std::vector<double> const & ReadVASPWaveFunction::get_k_points() const
 {
 	return kpoints_;
+}
+
+std::string const &
+ReadVASPWaveFunction::get_filename() const
+{
+	return filename_;
 }
 
 } /* namespace IOMethods */

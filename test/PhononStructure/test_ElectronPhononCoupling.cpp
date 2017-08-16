@@ -43,7 +43,7 @@ load_wfct_Al_fcc_primitive_vasp_sc2x2x2()
 	auto loader = dl.create_vasp_loader( content );
 
 	elephon::ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize( 1e-6, rootDir.string(), loader);
+	wfcts.initialize(rootDir.string(), loader);
 	return wfcts;
 }
 
