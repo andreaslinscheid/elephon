@@ -230,6 +230,8 @@ void ReadVASPWaveFunction::read_wavefunction(
 	int numKIrred = static_cast<int>(kpoints_.size())/3;
 	int Nk = static_cast<int>(kptindices.size());
 	int Nb = static_cast<int>(bandIndices.size());
+	if ( (Nk == 0) || (Nb == 0) )
+		return;
 	assert( Nk <= numKIrred );
 	assert( Nb <= nBndsVASP_ );
 

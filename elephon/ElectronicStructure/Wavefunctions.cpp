@@ -413,84 +413,87 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 
 	Algorithms::TrilinearInterpolation interpol( grid_.view_bare_grid() );
 
+	// Step 1.: cast the wave functions at the corner points into a map for fast plane wave retrieval
+	// 			Helper ft G Vector struct
+	struct GVector {
+		GVector( int x, int y, int z) : xi {x, y, z} { };
+		int xi[3];
+		bool operator<(GVector const & other) const
+		{
+			for ( int i = 0 ; i < 3; ++i)
+				if ( xi[i] != other.xi[i] )
+					return xi[i]<other.xi[i];
+			return false;
+		}
+	};
+	std::vector<double> redVectors(redIndices.size()*3);
+	for ( int ikr = 0 ; ikr < redIndices.size() ; ++ikr )
+	{
+		auto v = grid_.get_vector_direct( redIndices[ikr] );
+		std::copy( v.begin(), v.end(), &redVectors[ikr*3] );
+	}
+	std::vector< std::vector<int> > redVecFFTMaps;
+	this->compute_Fourier_maps(redVectors, redVecFFTMaps);
+
+	auto fftMax = this->get_max_fft_dims();
+	std::vector< std::map<GVector,int> >cmaps(redIndices.size());
+	for ( int ikr = 0 ; ikr < redIndices.size() ; ++ikr )
+		for ( int ipw = 0 ; ipw < redVecFFTMaps[ikr].size()/3; ++ipw)
+		{
+			int iGx = redVecFFTMaps[ikr][ipw*3+0];
+			int iGy = redVecFFTMaps[ikr][ipw*3+1];
+			int iGz = redVecFFTMaps[ikr][ipw*3+2];
+			cmaps[ikr].insert( std::make_pair(GVector(iGx, iGy, iGz), ipw) );
+		}
+
 	std::vector<int> npwPerK(8);
 	std::vector<std::vector< std::complex<float> > > wfctCornerPoints(8);
 	int iIrrKCounter = 0;
 	for ( int ic = 0 ; ic < gridCubes.size(); ++ic)
 	{
-		//Step 1.: cast the wave functions at the corner points into a map for fast plane wave retrieval
-		//Helper ft G Vector struct
-		struct GVector {
-			GVector( int x, int y, int z) : xi {x, y, z} { };
-			int xi[3];
-			bool operator<(GVector const & other) const
-			{
-				for ( int i = 0 ; i < 3; ++i)
-					if ( xi[i] != other.xi[i] )
-						return xi[i]<other.xi[i];
-				return false;
-			}
-		};
-		std::vector<double> cornerVectors(8*3);
-		for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-		{
-			auto v = grid_.get_vector_direct( gridCubes[ic].cornerIndices_[iCorner] );
-			std::copy( v.begin(), v.end(), &cornerVectors[iCorner*3] );
-		}
-		std::vector< std::vector<int> > cornerVecFFTMaps;
-		this->compute_Fourier_maps(cornerVectors, cornerVecFFTMaps);
-
-		auto fftMax = this->get_max_fft_dims();
-		std::vector< std::map<GVector,int> >cmaps(8);
-		for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
-			for ( int ipw = 0 ; ipw < cornerVecFFTMaps[iCorner].size()/3; ++ipw)
-			{
-				int iGx = cornerVecFFTMaps[iCorner][ipw*3+0];
-				int iGy = cornerVecFFTMaps[iCorner][ipw*3+1];
-				int iGz = cornerVecFFTMaps[iCorner][ipw*3+2];
-				cmaps[iCorner].insert( std::make_pair(GVector(iGx, iGy, iGz), ipw) );
-			}
-
-		// Step 2.: Fetch the coefficients needed at this very k point.
-		//			Coefficients that do not appear are set to zero.
+	// Step 2.: Fetch the coefficients needed at this very k point.
+	//			Coefficients that do not appear are set to zero.
 		for ( int ikAC = 0 ; ikAC < gridCubes[ic].containedIrregularPts_.size(); ++ikAC )
 		{
 			//ikA is the index of the k point in kList in this cube
 			int ikA = gridCubes[ic].containedIrregularPts_[ikAC];
 			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
 			{
-				if ( fftMapsArbitrayKp[ikA] == cornerVecFFTMaps[iCorner] )
+				int ikr = redIndicesTokptset[ic*8+iCorner];
+				if ( fftMapsArbitrayKp[ikA] == redVecFFTMaps[ikr] )
 				{
-					wfctCornerPoints[iCorner] = wfctAllRedPts[redIndicesTokptset[ic*8+iCorner]];
+					wfctCornerPoints[iCorner] = wfctAllRedPts[ikr];
 				}
 				else
 				{
 					int npw = fftMapsArbitrayKp[ikA].size()/3;
-					int npwC = cornerVecFFTMaps[iCorner].size()/3;
+					int npwC = redVecFFTMaps[ikr].size()/3;
 					wfctCornerPoints[iCorner].resize( npw*bandList.size() );
 					for ( int ib = 0 ; ib < bandList.size() ; ++ib )
 					{
 						for ( int ipw = 0 ; ipw < npw ; ++ipw )
 						{
-							int iGx = cornerVecFFTMaps[iCorner][ipw*3+0];
-							int iGy = cornerVecFFTMaps[iCorner][ipw*3+1];
-							int iGz = cornerVecFFTMaps[iCorner][ipw*3+2];
-							auto it = cmaps[iCorner].find(GVector(iGx, iGy, iGz));
-							std::complex<float> val(0);
-							if ( it != cmaps[iCorner].end() )
-								val = wfctAllRedPts[redIndicesTokptset[ic*8+iCorner]][ib*npwC+it->second];
+							int iGx = fftMapsArbitrayKp[ikA][ipw*3+0];
+							int iGy = fftMapsArbitrayKp[ikA][ipw*3+1];
+							int iGz = fftMapsArbitrayKp[ikA][ipw*3+2];
+							auto it = cmaps[ikr].find(GVector(iGx, iGy, iGz));
+							std::complex<float> val(0.0f);
+							if ( it != cmaps[ikr].end() )
+								val = wfctAllRedPts[ikr][ib*npwC+it->second];
 							wfctCornerPoints[iCorner][ib*npw+ipw] = val;
 						}
 					}
 				}
 			}
 
-			// Step 3.: Perform a trilinear interpolation. While the wavefunction need the actual 1BZ
-			//			k vectors, here we have to map to the zone [0, 1[
+	// Step 3.: Perform a trilinear interpolation. While the wavefunction need the actual 1BZ
+	//			k vectors, here we have to map to the zone [0, 1[
 			std::vector< std::complex<float> > buffer;
 			auto d = grid_.get_grid_dim();
 			double dxi[] = {1.0/double(d[0]), 1.0/double(d[1]), 1.0/double(d[2])};
-			double kB[] = {cornerVectors[0], cornerVectors[1], cornerVectors[2]};
+			double kB[] = {	redVectors[redIndicesTokptset[ic*8]*3 + 0],
+							redVectors[redIndicesTokptset[ic*8]*3 + 1],
+							redVectors[redIndicesTokptset[ic*8]*3 + 2]};
 			std::vector<double> kv = {kList[ikA*3+0], kList[ikA*3+1], kList[ikA*3+2]};
 			for ( int i = 0 ; i < 3 ; ++i )
 			{

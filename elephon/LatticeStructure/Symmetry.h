@@ -92,6 +92,18 @@ public:
 
 	void small_group(std::vector<double> const& point);
 
+	/**
+	 *
+	 * Return a list of symmetry elements that leave point invariant.
+	 *
+	 * In some sense this is orthogonal to the small group.
+	 *
+	 * @param point		A three element vector.
+	 *
+	 * @return	A vector with Symmetry operations that generate the star of this \p point.
+	 */
+	std::vector<SymmetryOperation> star_operations(std::vector<double> const& point) const;
+
 	void small_group_cart(std::vector<double> const& pointCartCoords);
 
 	void symmetry_reduction( std::vector<int> indicesDropped);

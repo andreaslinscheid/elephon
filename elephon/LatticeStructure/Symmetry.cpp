@@ -18,6 +18,7 @@
  */
 
 #include "Symmetry.h"
+#include "RegularBareGrid.h"
 #include <assert.h>
 #include <set>
 #include <cmath>
@@ -383,6 +384,32 @@ Symmetry::small_group(std::vector<double> const& point)
 			}
 	}
  	this->symmetry_reduction(dropIndices);
+}
+
+std::vector<Symmetry::SymmetryOperation>
+Symmetry::star_operations(std::vector<double> const& point) const
+{
+	//apply all symmetry operations and discard those who leave the point invariant
+	std::set<typename RegularBareGrid::GridPoint> pointStar;
+	std::vector<Symmetry::SymmetryOperation> ops;
+ 	for (int isym = 0 ; isym < numRotations_; ++isym)
+	{
+		auto rotcpy = point;
+		this->apply(isym, rotcpy.begin(), rotcpy.end(), false );
+		if ((std::abs(rotcpy[0]-point[0]) > symmPrec_) or
+			(std::abs(rotcpy[1]-point[1]) > symmPrec_) or
+			(std::abs(rotcpy[2]-point[2]) > symmPrec_) )
+		{
+			RegularBareGrid::GridPoint gp(rotcpy, symmPrec_);
+			auto it = pointStar.find(gp);
+			if ( it == pointStar.end() )
+			{
+				pointStar.insert(gp);
+				ops.push_back( this->get_sym_op(isym) );
+			}
+		}
+	}
+ 	return ops;
 }
 
 void

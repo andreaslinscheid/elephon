@@ -126,7 +126,6 @@ LocalDensityOfStates::compute_ldos(
 										       + std::pow(std::imag(wfctsRealSpace[ir]), 2));
 					assert( ! std::isnan(ldos_[ie*nrs+ir]) );
 				}
-
 			}
 		}
 	}

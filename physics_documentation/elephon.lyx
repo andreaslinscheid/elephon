@@ -1918,7 +1918,7 @@ with
 \begin_inset Formula 
 \begin{eqnarray}
 B^{{\rm T}}\cdot S\cdot A & = & \tilde{S}\\
-A^{{\rm T}}\cdot S\cdot B & = & \tilde{S}_{k}\leftrightarrow\tilde{S}^{{\rm T}}=\tilde{S}_{k}^{-1}
+A^{{\rm T}}\cdot S\cdot B & = & \tilde{S}_{k}\leftrightarrow\tilde{S}^{{\rm T}}=\tilde{S}_{k}^{-1}2
 \end{eqnarray}
 
 \end_inset
