@@ -39,6 +39,7 @@ public:
 	 *
 	 * @param kpoints	K point in direct coordinates as [k0_x,k0_y,k0_z, k1_x,...,kN-1_z]
 	 * @param numBands	Number of bands
+	 * @param fermiEnergy	energy reference of the \p bandData
 	 * @param bandData	N, which is the number of k points, times number of bands data values
 	 * 					with 'bands' as the fast running dimension such as [(b=0,k=0),(b=1,k=0),...(b=num bands,k=N-1)]
 	 * @param grid		K point grid
@@ -46,6 +47,7 @@ public:
 	void initialize(
 			std::vector<double> const & kpoints,
 			int numBands,
+			double fermiEnergy,
 			std::vector<double> bandData,
 			LatticeStructure::RegularSymmetricGrid grid);
 
@@ -56,12 +58,14 @@ public:
 	 * Which one is picked depends on the size of \p bandData ; if it matches either one it will be chosen.
 	 *
 	 * @param numBands	Number of bands
+	 * @param fermiEnergy	energy reference of the \p bandData
 	 * @param bandData	N, which is the number of k points, times number of bands data values
 	 * 					with 'bands' as the fast running dimension such as [(b=0,k=0),(b=1,k=0),...(b=num bands,k=N-1)]
 	 * @param grid		K point grid
 	 */
 	void initialize(
 			int numBands,
+			double fermiEnergy,
 			std::vector<double> bandData,
 			LatticeStructure::RegularSymmetricGrid grid);
 

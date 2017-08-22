@@ -30,6 +30,7 @@ void
 ElectronicBands::initialize(
 		std::vector<double> const & kpoints,
 		int numBands,
+		double fermiEnergy,
 		std::vector<double> bandData,
 		LatticeStructure::RegularSymmetricGrid grid)
 {
@@ -50,12 +51,13 @@ ElectronicBands::initialize(
 	dataIrred_ = std::vector<double>(npIrr*numBands);
 	for ( int irr = 0 ; irr < npIrr; ++irr )
 		for ( int ibnd = 0 ; ibnd < nBnd_; ++ibnd )
-			dataIrred_[ pointIndices[irr]*nBnd_ + ibnd ] = bandData[ irr*nBnd_ + ibnd ];
+			dataIrred_[ pointIndices[irr]*nBnd_ + ibnd ] = bandData[ irr*nBnd_ + ibnd ] - fermiEnergy;
 }
 
 void
 ElectronicBands::initialize(
 		int numBands,
+		double fermiEnergy,
 		std::vector<double> bandData,
 		LatticeStructure::RegularSymmetricGrid grid)
 {
@@ -64,7 +66,11 @@ ElectronicBands::initialize(
 	nBnd_ = numBands;
 
 	if ( bandData.size() == grid_.get_np_irred()*nBnd_ )
+	{
 		dataIrred_ = std::move(bandData);
+		for ( auto &e : dataIrred_ )
+			e -= fermiEnergy;
+	}
 	else if ( bandData.size() == grid_.get_np_red()*nBnd_ )
 	{
 		dataIrred_.resize( grid_.get_np_irred()*nBnd_ );
@@ -73,7 +79,7 @@ ElectronicBands::initialize(
 			int irr = grid_.get_maps_red_to_irreducible()[ired];
 			for ( int ibnd = 0 ; ibnd < nBnd_; ++ibnd )
 			{
-				dataIrred_[ irr*nBnd_ + ibnd ] = bandData[ ired*nBnd_ + ibnd ];
+				dataIrred_[ irr*nBnd_ + ibnd ] = bandData[ ired*nBnd_ + ibnd ] - fermiEnergy;
 			}
 		}
 	}
@@ -119,17 +125,19 @@ std::vector<int>
 ElectronicBands::get_bands_crossing_energy_lvls(
 		std::vector<double> const & energies ) const
 {
+	assert( energies.size() > 0 );
 	std::set<int> bandset;
-	for ( int ib = 0 ; ib < nBnd_; ++ib )
-	{
-		double refEne = dataIrred_[ib];
-		for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik )
-			if ( refEne*dataIrred_[ik*nBnd_ + ib] < 0 )
-			{
-				bandset.insert(ib);
-				break;
-			}
-	}
+	for ( auto e : energies )
+		for ( int ib = 0 ; ib < nBnd_; ++ib )
+		{
+			double refEne = dataIrred_[ib] - e;
+			for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik )
+				if ( refEne*(dataIrred_[ik*nBnd_ + ib] - e) < 0 )
+				{
+					bandset.insert(ib);
+					break;
+				}
+		}
 	return std::vector<int>(bandset.begin(),bandset.end());
 }
 

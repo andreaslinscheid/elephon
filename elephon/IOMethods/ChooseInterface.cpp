@@ -44,7 +44,7 @@ choose_interface( InputOptions inputOPts )
 	for (fs::recursive_directory_iterator i(bp); i != end; ++i)
 	{
 		const fs::path cp = (*i);
-		fileSet.insert(cp.string());
+		fileSet.insert(cp.filename().string());
 	}
 
 	std::shared_ptr<ElectronicStructureCodeInterface> result = nullptr;

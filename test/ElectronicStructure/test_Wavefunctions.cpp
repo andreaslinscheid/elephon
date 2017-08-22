@@ -482,7 +482,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	const double eCut = 10;
 	std::vector<double> bandData(kgrid.get_np_irred(), 0.0);
 	elephon::ElectronicStructure::ElectronicBands bands;
-	bands.initialize(nBnd, bandData, kgrid);
+	bands.initialize(nBnd, 0.0, bandData, kgrid);
 
 	elephon::IOMethods::ReadVASPWaveFunction reader;
 	std::vector<int> mFFT;
@@ -632,7 +632,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 	const double eCut = 11;
 	std::vector<double> bandData(kgrid.get_np_irred()*nBnd, 0.0);
 	elephon::ElectronicStructure::ElectronicBands bands;
-	bands.initialize(nBnd, bandData, kgrid);
+	bands.initialize(nBnd, 0.0, bandData, kgrid);
 
 	elephon::IOMethods::ReadVASPWaveFunction reader;
 	std::vector<int> mFFT;

@@ -1,0 +1,5 @@
+# Ignore any file (re-include all subdirs) in this directory except for this file and run.sh KPOINTS INCAR POSCAR and POTCAR.spec files
+**
+!/**/
+!**/run.sh
+!.gitignore

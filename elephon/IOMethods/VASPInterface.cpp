@@ -240,7 +240,7 @@ VASPInterface::read_band_structure(
 	if ( kPointMesh.get_np_irred() != nkIrred )
 		throw std::runtime_error("Number of k point in the energy grid and the loaded k point grid disagree.");
 
-	bands.initialize( nband, irredData, kPointMesh );
+	bands.initialize( nband, eFermi, irredData, kPointMesh );
 }
 
 void

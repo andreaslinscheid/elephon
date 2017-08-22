@@ -41,7 +41,7 @@ LocalDensityOfStates::compute_ldos(
 	uc_ = std::move(unitcell);
 	isoEnergies_ = std::move(energies);
 	rsDims_ = std::move(realSpaceRes);
-	auto reqBandIds = bands.get_bands_crossing_energy_lvls(energies);
+	auto reqBandIds = bands.get_bands_crossing_energy_lvls(isoEnergies_);
 	std::vector<double> regularData;
 	bands.generate_reducible_grid_bands(reqBandIds, regularData);
 
