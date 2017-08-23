@@ -19,6 +19,7 @@
 
 #include "Wavefunctions.h"
 #include "Algorithms/TrilinearInterpolation.h"
+#include "Algorithms/FFTInterface.h"
 #include <complex>
 #include <iostream>
 #include <set>
@@ -209,38 +210,32 @@ Wavefunctions::generate_reducible_grid_wfcts(
 
 				//For rotating the G vector, we need to 3D coordinates at this k point
 				//Obtain the connection (index of pw) -> 3D G vector to rotate this wavefunction
+				std::vector<int> G(3);
 				std::vector<int> planeWaveLookup(npw,-1);
 				for ( int ipw = 0 ; ipw < npw; ++ipw)
 				{
 					int cnsq = gSymBuffer_[isym][pwToConseq[ipw]];
 					if ( (umklappShift[0] != 0) or (umklappShift[1] != 0) or (umklappShift[2] != 0) )
 					{
-						int iGz = cnsq/(fftMaxDims[1]*fftMaxDims[0]);
-						int iGy = (cnsq-iGz*(fftMaxDims[1]*fftMaxDims[0]))/fftMaxDims[0];
-						int iGx = cnsq-(iGz*fftMaxDims[1]+iGy)*fftMaxDims[0];
-						iGx = iGx < fftMaxDims[0]/2 ?  iGx : iGx - fftMaxDims[0];
-						iGy = iGy < fftMaxDims[1]/2 ?  iGy : iGy - fftMaxDims[1];
-						iGz = iGz < fftMaxDims[2]/2 ?  iGz : iGz - fftMaxDims[2];
-						iGx += umklappShift[0];
-						iGy += umklappShift[1];
-						iGz += umklappShift[2];
-						iGx = iGx < 0 ?  iGx + fftMaxDims[0] : iGx;
-						iGy = iGy < 0 ?  iGy + fftMaxDims[1] : iGy;
-						iGz = iGz < 0 ?  iGz + fftMaxDims[2] : iGz;
-						cnsq = (iGz*fftMaxDims[1]+iGy)*fftMaxDims[0]+iGx;
+						G[2] = cnsq/(fftMaxDims[1]*fftMaxDims[0]);
+						G[1] = (cnsq-G[2]*(fftMaxDims[1]*fftMaxDims[0]))/fftMaxDims[0];
+						G[0] = cnsq-(G[2]*fftMaxDims[1]+G[1])*fftMaxDims[0];
+						Algorithms::FFTInterface::inplace_to_freq(G, fftMaxDims);
+						for ( int i = 0 ; i < 3; ++i)
+							G[i] += umklappShift[i];
+						Algorithms::FFTInterface::freq_to_inplace(G, fftMaxDims);
+						cnsq = (G[2]*fftMaxDims[1]+G[1])*fftMaxDims[0]+G[0];
 					}
 
 					auto ret = rotLookupMap.find(cnsq);
 					if (ret == rotLookupMap.end())
 					{
-						int iGz = cnsq/(fftMaxDims[1]*fftMaxDims[0]);
-						int iGy = (cnsq-iGz*(fftMaxDims[1]*fftMaxDims[0]))/fftMaxDims[0];
-						int iGx = cnsq-(iGz*fftMaxDims[1]+iGy)*fftMaxDims[0];
-						iGx = iGx < fftMaxDims[0]/2 ?  iGx : iGx - fftMaxDims[0];
-						iGy = iGy < fftMaxDims[1]/2 ?  iGy : iGy - fftMaxDims[1];
-						iGz = iGz < fftMaxDims[2]/2 ?  iGz : iGz - fftMaxDims[2];
-						throw std::runtime_error(std::string("Could not located rotated G vector ")
-									+std::to_string(iGx) + ", "+std::to_string(iGy) + ", "+std::to_string(iGz));
+						G[2] = cnsq/(fftMaxDims[1]*fftMaxDims[0]);
+						G[1] = (cnsq-G[2]*(fftMaxDims[1]*fftMaxDims[0]))/fftMaxDims[0];
+						G[0] = cnsq-(G[2]*fftMaxDims[1]+G[1])*fftMaxDims[0];
+						Algorithms::FFTInterface::inplace_to_freq(G, fftMaxDims);
+						throw std::runtime_error(std::string("Could not locate rotated G vector ")
+									+std::to_string(G[0]) + ", "+std::to_string(G[1]) + ", "+std::to_string(G[2]));
 					}
 					planeWaveLookup[ipw] = ret->second;
 
@@ -289,33 +284,30 @@ Wavefunctions::fill_G_symmetry_buffer(int isym) const
 	if ( int(gSymBuffer_.size()) != grid_.get_symmetry().get_num_symmetries() )
 		gSymBuffer_ = std::vector<std::vector<int>>( grid_.get_symmetry().get_num_symmetries() );
 
-	std::vector<int> GRot(3);
 	if ( int(gSymBuffer_[isym].size()) != fftDims[0]*fftDims[1]*fftDims[2] )
 	{
-		gSymBuffer_[isym] = std::vector<int>( fftDims[0]*fftDims[1]*fftDims[2] , -1);
+		gSymBuffer_[isym].assign( fftDims[0]*fftDims[1]*fftDims[2] , -1);
 		auto S = grid_.get_symmetry().get_sym_op(isym);
 		for ( int k = 0 ; k < fftDims[2]; ++k )
 			for ( int j = 0 ; j < fftDims[1]; ++j )
 				for ( int i = 0 ; i < fftDims[0]; ++i )
 				{
 					//By convention we store x as the fastest running index and z as the slowest
-					int indexOrig = (k*fftDims[1]+j)*fftDims[0]+i;
-					GRot[0] = i < fftDims[0]/2 ? i : i - fftDims[0];
-					GRot[1] = j < fftDims[1]/2 ? j : j - fftDims[1];
-					GRot[2] = k < fftDims[2]/2 ? k : k - fftDims[2];
-					S.rotate(GRot);
-					int ri = (GRot[0] < 0 ? GRot[0] + fftDims[0]: GRot[0]);
-					int rj = (GRot[1] < 0 ? GRot[1] + fftDims[1]: GRot[1]);
-					int rk = (GRot[2] < 0 ? GRot[2] + fftDims[2]: GRot[2]);
-					ri = (ri == fftDims[0] ? 0 : ri);
-					rj = (rj == fftDims[1] ? 0 : rj);
-					rk = (rk == fftDims[2] ? 0 : rk);
-					assert( (ri >= 0) && (ri < fftDims[0]) );
-					assert( (rj >= 0) && (rj < fftDims[1]) );
-					assert( (rk >= 0) && (rk < fftDims[2]) );
-					int rotIndex = (rk*fftDims[1]+rj)*fftDims[0]+ri;
-					assert( gSymBuffer_[isym][indexOrig] < 0 );
-					gSymBuffer_[isym][indexOrig] = rotIndex;
+					int cnsq = (k*fftDims[1]+j)*fftDims[0]+i;
+					std::vector<int> GRot = {i, j, k};
+					Algorithms::FFTInterface::inplace_to_freq(GRot, fftDims);
+					grid_.get_symmetry().rotate<int>(isym, GRot.begin(), GRot.end(), false);
+					// We allow aliasing, because for uneven grids, rotated G vectors can exceed the fftDims.
+					// These will not be referenced by plane waves anyhow.
+					for ( int l = 0 ; l < 3 ; ++l)
+					{
+						GRot[l] = (GRot[l] <= -fftDims[l]/2-fftDims[l]%2 ? GRot[l] + fftDims[l] : GRot[l] );
+						GRot[l] = (GRot[l] > fftDims[l]/2 ? GRot[l] - fftDims[l] : GRot[l] );
+					}
+					Algorithms::FFTInterface::freq_to_inplace(GRot, fftDims);
+					int rotIndex = (GRot[2]*fftDims[1]+GRot[1])*fftDims[0]+GRot[0];
+					assert( gSymBuffer_[isym][cnsq] < 0 );
+					gSymBuffer_[isym][cnsq] = rotIndex;
 				}
 	}
 
@@ -333,12 +325,11 @@ Wavefunctions::fill_G_symmetry_buffer(int isym) const
 				for ( int j = 0 ; j < fftDims[1]; ++j )
 					for ( int i = 0 ; i < fftDims[0]; ++i )
 					{
-						int gx = i < fftDims[0]/2 ? i : i - fftDims[0];
-						int gy = j < fftDims[1]/2 ? j : j - fftDims[1];
-						int gz = k < fftDims[2]/2 ? k : k - fftDims[2];
+						std::vector<int> G = {i, j, k};
+						Algorithms::FFTInterface::inplace_to_freq(G, fftDims);
 						int consq = (k*fftDims[1]+j)*fftDims[0]+i;
 						phaseBuffer_[isym][consq] = std::complex<float>(std::exp(
-								 std::complex<double>(0,2.0*M_PI*(tau[0]*gx+tau[1]*gy+tau[2]*gz)) ) );
+								 std::complex<double>(0,2.0*M_PI*(tau[0]*G[0]+tau[1]*G[1]+tau[2]*G[2])) ) );
 					}
 		}
 	}

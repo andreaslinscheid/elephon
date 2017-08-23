@@ -36,7 +36,7 @@ Symmetry::rotate(
 	assert( std::distance(fieldDirectSpaceBegin,fieldDirectSpaceEnd)%3 == 0 );
 	assert( isym < this->get_num_symmetries() );
 	auto fb = fieldDirectSpaceBegin; //shorter names for clarity
-	auto fe = fieldDirectSpaceBegin;
+	auto fe = fieldDirectSpaceEnd;
 
 	T buff[3];
 
@@ -48,16 +48,18 @@ Symmetry::rotate(
 		if ( not isReciprocalSpace_ )
 			for ( int xi = 0; xi < 3; ++xi)
 			{
-				*(fc+xi) = symmetries_[(isym*3+xi)*3+0]*buff[0]+symmetries_[(isym*3+xi)*3+1]*buff[1]
-								+symmetries_[(isym*3+xi)*3+2]*buff[2];
+				*(fc+xi) = symmetries_[(isym*3+xi)*3+0]*buff[0]
+					      +symmetries_[(isym*3+xi)*3+1]*buff[1]
+						  +symmetries_[(isym*3+xi)*3+2]*buff[2];
 				if ( latticePeriodic )
 					*(fc+xi) -= std::floor( *(fc+xi)+0.5);
 			}
 		else
 			for ( int xi = 0; xi < 3; ++xi)
 			{
-				*(fc+xi) = symmetries_[(isym*3+0)*3+xi]*buff[0]+symmetries_[(isym*3+1)*3+xi]*buff[1]
-								+symmetries_[(isym*3+2)*3+xi]*buff[2];
+				*(fc+xi) = symmetriesReciprocal_[(isym*3+xi)*3+0]*buff[0]
+						  +symmetriesReciprocal_[(isym*3+xi)*3+1]*buff[1]
+						  +symmetriesReciprocal_[(isym*3+xi)*3+2]*buff[2];
 				if ( latticePeriodic )
 					*(fc+xi) -= std::floor( *(fc+xi)+0.5);
 			}

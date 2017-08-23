@@ -13,11 +13,12 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Apr 24, 2017
+ *  Created on: Apr 24, 2017Algorithms::FFTInterface
  *      Author: A. Linscheid
  */
 
 #include <IOMethods/ReadVASPWaveFunction.h>
+#include "Algorithms/FFTInterface.h"
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -349,27 +350,24 @@ ReadVASPWaveFunction::compute_fourier_map(
 			int ng = 0;
 			for ( int igz = 0 ; igz < fourierMax[2]; ++igz)
 			{
-				int igzf = igz < fourierMax[2]/2 ? igz : igz - fourierMax[2];
 				for ( int igy = 0 ; igy < fourierMax[1]; ++igy)
 				{
-					int igyf = igy < fourierMax[1]/2 ? igy : igy - fourierMax[1];
 					for ( int igx = 0 ; igx < fourierMax[0]; ++igx)
 					{
-						int igxf = igx < fourierMax[0]/2 ? igx : igx - fourierMax[0];
-						kPlusG[0] = kptCoords[ik*3+0]+igxf;
-						kPlusG[1] = kptCoords[ik*3+1]+igyf;
-						kPlusG[2] = kptCoords[ik*3+2]+igzf;
+						std::vector<int> G = {igx, igy, igz};
+						Algorithms::FFTInterface::inplace_to_freq(G, fourierMax);
+						for ( int i = 0 ; i < 3 ; ++i)
+							kPlusG[i] = kptCoords[ik*3+i] + G[i];
 						lattice.reci_direct_to_cartesian_2pibya(kPlusG);
 						if ( (kPlusG[0]*kPlusG[0] + kPlusG[1]*kPlusG[1]
 							  + kPlusG[2]*kPlusG[2])/energyConverionFactorVASP_ < ecutoff )
 						{
-							// igx,y,zf is the VASP G vector. We add -(k - k')
-							int iGx = igxf - std::floor(umklappElephonToVasp[ik*3+0]+0.5);
-							int iGy = igyf - std::floor(umklappElephonToVasp[ik*3+1]+0.5);
-							int iGz = igzf - std::floor(umklappElephonToVasp[ik*3+2]+0.5);
-							fftMapPerK[ik][ng*3+0] = iGx < 0 ? iGx + fourierMax[0] : iGx;
-							fftMapPerK[ik][ng*3+1] = iGy < 0 ? iGy + fourierMax[1] : iGy;
-							fftMapPerK[ik][ng*3+2] = iGz < 0 ? iGz + fourierMax[2] : iGz;
+							// G is the VASP G vector. We add -(k - k')
+							for ( int i = 0 ; i < 3 ; ++i)
+								G[i] -= std::floor(umklappElephonToVasp[ik*3+i]+0.5);
+							Algorithms::FFTInterface::freq_to_inplace(G, fourierMax);
+							for ( int i = 0 ; i < 3 ; ++i)
+								fftMapPerK[ik][ng*3+i] = G[i];
 							ng++;
 						}
 					}

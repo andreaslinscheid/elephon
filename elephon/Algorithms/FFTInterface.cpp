@@ -79,5 +79,35 @@ FFTInterface::~FFTInterface()
 	fftw_destroy_plan( fftw3PlanBkwdKtoR_ );
 }
 
+void
+FFTInterface::inplace_to_freq(int &x, int &y, int &z, int dx, int dy, int dz)
+{
+	assert((x >= 0 && x < dx) && (y >= 0 && y < dy) && (z >= 0 && z < dz));
+	x = x <= dx/2 ? x : x - dx;
+	y = y <= dy/2 ? y : y - dy;
+	z = z <= dz/2 ? z : z - dz;
+}
+
+void
+FFTInterface::inplace_to_freq(std::vector<int> & g, std::vector<int> const & d)
+{
+	FFTInterface::inplace_to_freq(g[0], g[1], g[2], d[0], d[1], d[2]);
+}
+
+void
+FFTInterface::freq_to_inplace(int &x, int &y, int &z, int dx, int dy, int dz)
+{
+	assert((x > -dx/2-dx%2 && x <= dx/2) && (y > -dy/2-dy%2 && y <= dy/2) && (z > -dz/2-dz%2 && z <= dz/2));
+	x = x < 0 ? x + dx : x;
+	y = y < 0 ? y + dy : y;
+	z = z < 0 ? z + dz : z;
+}
+
+void
+FFTInterface::freq_to_inplace(std::vector<int> & g, std::vector<int> const & d)
+{
+	FFTInterface::freq_to_inplace(g[0], g[1], g[2], d[0], d[1], d[2]);
+}
+
 } /* namespace Algorithms */
 } /* namespace elephon */

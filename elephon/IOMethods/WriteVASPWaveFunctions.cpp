@@ -19,6 +19,7 @@
 
 #include "IOMethods/WriteVASPWaveFunctions.h"
 #include "IOMethods/ReadVASPWaveFunction.h"
+#include "Algorithms/FFTInterface.h"
 
 namespace elephon
 {
@@ -140,10 +141,8 @@ void write_VASP_wavefunctions(
 		auto hint = pwconversion.end();
 		for ( int ipw = 0 ; ipw < npw; ++ipw )
 		{
-			int G[3];
-			for ( int i = 0; i  < 3 ; ++i)
-				G[i] = fftMapVASP[ikir][ipw*3 + i] < fourierMax[i]/2
-					? fftMapVASP[ikir][ipw*3 + i] : fftMapVASP[ikir][ipw*3 + i] - fourierMax[i];
+			std::vector<int> G = {fftMapVASP[ikir][ipw*3 + 0], fftMapVASP[ikir][ipw*3 + 1], fftMapVASP[ikir][ipw*3 + 2]};
+			Algorithms::FFTInterface::inplace_to_freq(G, fourierMax);
 			hint = pwconversion.insert(hint, std::make_pair(GVector(G[0], G[1], G[2]), ipw));
 		}
 
@@ -164,10 +163,8 @@ void write_VASP_wavefunctions(
 			VASPSP * buffAsSingle = reinterpret_cast<VASPSP * >( &binaryBuffer[(irecord + ibnd + 1)*reclength] );
 			for ( int ipw = 0 ; ipw < npw; ++ipw)
 			{
-				int G[3];
-				for ( int i = 0; i  < 3 ; ++i)
-					G[i] = fftMap[ikir][ipw*3 + i] < fourierMax[i]/2
-						? fftMap[ikir][ipw*3 + i] : fftMap[ikir][ipw*3 + i] - fourierMax[i];
+				std::vector<int> G = {fftMap[ikir][ipw*3 + 0], fftMap[ikir][ipw*3 + 1], fftMap[ikir][ipw*3 + 2]};
+				Algorithms::FFTInterface::inplace_to_freq(G, fourierMax);
 				auto Gv = GVector(G[0] + GVectorShiftElephonToVasp[ikir*3 + 0],
 							 	  G[1] + GVectorShiftElephonToVasp[ikir*3 + 1],
 								  G[2] + GVectorShiftElephonToVasp[ikir*3 + 2]);

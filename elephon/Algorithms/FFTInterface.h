@@ -57,6 +57,14 @@ public:
 			int exponentSign,
 			bool dataLayoutRowMajor = false,
 			int hintHowOften = 1);
+
+	static void inplace_to_freq(int &x, int &y, int &z, int dx, int dy, int dz);
+
+	static void inplace_to_freq(std::vector<int> & g, std::vector<int> const & d);
+
+	static void freq_to_inplace(int &x, int &y, int &z, int dx, int dy, int dz);
+
+	static void freq_to_inplace(std::vector<int> & g, std::vector<int> const & d);
 private:
 
 	//do not implement
