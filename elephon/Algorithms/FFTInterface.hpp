@@ -68,6 +68,18 @@ struct ComplexConversion<To,std::complex<Ti> >
 
 	To imagAccumalate = To(0);
 };
+
+template<class T>
+struct MakeComplex
+{
+	typedef std::complex<T> type;
+};
+
+template<class T>
+struct MakeComplex<std::complex<T>>
+{
+	typedef std::complex<T> type;
+};
 } /* namespace detail */
 
 template< typename TR>
@@ -297,6 +309,56 @@ FFTInterface::fft_data(
 		this->fill_result(ngrid,nDataPerGridPt,dataResult);
 	}
 }
+
+template<typename T>
+void
+FFTInterface::fft_interpolate(
+               std::vector<int> const & gridDimsIn,
+               std::vector< T > const & data,
+               std::vector<int> const & gridDimsOut,
+               std::vector< T > & dataResult,
+               int nDataPerGridPt)
+{
+       assert(gridDimsIn.size() == gridDimsOut.size());
+       assert(gridDimsIn.size() == 3);
+       int ngridIn = gridDimsIn[0]*gridDimsIn[1]*gridDimsIn[2];
+       int ngridOut = gridDimsOut[0]*gridDimsOut[1]*gridDimsOut[2];
+       assert( (ngridIn != 0) && (ngridOut != 0));
+
+       // here we assume x major grid order
+       std::vector< typename detail::MakeComplex<T>::type > intermedOut;
+       this->fft_data(gridDimsIn, data, intermedOut, nDataPerGridPt, -1, false, 1);
+
+       for ( auto &d : intermedOut )
+               d /= T(ngridIn);
+
+       std::vector< typename detail::MakeComplex<T>::type > intermedIn(ngridOut*nDataPerGridPt,
+                                                               typename detail::MakeComplex<T>::type(0.0));
+       for ( int iz = 0 ; iz < gridDimsIn[2]; ++iz)
+               for ( int iy = 0 ; iy < gridDimsIn[1]; ++iy)
+                       for ( int ix = 0 ; ix < gridDimsIn[0]; ++ix)
+                       {
+                               int cnsq = ix + gridDimsIn[0]*(iy + gridDimsIn[1]*iz);
+                               // go in to the frequency representation with + and - frequencies in the input mesh
+                               int iX = ix;
+                               int iY = iy;
+                               int iZ = iz;
+                               Algorithms::FFTInterface::inplace_to_freq(iX, iY, iZ, gridDimsIn[0], gridDimsIn[1], gridDimsIn[2]);
+                               // frequencies outside the output grid are dropped
+                               if ( ((iX < -gridDimsOut[0]/2-gridDimsOut[0]%2) or (iX >= gridDimsOut[0]/2+gridDimsOut[0]%2)) or
+                                        ((iY < -gridDimsOut[1]/2-gridDimsOut[1]%2) or (iY >= gridDimsOut[1]/2+gridDimsOut[1]%2)) or
+                                        ((iZ < -gridDimsOut[2]/2-gridDimsOut[2]%2) or (iZ >= gridDimsOut[2]/2+gridDimsOut[2]%2)) )
+                                       continue;
+                               // go in to the fftw3 representation in the positive frequency notation in the output mesh
+                               Algorithms::FFTInterface::freq_to_inplace(iX, iY, iZ, gridDimsOut[0], gridDimsOut[1], gridDimsOut[2]);
+                               int cnsqNew = iX + gridDimsOut[0]*(iY + gridDimsOut[1]*iZ);
+                               for ( int ib = 0 ; ib < nDataPerGridPt; ++ib )
+                                       intermedIn[cnsqNew*nDataPerGridPt+ib] = intermedOut[cnsq*nDataPerGridPt+ib];
+                       }
+
+       this->fft_data(gridDimsOut, intermedIn, dataResult, nDataPerGridPt, 1, false, 1);
+}
+
 
 } /* namespace Algorithms */
 } /* namespace elephon */

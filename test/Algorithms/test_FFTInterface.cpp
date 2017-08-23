@@ -142,3 +142,69 @@ BOOST_AUTO_TEST_CASE( sparse_data_test )
 
 	BOOST_CHECK_SMALL( diff , 1e-6);
 }
+
+BOOST_AUTO_TEST_CASE( fft_interpolate_constant )
+{
+       int nBands = 3;
+       std::vector<int> grid({1,1,1});
+       std::vector<double> data(grid[0]*grid[1]*grid[2]*nBands);
+       data[0] = 1;
+       data[1] = 2;
+       data[2] = -2;
+
+       std::vector<int> gridOut({3,2,4});
+       int nG = gridOut[0]*gridOut[1]*gridOut[2];
+       elephon::Algorithms::FFTInterface fft;
+       fft.fft_interpolate(grid, data, gridOut, data, nBands);
+
+       BOOST_REQUIRE_EQUAL(data.size(), nBands*nG);
+       for ( int k = 0 ; k < gridOut[2]; ++k)
+               for ( int j = 0 ; j < gridOut[1]; ++j)
+                       for ( int i = 0 ; i < gridOut[0]; ++i)
+                       {
+                               int cnsq = i + gridOut[0]*(j + gridOut[1]*k);
+                               BOOST_CHECK_SMALL(data[cnsq*nBands+0] - 1, 1e-6);
+                               BOOST_CHECK_SMALL(data[cnsq*nBands+1] - 2, 1e-6);
+                               BOOST_CHECK_SMALL(data[cnsq*nBands+2] + 2, 1e-6);
+                       }
+}
+
+BOOST_AUTO_TEST_CASE( fft_interpolate_cos_sin )
+{
+       int nBands = 2;
+       std::vector<int> grid({11,8,9});
+       std::vector<double> data(grid[0]*grid[1]*grid[2]*nBands);
+       for ( int k = 0 ; k < grid[2]; ++k)
+               for ( int j = 0 ; j < grid[1]; ++j)
+                       for ( int i = 0 ; i < grid[0]; ++i)
+                       {
+                               int cnsq = i + grid[0]*(j + grid[1]*k);
+                               data[cnsq*nBands+0] = std::cos(2*M_PI*i/double(grid[0]));
+                               data[cnsq*nBands+1] = std::pow(std::sin(2*M_PI*k/double(grid[2])),2);
+                       }
+
+       std::vector<int> gridOut({15,7,28});
+       int nG = gridOut[0]*gridOut[1]*gridOut[2];
+       elephon::Algorithms::FFTInterface fft;
+       fft.fft_interpolate(
+                       grid,
+                       data,
+                       gridOut,
+                       data,
+                       nBands);
+
+       BOOST_REQUIRE_EQUAL(data.size(), nBands*nG);
+
+       double diff = 0;
+       for ( int k = 0 ; k < gridOut[2]; ++k)
+               for ( int j = 0 ; j < gridOut[1]; ++j)
+                       for ( int i = 0 ; i < gridOut[0]; ++i)
+                       {
+                               int cnsq = i + gridOut[0]*(j + gridOut[1]*k);
+                               diff += std::abs(data[cnsq*nBands+0] - std::cos(2*M_PI*i/double(gridOut[0])));
+                               diff += std::abs(data[cnsq*nBands+1] - std::pow(std::sin(2*M_PI*k/double(gridOut[2])),2));
+                       }
+
+       BOOST_CHECK_SMALL( diff/nBands/nG , 1e-6);
+}
+

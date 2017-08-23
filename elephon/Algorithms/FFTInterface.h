@@ -58,6 +58,15 @@ public:
 			bool dataLayoutRowMajor = false,
 			int hintHowOften = 1);
 
+	template<typename T>
+	void fft_interpolate(
+	                std::vector<int> const & gridDimsIn,
+	                std::vector< T > const & data,
+	                std::vector<int> const & gridDimsOut,
+	                std::vector< T > & dataResult,
+	                int nDataPerGridPt);
+
+
 	static void inplace_to_freq(int &x, int &y, int &z, int dx, int dy, int dz);
 
 	static void inplace_to_freq(std::vector<int> & g, std::vector<int> const & d);
