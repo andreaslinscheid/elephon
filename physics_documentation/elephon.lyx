@@ -2200,6 +2200,70 @@ u_{\boldsymbol{k}^{\prime}}(\boldsymbol{r}) & = & u_{S\cdot\boldsymbol{k}}^{\ast
 
 \end_layout
 
+\begin_layout Subsection
+Fourier interpolation of the band structure
+\end_layout
+
+\begin_layout Standard
+For finding a smoother sampling of the Fermi surface, we need to interpolate
+ the band structure and a good way of doing this for the perpdic data is
+ the Fourier based interpolation scheme.
+ Here we use
+\begin_inset Formula 
+\begin{equation}
+\varepsilon(\bar{\boldsymbol{k}})=\sum_{\boldsymbol{R}}\{\sum_{\boldsymbol{k}}\varepsilon(\boldsymbol{k}){\rm e}^{{\rm -}\boldsymbol{k}\cdot\boldsymbol{R}}\}{\rm e}^{\bar{\boldsymbol{k}}\cdot\boldsymbol{R}}
+\end{equation}
+
+\end_inset
+
+where the grid size of 
+\begin_inset Formula 
+\begin{equation}
+\varepsilon(\boldsymbol{R})=\sum_{\boldsymbol{k}}\varepsilon(\boldsymbol{k}){\rm e}^{{\rm -}\boldsymbol{k}\cdot\boldsymbol{R}}
+\end{equation}
+
+\end_inset
+
+will be zero-padded to the desired density indicated with a bar.
+ Thus we use
+\begin_inset Formula 
+\begin{eqnarray}
+\varepsilon(\boldsymbol{R}) & = & {\rm FFT}\{\varepsilon(\boldsymbol{k})\}\\
+\varepsilon(\bar{\boldsymbol{R}}) & = & {\rm Zero-Pad}\{\varepsilon(\boldsymbol{R})\}\\
+\varepsilon(\bar{\boldsymbol{k}}) & = & {\rm IFFT}\{\varepsilon(\bar{\boldsymbol{R}})\}
+\end{eqnarray}
+
+\end_inset
+
+ Since 
+\begin_inset Formula $\varepsilon(\boldsymbol{k})$
+\end_inset
+
+ is real, 
+\begin_inset Formula $\varepsilon(-\boldsymbol{R})^{\ast}=\varepsilon(\boldsymbol{R})$
+\end_inset
+
+.
+ A bit of a headache are the grid shifts, 
+\begin_inset Formula $\boldsymbol{k}_{0}$
+\end_inset
+
+ and 
+\begin_inset Formula $\bar{\boldsymbol{k}}_{0}$
+\end_inset
+
+ that are frequencently used
+\begin_inset Formula 
+\begin{eqnarray}
+\varepsilon(R_{x},R_{y},R_{z}) & = & {\rm e}^{{\rm -}\frac{{\boldsymbol{k}_{0}}_{x}\cdot R_{x}}{N_{kx}}\frac{{\boldsymbol{k}_{0}}_{y}\cdot R_{y}}{N_{ky}}\frac{{\boldsymbol{k}_{0}}_{z}\cdot R_{z}}{N_{kz}}}\sum_{i,j,l}[\varepsilon(\boldsymbol{k})]{\rm e}^{{\rm -}\frac{i\cdot R_{x}}{N_{kx}}\frac{j\cdot R_{y}}{N_{ky}}\frac{l\cdot R_{z}}{N_{kz}}}\\
+\varepsilon(\bar{\boldsymbol{k}}) & = & {\rm FFT}\bigl({\rm Zero-Pad}\{{\rm FFT}\{\varepsilon(\boldsymbol{k})\}{\rm e}^{{\rm -}\frac{{\boldsymbol{k}_{0}}_{x}\cdot R_{x}}{N_{kx}}\frac{{\boldsymbol{k}_{0}}_{y}\cdot R_{y}}{N_{ky}}\frac{{\boldsymbol{k}_{0}}_{z}\cdot R_{z}}{N_{kz}}}\}{\rm e}^{\frac{{\mbox{\bar{\boldsymbol{k}}_{0}}}_{x}\cdot\bar{R}_{x}}{\bar{N}_{kx}}\frac{{\mbox{\bar{\boldsymbol{k}}_{0}}}_{y}\cdot\bar{R}_{y}}{\bar{N}_{ky}}\frac{{\mbox{\bar{\boldsymbol{k}}_{0}}}_{z}\cdot\bar{R}_{z}}{\bar{N}_{kz}}}\bigr)
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Standard
 \begin_inset ERT
 status open

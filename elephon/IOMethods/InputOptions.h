@@ -116,6 +116,26 @@ class InputOptions : public InputBase<InputOptions>
 			"0.0",
 			{ 0.0 },
 			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			fftd,
+			"Grid dimension for the electronic structure fft interpolation.\n"
+			"Can be a list of 3 non-negative integers which will be the grid.\n"
+			"Setting a dimension to 0 means no interpolation in this direction.\n"
+			"Can also be single positive integer, in which case it will be a scaling to the read-in grid.\n",
+			"3",
+			{ 3 },
+			std::vector<int>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			ffts,
+			"Grid shift for the electronic structure fft interpolation.\n"
+			"Must be a list of 3 non-negative floating point values smaller 1.0 which"
+			"will be the shift grid relative to the grid spacing.\n"
+			"E.g. '0.5 0.0 0.0' will shift the grid by 0.5/ffd[0] in x direction if fftd determines the grid directly.\n",
+			"0.0 0.0 0.0",
+			{0.0 COMMA_SUBSTITUTION 0.0 COMMA_SUBSTITUTION 0.0},
+			std::vector<double>);
 };
 
 } /* namespace IOMethods */

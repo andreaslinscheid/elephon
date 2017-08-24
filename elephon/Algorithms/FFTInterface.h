@@ -61,8 +61,10 @@ public:
 	template<typename T>
 	void fft_interpolate(
 	                std::vector<int> const & gridDimsIn,
+					std::vector<double> const & gridShiftIn,
 	                std::vector< T > const & data,
 	                std::vector<int> const & gridDimsOut,
+					std::vector<double> const & gridShiftOut,
 	                std::vector< T > & dataResult,
 	                int nDataPerGridPt);
 
@@ -74,6 +76,16 @@ public:
 	static void freq_to_inplace(int &x, int &y, int &z, int dx, int dy, int dz);
 
 	static void freq_to_inplace(std::vector<int> & g, std::vector<int> const & d);
+
+	static void cnsq_to_xyz(int cnsq,
+			std::vector<int> & xyz,
+			std::vector<int> const& grid,
+			bool dataLayoutRowMajor = false);
+
+	static void xyz_to_cnsq(int &cnsq,
+			std::vector<int> const& xyz,
+			std::vector<int> const& grid,
+			bool dataLayoutRowMajor = false);
 private:
 
 	//do not implement

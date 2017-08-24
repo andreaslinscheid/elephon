@@ -91,6 +91,8 @@ public:
 	 * @return	Band energy value in eV relative to the Fermi level at E=0.
 	 */
 	double operator() (int ikIrred, int ib, int ispin = 0) const;
+
+	void fft_interpolate(std::vector<int> const & newDims, std::vector<double> const & gridShift);
 private:
 
 	int nBnd_;

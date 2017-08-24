@@ -23,6 +23,27 @@
 #include <vector>
 #include <complex>
 
+BOOST_AUTO_TEST_CASE( fft_interpolate_cos_shift_1D )
+{
+	std::vector<int> grid{20};
+	std::vector<double> data(grid[0]);
+	std::vector<double> sIn {0.50};
+	for ( int i = 0 ; i < grid[0]; ++i)
+		data[i] = std::cos(2*M_PI*((i+sIn[0])/double(grid[0])));
+
+	std::vector<int> gridOut{50};
+	std::vector<double> sOut{0.0};
+	int nG = gridOut[0];
+	elephon::Algorithms::FFTInterface fft;
+	fft.fft_interpolate(grid, sIn, data, gridOut, sOut, data, 1);
+
+	double diff = 0;
+	for ( int i = 0 ; i < gridOut[0]; ++i)
+		diff += std::abs(data[i] - std::cos(2*M_PI*((i+sOut[0])/double(gridOut[0]))));
+
+   BOOST_CHECK_SMALL( diff/nG , 1e-6);
+}
+
 BOOST_AUTO_TEST_CASE( Cosine_tests_1D )
 {
 
@@ -155,7 +176,8 @@ BOOST_AUTO_TEST_CASE( fft_interpolate_constant )
        std::vector<int> gridOut({3,2,4});
        int nG = gridOut[0]*gridOut[1]*gridOut[2];
        elephon::Algorithms::FFTInterface fft;
-       fft.fft_interpolate(grid, data, gridOut, data, nBands);
+       auto nullv = std::vector<double>{0.0, 0.0, 0.0};
+       fft.fft_interpolate(grid, nullv, data, gridOut, nullv, data, nBands);
 
        BOOST_REQUIRE_EQUAL(data.size(), nBands*nG);
        for ( int k = 0 ; k < gridOut[2]; ++k)
@@ -171,40 +193,72 @@ BOOST_AUTO_TEST_CASE( fft_interpolate_constant )
 
 BOOST_AUTO_TEST_CASE( fft_interpolate_cos_sin )
 {
-       int nBands = 2;
-       std::vector<int> grid({11,8,9});
-       std::vector<double> data(grid[0]*grid[1]*grid[2]*nBands);
-       for ( int k = 0 ; k < grid[2]; ++k)
-               for ( int j = 0 ; j < grid[1]; ++j)
-                       for ( int i = 0 ; i < grid[0]; ++i)
-                       {
-                               int cnsq = i + grid[0]*(j + grid[1]*k);
-                               data[cnsq*nBands+0] = std::cos(2*M_PI*i/double(grid[0]));
-                               data[cnsq*nBands+1] = std::pow(std::sin(2*M_PI*k/double(grid[2])),2);
-                       }
+	int nBands = 2;
+	std::vector<int> grid({11,8,9});
+	std::vector<double> data(grid[0]*grid[1]*grid[2]*nBands);
+	for ( int k = 0 ; k < grid[2]; ++k)
+		   for ( int j = 0 ; j < grid[1]; ++j)
+				   for ( int i = 0 ; i < grid[0]; ++i)
+				   {
+						   int cnsq = i + grid[0]*(j + grid[1]*k);
+						   data[cnsq*nBands+0] = std::cos(2*M_PI*i/double(grid[0]));
+						   data[cnsq*nBands+1] = std::pow(std::sin(2*M_PI*k/double(grid[2])),2);
+				   }
 
-       std::vector<int> gridOut({15,7,28});
-       int nG = gridOut[0]*gridOut[1]*gridOut[2];
-       elephon::Algorithms::FFTInterface fft;
-       fft.fft_interpolate(
-                       grid,
-                       data,
-                       gridOut,
-                       data,
-                       nBands);
+	std::vector<int> gridOut({15,7,28});
+	int nG = gridOut[0]*gridOut[1]*gridOut[2];
+	elephon::Algorithms::FFTInterface fft;
+	fft.fft_interpolate(
+				   grid,
+				   std::vector<double>{0.0, 0.0, 0.0},
+				   data,
+				   gridOut,
+				   std::vector<double>{0.0, 0.0, 0.0},
+				   data,
+				   nBands);
 
-       BOOST_REQUIRE_EQUAL(data.size(), nBands*nG);
+	BOOST_REQUIRE_EQUAL(data.size(), nBands*nG);
 
-       double diff = 0;
-       for ( int k = 0 ; k < gridOut[2]; ++k)
-               for ( int j = 0 ; j < gridOut[1]; ++j)
-                       for ( int i = 0 ; i < gridOut[0]; ++i)
-                       {
-                               int cnsq = i + gridOut[0]*(j + gridOut[1]*k);
-                               diff += std::abs(data[cnsq*nBands+0] - std::cos(2*M_PI*i/double(gridOut[0])));
-                               diff += std::abs(data[cnsq*nBands+1] - std::pow(std::sin(2*M_PI*k/double(gridOut[2])),2));
-                       }
+	double diff = 0;
+	for ( int k = 0 ; k < gridOut[2]; ++k)
+		for ( int j = 0 ; j < gridOut[1]; ++j)
+			for ( int i = 0 ; i < gridOut[0]; ++i)
+			{
+				int cnsq = i + gridOut[0]*(j + gridOut[1]*k);
+				diff += std::abs(data[cnsq*nBands+0] - std::cos(2*M_PI*i/double(gridOut[0])));
+				diff += std::abs(data[cnsq*nBands+1] - std::pow(std::sin(2*M_PI*k/double(gridOut[2])),2));
+			}
 
-       BOOST_CHECK_SMALL( diff/nBands/nG , 1e-6);
+   BOOST_CHECK_SMALL( diff/nBands/nG , 1e-6);
 }
 
+
+BOOST_AUTO_TEST_CASE( fft_interpolate_cos_sin_shift )
+{
+	std::vector<int> grid({11,7,5});
+	std::vector<double> data(grid[0]*grid[1]*grid[2]);
+	std::vector<double> sIn {0.50, 0.75, 0.00};
+	for ( int k = 0 ; k < grid[2]; ++k)
+		for ( int j = 0 ; j < grid[1]; ++j)
+			for ( int i = 0 ; i < grid[0]; ++i)
+				data[i + grid[0]*(j + grid[1]*k)] = std::cos(2*M_PI*((i+sIn[0])/double(grid[0])))
+													+std::cos(2*M_PI*((j+sIn[1])/double(grid[1])));
+
+	std::vector<int> gridOut({15,27,23});
+	std::vector<double> sOut{0.25, 0.00, 0.00};
+	int nG = gridOut[0]*gridOut[1]*gridOut[2];
+	elephon::Algorithms::FFTInterface fft;
+	fft.fft_interpolate(grid, sIn, data, gridOut, sOut, data, 1);
+
+	BOOST_REQUIRE_EQUAL(data.size(), nG);
+
+	double diff = 0;
+	for ( int k = 0 ; k < gridOut[2]; ++k)
+		for ( int j = 0 ; j < gridOut[1]; ++j)
+			for ( int i = 0 ; i < gridOut[0]; ++i)
+				diff += std::abs(data[i + gridOut[0]*(j + gridOut[1]*k)]
+									  - std::cos(2*M_PI*((i+sOut[0])/double(gridOut[0])))
+									  - std::cos(2*M_PI*((j+sOut[1])/double(gridOut[1]))));
+
+   BOOST_CHECK_SMALL( diff/nG , 1e-6);
+}

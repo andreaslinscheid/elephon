@@ -91,7 +91,12 @@ FFTInterface::inplace_to_freq(int &x, int &y, int &z, int dx, int dy, int dz)
 void
 FFTInterface::inplace_to_freq(std::vector<int> & g, std::vector<int> const & d)
 {
-	FFTInterface::inplace_to_freq(g[0], g[1], g[2], d[0], d[1], d[2]);
+	assert(g.size() == d.size());
+	for ( int i = 0 ; i < g.size(); ++i )
+	{
+		assert((g[i] >= 0 ) && (g[i] < d[i]));
+		g[i] = g[i] <= d[i]/2 ? g[i] : g[i] - d[i];
+	}
 }
 
 void
@@ -106,7 +111,87 @@ FFTInterface::freq_to_inplace(int &x, int &y, int &z, int dx, int dy, int dz)
 void
 FFTInterface::freq_to_inplace(std::vector<int> & g, std::vector<int> const & d)
 {
-	FFTInterface::freq_to_inplace(g[0], g[1], g[2], d[0], d[1], d[2]);
+	assert(g.size() == d.size());
+	for ( int i = 0 ; i < g.size(); ++i )
+	{
+		assert((g[i] > -d[i]/2-d[i]%2) && (g[i] <= d[i]/2));
+		g[i] = g[i] < 0 ? g[i] + d[i]: g[i];
+	}
+}
+
+void
+FFTInterface::cnsq_to_xyz(
+		int cnsq,
+		std::vector<int> & xyz,
+		std::vector<int> const& grid,
+		bool dataLayoutRowMajor)
+{
+	int d = grid.size();
+	assert(xyz.size()==d);
+	std::vector<int> dimProd( d , 1 );
+	std::fill(xyz.begin(), xyz.end(), cnsq );
+	if (not dataLayoutRowMajor)
+	{
+		//reverse-engineer expressions like
+		//	index = x + dx*( y + dy*( z ) )
+		//	      = x + dx*y + dx*dy*z
+		for (int i = 1 ; i < d ; ++i)
+			dimProd[i] = grid[ i-1 ]*dimProd[i-1];
+
+		for ( int i = d-1 ; i >= 1; --i )
+		{
+			xyz[i] = xyz[i]/dimProd[i];
+			for ( int j = i-1 ; j >=0; --j )
+				xyz[j] -= xyz[i]*dimProd[i];
+		}
+	}
+	else
+	{
+		//reverse-engineer expressions like
+		//	index = (x*dy + y)*dz + z
+		//		  = x*dy*dz + y*dz + z
+		for (int i = d-2 ; i >= 0 ; --i)
+			dimProd[i] = grid[ i+1 ]*dimProd[i+1];
+
+		for ( int i = 0 ;  i < d-1 ; ++i )
+		{
+			xyz[i] = xyz[i]/dimProd[i];
+			for ( int j = i+1 ;  j < d ; ++j )
+				xyz[j] -= xyz[i]*dimProd[i];
+		}
+	}
+}
+
+void
+FFTInterface::xyz_to_cnsq(int &cnsq,
+		std::vector<int> const& xyz,
+		std::vector<int> const& grid,
+		bool dataLayoutRowMajor)
+{
+	assert( xyz.size() == grid.size() );
+	cnsq = 0;
+	int dim = grid.size();
+	if ( dataLayoutRowMajor )
+	{
+		//e.g. for d == 3 : ix*d[1]+iy)*d[2]+iz
+		for ( int i = 0 ; i < dim-1; ++i)
+		{
+			cnsq += xyz[i];
+			cnsq *= grid[i+1];
+		}
+		int im = dim-1;
+		cnsq += xyz[im];
+	}
+	else // Column major
+	{
+		//e.g. for d == 3 : ix+d[0]*(iy+d[1]*iz
+		for ( int i = dim-1 ; i > 0; --i)
+		{
+			cnsq += xyz[i];
+			cnsq *= grid[i-1];
+		}
+		cnsq += xyz[0];
+	}
 }
 
 } /* namespace Algorithms */
