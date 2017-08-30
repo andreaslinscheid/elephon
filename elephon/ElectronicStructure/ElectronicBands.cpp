@@ -160,54 +160,54 @@ ElectronicBands::fft_interpolate(
 		std::vector<int> const & newDims,
 		std::vector<double> const & gridShift)
 {
-       auto fftd = newDims;
-       if ( fftd.size() == 1 )
-       {
-               int scale = fftd.at(0);
-               fftd = grid_.get_grid_dim();
-               if ( scale != 0 )
-                       for ( auto &d : fftd )
-                               d *= scale;
-       }
-       else
-       {
-               if ( newDims.size() != 3 )
-                       throw std::runtime_error("Incorrect grid dimension for bands interpolate.");
-               for ( int id = 0 ; id < 3; ++id)
-                       fftd[id] = fftd[id] == 0 ? grid_.get_grid_dim()[id] : fftd[id];
-       }
+	auto fftd = newDims;
+	if ( fftd.size() == 1 )
+	{
+		int scale = fftd.at(0);
+		fftd = grid_.get_grid_dim();
+		if ( scale != 0 )
+			for ( auto &d : fftd )
+				d *= scale;
+	}
+	else
+	{
+		if ( newDims.size() != 3 )
+			throw std::runtime_error("Incorrect grid dimension for bands interpolate.");
+		for ( int id = 0 ; id < 3; ++id)
+			fftd[id] = fftd[id] == 0 ? grid_.get_grid_dim()[id] : fftd[id];
+	}
 
-       std::vector<double> oldData;
-       int nB = this->get_nBnd();
-       std::vector<int> bandList(nB);
-       for ( int ib = 0 ; ib < nB; ++ib )
-               bandList[ib] = ib;
-       this->generate_reducible_grid_bands(bandList, oldData);
+	std::vector<double> oldData;
+	int nB = this->get_nBnd();
+	std::vector<int> bandList(nB);
+	for ( int ib = 0 ; ib < nB; ++ib )
+		   bandList[ib] = ib;
+	this->generate_reducible_grid_bands(bandList, oldData);
 
-       std::vector<double> newReducibleData;
-       Algorithms::FFTInterface fft;
-       fft.fft_interpolate(
-                       grid_.get_grid_dim(),
-                       grid_.get_grid_shift(),
-                       oldData,
-                       fftd,
-					   gridShift,
-                       newReducibleData,
-                       nB);
+	std::vector<double> newReducibleData;
+	Algorithms::FFTInterface fft;
+	fft.fft_interpolate(
+				   grid_.get_grid_dim(),
+				   grid_.get_grid_shift(),
+				   oldData,
+				   fftd,
+				   gridShift,
+				   newReducibleData,
+				   nB);
 
-       LatticeStructure::RegularSymmetricGrid newGrid;
-       newGrid.initialize(
-                       fftd,
-                       grid_.get_grid_prec(),
-					   gridShift,
-                       grid_.get_symmetry(),
-                       grid_.get_lattice());
+	LatticeStructure::RegularSymmetricGrid newGrid;
+	newGrid.initialize(
+				   fftd,
+				   grid_.get_grid_prec(),
+				   gridShift,
+				   grid_.get_symmetry(),
+				   grid_.get_lattice());
 
-       this->initialize(
-                       nB,
-                       0.0,
-                       newReducibleData,
-                       newGrid);
+	this->initialize(
+				   nB,
+				   0.0,
+				   newReducibleData,
+				   newGrid);
 }
 
 

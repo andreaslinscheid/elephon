@@ -112,3 +112,60 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 							- dataNoSym[ i*bands_sym.get_nBnd()+j ] );
 	BOOST_REQUIRE( diff < 1e-6 );
 }
+
+/** Test the generation of data on a reducible grid
+ */
+BOOST_AUTO_TEST_CASE( Bands_reducible_reconstruction)
+{
+	//TODO write this test.
+}
+
+BOOST_AUTO_TEST_CASE( Bands_fft_interpolation )
+{
+	std::vector<int> griddims{50, 50, 50};
+	std::vector<double> gridshift{0.0, 0.0, 0.0};
+	int nB = 2;
+
+	std::vector<double> data(nB*griddims[2]*griddims[1]*griddims[0]);
+	for ( int iz = 0 ; iz < griddims[2]; ++iz )
+		for ( int iy = 0 ; iy < griddims[1]; ++iy )
+			for ( int ix = 0 ; ix < griddims[0]; ++ix )
+			{
+				int cnsq = ix + griddims[0]*(iy + griddims[1]*iz);
+				data[cnsq*nB+0] = std::cos((2*M_PI/griddims[0])*(ix+gridshift[0]))
+								 +std::cos((2*M_PI/griddims[1])*(iy+gridshift[1]));
+
+				data[cnsq*nB+1] = std::cos((2*M_PI/griddims[2])*(iz+gridshift[2]));
+			}
+
+	elephon::ElectronicStructure::ElectronicBands bands;
+	elephon::LatticeStructure::Symmetry id;
+	id.set_reciprocal_space_sym();
+	elephon::LatticeStructure::RegularSymmetricGrid grid;
+	grid.initialize(
+			griddims,
+			1e-6,
+			gridshift,
+			id,
+			elephon::LatticeStructure::LatticeModule());
+	bands.initialize(nB, 0.0, data, grid);
+
+	std::vector<int> griddimsNew{64, 64, 64};
+	std::vector<double> gridshiftNew{0.0, 0.0, 0.0};
+	bands.fft_interpolate(griddimsNew, gridshiftNew);
+
+	double diff = 0;
+	for ( int iz = 0 ; iz < griddimsNew[2]; ++iz )
+		for ( int iy = 0 ; iy < griddimsNew[1]; ++iy )
+			for ( int ix = 0 ; ix < griddimsNew[0]; ++ix )
+			{
+				int cnsq = ix + griddimsNew[0]*(iy + griddimsNew[1]*iz);
+				diff += std::abs(bands(cnsq, 0) - std::cos((2*M_PI/griddimsNew[0])*(ix+gridshiftNew[0]))
+								 -std::cos((2*M_PI/griddimsNew[1])*(iy+gridshiftNew[1])));
+				diff += std::abs(bands(cnsq, 1) -
+									std::cos((2*M_PI/griddimsNew[2])*(iz+gridshiftNew[2])));
+			}
+	diff /= griddimsNew[0]*griddimsNew[1]*griddimsNew[2]*nB;
+
+	BOOST_CHECK_SMALL(diff, 1e-6);
+}
