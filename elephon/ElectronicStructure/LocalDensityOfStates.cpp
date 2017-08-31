@@ -155,6 +155,8 @@ LocalDensityOfStates::compute_ldos(
 	LatticeStructure::UnitCell uc;
 	uc.initialize(atoms, lattice, sym);
 
+	bands.fft_interpolate(loader->get_optns().get_fftd(), loader->get_optns().get_ffts());
+
 	Wavefunctions wfcts;
 	wfcts.initialize(
 			loader->get_optns().get_root_dir(),

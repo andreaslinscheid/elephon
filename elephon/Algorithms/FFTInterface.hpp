@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <stdexcept>
 #include <iostream>
+#include <map>
 
 namespace elephon
 {
@@ -247,8 +248,11 @@ FFTInterface::fill_result(int ngrid, int nDataPerGridPt, std::vector<TR> & dataR
 	detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
 	for (int ig = 0 ; ig < ngrid; ++ig)
 		for (int id = 0 ; id < nDataPerGridPt; ++id)
+		{
 			dataResult [ ig * nDataPerGridPt + id ] =
 					converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] );
+			assert( dataResult [ ig * nDataPerGridPt + id ] == dataResult [ ig * nDataPerGridPt + id ]);
+		}
 	if ( converterBkwd.complex_to_real )
 		if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
 			throw std::runtime_error(
@@ -277,10 +281,13 @@ FFTInterface::fft_data(
 	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
 
 	auto fillBuffer = [&] () {
+		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_);
 		for (int ig = 0 ; ig < ngrid; ++ig)
 			for (int id = 0 ; id < nDataPerGridPt; ++id)
-				reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] =
-						converterFwd.convert( data [ ig * nDataPerGridPt + id ] );
+			{
+				ptr[ id*ngrid + ig ] = converterFwd.convert( data [ ig * nDataPerGridPt + id ] );
+				assert( ptr[ id*ngrid + ig ] == ptr[ id*ngrid + ig ] );
+			}
 	};
 
 	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
@@ -389,6 +396,81 @@ FFTInterface::fft_interpolate(
 					   intermedOut[ic*nDataPerGridPt+ib]*phase1*phase2;
 	}
 
+	// handle the Nyquist frequencies. The input data to the next FFT must be
+	// balanced in frequencies. If the result was zero-padded, we simply add
+	// the N/2 term to the -N/2 position and devide by 2, otherwise, we drop the
+	// unbalanced term.
+	for (int ic = 0 ; ic < ngridIn; ++ic )
+	{
+		FFTInterface::cnsq_to_xyz(ic, xyz, gridDimsIn, false);
+		Algorithms::FFTInterface::inplace_to_freq(xyz, gridDimsIn);
+
+		// Check which dimensions are on the non-symmetric edge while
+		// there is zero padding to be used for leveling
+		std::vector<int> copyDim;
+		for ( int id = 0 ; id < dim; ++id)
+			if ( ((gridDimsIn[id] % 2) == 0) and (gridDimsOut[id] > gridDimsIn[id]) )
+				if ( xyz[id] == gridDimsIn[id]/2 )
+					copyDim.push_back(id);
+
+		if ( copyDim.empty() )
+			continue;
+
+		// Build the surface to be copied. While the below seems a bit opaque,
+		// it solves problems in D >= 2 where the corner must be averaged between
+		// 2^D points
+		std::vector<std::vector<int>> indicesToCopy(1, xyz);
+		int npts = std::pow(2,copyDim.size());
+		indicesToCopy.reserve(npts);
+		for ( int idc = 0 ; idc < copyDim.size(); ++idc )
+		{
+			std::vector<std::vector<int>> indicesDimMinusOne = indicesToCopy;
+			for ( auto &d : indicesDimMinusOne )
+				d[copyDim[idc]] = -gridDimsIn[copyDim[idc]]/2;
+			indicesToCopy.insert(indicesToCopy.end(), indicesDimMinusOne.begin(), indicesDimMinusOne.end());
+		}
+
+		// Do the copying of Nyquist frequencies
+		for ( int ip = 0 ; ip < npts; ++ip)
+		{
+			// recompute phases for the copied Nyquist frequency
+			CT phase1 = CT(1);
+			if ( (std::abs(gridShiftIn[0]) > 1e-6) or (std::abs(gridShiftIn[2]) > 1e-6)
+						or (std::abs(gridShiftIn[2]) > 1e-6) )
+			{
+				auto sum = 0.0;
+				for ( int id = 0; id < dim ; ++id)
+					sum += (2*M_PI/gridDimsIn[id])*indicesToCopy[ip][id]*gridShiftIn[id];
+				phase1 = std::exp(CT(0,-sum));
+			}
+			CT phase2 = CT(1);
+			if ( (std::abs(gridShiftOut[0]) > 1e-6) or (std::abs(gridShiftOut[2]) > 1e-6)
+					or (std::abs(gridShiftOut[2]) > 1e-6) )
+			{
+				auto sum = 0.0;
+				for ( int id = 0; id < dim ; ++id)
+					sum += (2*M_PI/gridDimsOut[id])*indicesToCopy[ip][id]*gridShiftOut[id];
+				phase2 = std::exp(CT(0,sum));
+			}
+
+			int cnsq;
+			FFTInterface::freq_to_inplace(indicesToCopy[ip], gridDimsOut);
+			FFTInterface::xyz_to_cnsq(cnsq, indicesToCopy[ip], gridDimsOut, false);
+			for ( int ib = 0 ; ib < nDataPerGridPt; ++ib )
+				intermedIn[cnsq*nDataPerGridPt+ib] =
+						   intermedOut[ic*nDataPerGridPt+ib]*phase1*phase2 / CT(npts);
+		}
+
+		// We have to balance the output by dropping the Nyquist frequency if there is no space
+		for ( int id = 0 ; id < dim; ++id)
+			if ( ((gridDimsOut[id] % 2) == 0) and (gridDimsOut[id] < gridDimsIn[id]) )
+			{
+				FFTInterface::cnsq_to_xyz(ic, xyz, gridDimsOut, false);
+				if ( xyz[id] == gridDimsOut[id]/2 )
+					for ( int ib = 0 ; ib < nDataPerGridPt; ++ib )
+						intermedIn[ic*nDataPerGridPt+ib] = 0.0;
+			}
+	}
 	this->fft_data(gridDimsOut, intermedIn, dataResult, nDataPerGridPt, 1, false, 1);
 }
 

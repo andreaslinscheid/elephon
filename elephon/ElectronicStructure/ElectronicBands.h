@@ -92,7 +92,21 @@ public:
 	 */
 	double operator() (int ikIrred, int ib, int ispin = 0) const;
 
-	void fft_interpolate(std::vector<int> const & newDims, std::vector<double> const & gridShift);
+	/**
+	 * Replace the content of this object with FFT interpolated data.
+	 *
+	 * If the grids are determined to be the same, no action is taken.
+	 *
+	 * @param newDims	1) A list of 3 positive numbers representing the new grid dimension. If a dimension is '0'
+	 * 						the number will be replaced by the internal grid number (i.e. remains unchanged).
+	 * 					2) A single positive number in which case the internal grid will be scaled in each direction.
+	 * @param gridShift	A list of 3 floating values in the range [0,1[ representing a shift within a single cube of the
+	 * 					grid. Thus, to know the shift in absolute numbers, multiply by the inverse grid dimension e.g.
+	 * 					for a grid 5 5 5 with shift 0.5 0.0 0.0 the absolute shift will be (1.0/5.0)*0.5 in x direction.
+	 */
+	void fft_interpolate(
+			std::vector<int> const & newDims,
+			std::vector<double> const & gridShift);
 private:
 
 	int nBnd_;

@@ -160,6 +160,7 @@ ElectronicBands::fft_interpolate(
 		std::vector<int> const & newDims,
 		std::vector<double> const & gridShift)
 {
+	assert( gridShift.size() == 3 );
 	auto fftd = newDims;
 	if ( fftd.size() == 1 )
 	{
@@ -176,6 +177,11 @@ ElectronicBands::fft_interpolate(
 		for ( int id = 0 ; id < 3; ++id)
 			fftd[id] = fftd[id] == 0 ? grid_.get_grid_dim()[id] : fftd[id];
 	}
+	if ( (grid_.get_grid_dim() == fftd) and
+			(    (std::abs(grid_.get_grid_shift()[0]-gridShift[0]) < grid_.get_grid_prec())
+			 and (std::abs(grid_.get_grid_shift()[1]-gridShift[1]) < grid_.get_grid_prec())
+			 and (std::abs(grid_.get_grid_shift()[2]-gridShift[2]) < grid_.get_grid_prec()) ))
+		return;
 
 	std::vector<double> oldData;
 	int nB = this->get_nBnd();

@@ -24,6 +24,8 @@
 #include "IOMethods/ReadVASPWaveFunction.h"
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPPoscar.h"
+#include "IOMethods/VASPInterface.h"
+#include "Algorithms/FFTInterface.h"
 #include <LatticeStructure/RegularSymmetricGrid.h>
 #include "LatticeStructure/Symmetry.h"
 #include "ElectronicStructure/ElectronicBands.h"
@@ -151,7 +153,7 @@ BOOST_AUTO_TEST_CASE( Bands_fft_interpolation )
 	bands.initialize(nB, 0.0, data, grid);
 
 	std::vector<int> griddimsNew{64, 64, 64};
-	std::vector<double> gridshiftNew{0.0, 0.0, 0.0};
+	std::vector<double> gridshiftNew{0.5, 0.5, 0.5};
 	bands.fft_interpolate(griddimsNew, gridshiftNew);
 
 	double diff = 0;
@@ -168,4 +170,54 @@ BOOST_AUTO_TEST_CASE( Bands_fft_interpolation )
 	diff /= griddimsNew[0]*griddimsNew[1]*griddimsNew[2]*nB;
 
 	BOOST_CHECK_SMALL(diff, 1e-6);
+}
+
+BOOST_AUTO_TEST_CASE( fft_interpol_MgB2_vasp )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::ElectronicStructure::ElectronicBands bands;
+	loader->read_band_structure(testd.string(), bands);
+
+	std::vector<int> gridd{32, 32, 32};
+	std::vector<double> gshift{0.0, 0.0, 0.0}; // this is a hexagonal system - non-zero shift breaks the symmetry
+	bands.fft_interpolate(gridd, gshift);
+
+	BOOST_REQUIRE( bands.get_grid().get_grid_dim() == gridd );
+}
+
+BOOST_AUTO_TEST_CASE( fft_interpol_Al_vasp )
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::ElectronicStructure::ElectronicBands bands;
+	loader->read_band_structure(testd.string(), bands);
+
+	std::vector<int> gridd{31, 31, 31};
+	std::vector<double> gshift{0.0, 0.0, 0.0};
+	bands.fft_interpolate(gridd, gshift);
+
+	BOOST_REQUIRE( bands.get_grid().get_grid_dim() == gridd );
 }
