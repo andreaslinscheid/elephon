@@ -21,7 +21,7 @@
 #include <assert.h>
 #include <stdexcept>
 #include <iostream>
-#include <map>
+#include <algorithm>
 
 namespace elephon
 {
@@ -363,8 +363,7 @@ FFTInterface::fft_interpolate(
 		// go in to the frequency representation with + and - frequencies in the input mesh
 		Algorithms::FFTInterface::inplace_to_freq(xyz, gridDimsIn);
 		CT phase1 = CT(1);
-		if ( (std::abs(gridShiftIn[0]) > 1e-6) or (std::abs(gridShiftIn[2]) > 1e-6)
-					or (std::abs(gridShiftIn[2]) > 1e-6) )
+		if (std::abs(*std::max_element(gridShiftIn	.begin(), gridShiftIn.end())) > 1e-6 )
 		{
 			auto sum = 0.0;
 			for ( int id = 0; id < dim ; ++id)
@@ -377,8 +376,7 @@ FFTInterface::fft_interpolate(
 			 continue;
 
 		CT phase2 = CT(1);
-		if ( (std::abs(gridShiftOut[0]) > 1e-6) or (std::abs(gridShiftOut[2]) > 1e-6)
-				or (std::abs(gridShiftOut[2]) > 1e-6) )
+		if (std::abs(*std::max_element(gridShiftOut.begin(), gridShiftOut.end())) > 1e-6 )
 		{
 			auto sum = 0.0;
 			for ( int id = 0; id < dim ; ++id)
@@ -435,8 +433,7 @@ FFTInterface::fft_interpolate(
 		{
 			// recompute phases for the copied Nyquist frequency
 			CT phase1 = CT(1);
-			if ( (std::abs(gridShiftIn[0]) > 1e-6) or (std::abs(gridShiftIn[2]) > 1e-6)
-						or (std::abs(gridShiftIn[2]) > 1e-6) )
+			if (std::abs(*std::max_element(gridShiftIn.begin(), gridShiftIn.end())) > 1e-6 )
 			{
 				auto sum = 0.0;
 				for ( int id = 0; id < dim ; ++id)
@@ -444,8 +441,7 @@ FFTInterface::fft_interpolate(
 				phase1 = std::exp(CT(0,-sum));
 			}
 			CT phase2 = CT(1);
-			if ( (std::abs(gridShiftOut[0]) > 1e-6) or (std::abs(gridShiftOut[2]) > 1e-6)
-					or (std::abs(gridShiftOut[2]) > 1e-6) )
+			if (std::abs(*std::max_element(gridShiftOut.begin(), gridShiftOut.end())) > 1e-6 )
 			{
 				auto sum = 0.0;
 				for ( int id = 0; id < dim ; ++id)
@@ -474,6 +470,51 @@ FFTInterface::fft_interpolate(
 	this->fft_data(gridDimsOut, intermedIn, dataResult, nDataPerGridPt, 1, false, 1);
 }
 
+template<typename T>
+void
+FFTInterface::fft_hessian(
+		std::vector<double> const & latticeMatrix,
+		std::vector<int> const & grid,
+		std::vector< T > const & data,
+		std::vector< T > & hessianOfData,
+		int nDataPerGridPt)
+{
+	typedef typename detail::MakeComplex<T>::type CT;
+
+	int dim = grid.size();
+	int nG = 1;
+	for ( int id = 0 ; id < dim; ++id)
+		nG *= grid[id];
+	assert(nG != 0);
+	assert(latticeMatrix.size() == dim*dim);
+	assert(data.size() == nG*nDataPerGridPt);
+
+	// here we assume x major grid order
+	std::vector<CT> intermedOut;
+	this->fft_data(grid, data, intermedOut, nDataPerGridPt, -1, false, 1);
+
+	std::vector<CT> fftHessian(nDataPerGridPt*nG*dim*dim, CT(0));
+	std::vector<int> xyz(dim);
+	std::vector<double> rvec(dim);
+	for (int ig = 0 ; ig < nG; ++ig )
+	{
+		std::fill(rvec.begin(), rvec.end(), 0.0);
+		cnsq_to_xyz(ig, xyz, grid, false);
+		inplace_to_freq(xyz, grid);
+		for ( int i = 0 ; i < dim ; ++i)
+			for ( int j = 0 ; j < dim ; ++j)
+				rvec[i] += latticeMatrix[i*dim + j]*xyz[j];
+
+		for ( int id = 0 ; id < nDataPerGridPt ; ++id)
+			for ( int i = 0 ; i < dim ; ++i)
+				for ( int j = 0 ; j < dim ; ++j)
+				{
+					int csq = j + dim*(i + dim*(id + nDataPerGridPt*ig));
+					fftHessian[csq] = -intermedOut[ig*nDataPerGridPt+id]*rvec[i]*rvec[j]/CT(nG);
+				}
+	}
+	this->fft_data(grid, fftHessian, hessianOfData, nDataPerGridPt*dim*dim, 1, false, 1);
+}
 
 } /* namespace Algorithms */
 } /* namespace elephon */

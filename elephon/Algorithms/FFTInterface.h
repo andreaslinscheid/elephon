@@ -20,6 +20,7 @@
 #ifndef ELEPHON_ALGORITHMS_FFTINTERFACE_H_
 #define ELEPHON_ALGORITHMS_FFTINTERFACE_H_
 
+#include "LatticeStructure/LatticeModule.h"
 #include <vector>
 #include <complex>
 #include <fftw3.h>
@@ -58,15 +59,51 @@ public:
 			bool dataLayoutRowMajor = false,
 			int hintHowOften = 1);
 
+	/**
+	 * Perform a band-limited Fourier interpolation of data and place it in dataResult.
+	 *
+	 * @param gridDimsIn		Input grid with integer indicating the size, e.g. {5 5}
+	 * @param gridShiftIn		Grid shift in units of the grid devision. Must have the same size as \p gridDimsIn
+	 * @param data				The input data is assumed on the grid \p gridDimsIn shifted by \p gridShiftIn
+	 * 							in dimension nDataPerGridPt, x[, y[,...]] laid out in Column major or Fortran order.
+	 * @param gridDimsOut		The output grid. Must be of the same size as \p gridDimsIn
+	 * @param gridShiftOut		Grid shift in units of the grid devision. Must have the same size as \p gridDimsIn
+	 * @param dataResult		The interpolated \p data. Same data order as input. Will be resized to fit the output.
+	 * @param nDataPerGridPt	The number of data elements per grid point.
+	 */
 	template<typename T>
 	void fft_interpolate(
-	                std::vector<int> const & gridDimsIn,
-					std::vector<double> const & gridShiftIn,
-	                std::vector< T > const & data,
-	                std::vector<int> const & gridDimsOut,
-					std::vector<double> const & gridShiftOut,
-	                std::vector< T > & dataResult,
-	                int nDataPerGridPt);
+			std::vector<int> const & gridDimsIn,
+			std::vector<double> const & gridShiftIn,
+			std::vector< T > const & data,
+			std::vector<int> const & gridDimsOut,
+			std::vector<double> const & gridShiftOut,
+			std::vector< T > & dataResult,
+			int nDataPerGridPt);
+
+	/**
+	 * Compute the second derivative matrix of a data field.
+	 *
+	 * @param latticeMatrix		The basis of the reciprocal space where the field is defined.
+	 * 							Must be a vector of size dimension^2, where 'dimension' is the
+	 * 							size of the vector of parameter \p grid with the basis vectors of size dimension
+	 * 							in fastest running order. Thus in 3D the first vector must be in position 0, 1 and 2.
+	 * @param grid				The number of elements in each dimension x[,y[,z[...]].
+	 * @param data				Vector of size (Prod grid) times \p nDataPerGridPt. Input data, assumed in Column major grid
+	 * 							order such that each block of \p nDataPerGridPt data points are layed out in x fastest order.
+	 * @param hessianOfData		Output data. On output will be a vector of size (Prod grid) times \p nDataPerGridPt times
+	 * 							dim*dim. Will be resized to hold the data. The layout is
+	 * 							[xi,xj,d,grid] where xi and xj enumare the dimension, d the data points per grid value and
+	 * 							grid is the the grid in Column major order.
+	 * @param nDataPerGridPt	Number of data elements per grid point.
+	 */
+	template<typename T>
+	void fft_hessian(
+			std::vector<double> const& latticeMatrix,
+			std::vector<int> const & grid,
+			std::vector< T > const & data,
+			std::vector< T > & hessianOfData,
+			int nDataPerGridPt);
 
 
 	static void inplace_to_freq(int &x, int &y, int &z, int dx, int dy, int dz);
