@@ -20,8 +20,8 @@
 #ifndef ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_
 #define ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_
 
-#include <vector>
 #include "LatticeStructure/RegularSymmetricGrid.h"
+#include <vector>
 
 namespace elephon
 {
@@ -72,6 +72,9 @@ public:
 	std::vector<int> get_bands_crossing_energy_lvls(
 			std::vector<double> const & energies ) const;
 
+	std::vector<int> get_bands_crossing_energy_window(
+			std::vector<double> const & energies ) const;
+
 	int get_nBnd() const;
 
 	int get_nspin() const;
@@ -107,6 +110,13 @@ public:
 	void fft_interpolate(
 			std::vector<int> const & newDims,
 			std::vector<double> const & gridShift);
+
+	/**
+	 * Compute the minimal and maximal value of the band data.
+	 *
+	 * @return	pair of first minimal and second maximal value in eV
+	 */
+	std::pair<double, double> get_min_max() const;
 private:
 
 	int nBnd_;

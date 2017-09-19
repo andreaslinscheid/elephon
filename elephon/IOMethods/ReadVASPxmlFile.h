@@ -32,6 +32,8 @@ class ReadVASPxmlFile
 {
 public:
 
+	bool is_parsed() const;
+
 	void parse_file( std::string filename );
 
 	std::vector<double> const & get_forces() const;
@@ -40,7 +42,14 @@ public:
 
 	double get_Fermi_energy() const;
 
+	std::vector<double> const & get_energies() const;
+
+	int get_nBnd() const;
+
+	int get_nkp() const;
 private:
+
+	int nBnd_ = 0;
 
 	double eFermi_ = 0;
 
@@ -49,6 +58,12 @@ private:
 	std::vector<double> forces_;
 
 	std::vector<double> kpoints_;
+
+	std::vector<double> energies_;
+
+	std::vector<double> latticeMat_;
+
+	std::vector<std::vector<double>> atomicPos_;
 };
 
 } /* namespace IOMethods */

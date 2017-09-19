@@ -64,7 +64,7 @@ public:
 			std::vector< std::vector< std::complex<float> > > & wfctData,
 			std::vector< int > & npwPerKpt);
 
-	std::vector<int> get_max_fft_dims() const;
+	std::vector<int> get_max_fft_dims();
 
 	void compute_fourier_map(
 			std::vector<double> const & kpts,
@@ -95,7 +95,7 @@ public:
 	void read_kpt_sampling(
 			std::string root_directory,
 			std::vector<int> & kptSampling,
-			std::vector<double> & shifts) const;
+			std::vector<double> & shifts);
 
 	void read_band_structure(
 			std::string root_directory,
@@ -107,6 +107,10 @@ public:
 			int & nkptsIrred,
 			std::vector<double> & energies,
 			double & fermiEnergy);
+
+	void read_nBnd(
+			std::string root_directory,
+			int & nBnd);
 
 private:
 

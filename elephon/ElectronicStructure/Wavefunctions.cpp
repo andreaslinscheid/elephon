@@ -36,6 +36,8 @@ Wavefunctions::initialize( LatticeStructure::RegularSymmetricGrid kgrid,
 	wfctInterface_ = wfctInterface;
 	rootDir_ = wfctInterface_->get_optns().get_root_dir();
 	grid_ = std::move(kgrid);
+
+	wfctInterface_->read_nBnd(rootDir_, nBnd_);
 }
 
 void
@@ -57,6 +59,8 @@ Wavefunctions::initialize(
 			lattice,
 			atoms,
 			sym);
+
+	wfctInterface_->read_nBnd(rootDir_, nBnd_);
 }
 
 void

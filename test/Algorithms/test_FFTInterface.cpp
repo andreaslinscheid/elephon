@@ -351,7 +351,6 @@ BOOST_AUTO_TEST_CASE( fft_hessian_3D_cos )
 
 BOOST_AUTO_TEST_CASE( fft_hessian_3D_cos_non_cubic_cell )
 {
-	// this is the fcc to cubic lattice matrix
 	std::vector<double> latticeMatrix{	1.000000, 1.000000, 0.000000,
 									   -1.000000, 1.000000, 0.000000,
 										0.000000, 0.000000, 1.000000 };
@@ -402,8 +401,6 @@ BOOST_AUTO_TEST_CASE( fft_hessian_3D_cos_non_cubic_cell )
 								((igr == 0)&&(jgr == 0) ? - std::cos(x) : 0.0) +
 								((igr == 1)&&(jgr == 1) ? - std::cos(y) : 0.0) +
 								((igr == 2)&&(jgr == 2) ? - std::cos(z) : 0.0)  ) );
-if ( (k == 0) and (j == 0) )
-std::cout << i<<'\t'<< dataOut[0+D*(0+D*cnsq)] << '\t'<< - std::cos(x) << std::endl;
 			}
 	BOOST_CHECK_SMALL( diff/nG/std::pow(D,2) , 1e-6);
 }

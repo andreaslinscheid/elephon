@@ -124,6 +124,14 @@ public:
 			double * rwork,
 			int lwork, int* iwork  );
 
+	int call_syev(
+			char jobz, char uplo, int n, double * a, int lda, double * w,
+			int matrix_layout = CblasRowMajor);
+
+	int call_syev(
+			char jobz, char uplo, int n, float * a, int lda, float * w,
+			int matrix_layout = CblasRowMajor);
+
 	void clear_buffer();
 private:
 

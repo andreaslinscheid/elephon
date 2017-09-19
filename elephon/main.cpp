@@ -19,6 +19,7 @@
 #include "IOMethods/Input.h"
 #include "ElectronicStructure/LocalDensityOfStates.h"
 #include "IOMethods/ChooseInterface.h"
+#include "ElectronicStructure/BandStructureAnalysis.h"
 
 using namespace elephon;
 
@@ -37,6 +38,9 @@ int main(int argc, char* argv[])
 		ldos.compute_ldos(options.get_eldos(), dataLoader);
 		ldos.write_file(options.get_f_ldos());
 	}
+
+	// do auxiliary analysis of the band structure if desired ...
+	ElectronicStructure::BandStructureAnalysis::do_band_structure_analysis(dataLoader);
 
     return 0;
 }

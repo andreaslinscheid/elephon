@@ -19,6 +19,7 @@
 
 #include "VASPInterface.h"
 #include "IOMethods/InputFile.h"
+#include "IOMethods/ReadVASPxmlFile.h"
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <map>
@@ -123,7 +124,7 @@ VASPInterface::compute_fourier_map(
 }
 
 std::vector<int>
-VASPInterface::get_max_fft_dims() const
+VASPInterface::get_max_fft_dims()
 {
 	return wfcReader_.get_fft_max_dims();
 }
@@ -159,7 +160,7 @@ VASPInterface::read_cell_paramters(
 		wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
 		irreducibleKPoints = wfcReader_.get_k_points();
 	}
-	else
+	else if ( boost::filesystem::exists( rootdir / "vasprun.xml" ) )
 	{
 		xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
 		irreducibleKPoints = xmlReader_.get_k_points();
@@ -244,6 +245,25 @@ VASPInterface::read_band_structure(
 }
 
 void
+VASPInterface::read_nBnd(
+		std::string root_directory,
+		int & nBnd)
+{
+	boost::filesystem::path rootdir(root_directory);
+	// this information is either in the wavecar or in the vasprun.xml
+	if ( boost::filesystem::exists( rootdir / "WAVECAR" ) )
+	{
+		wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
+		nBnd = wfcReader_.get_num_bands();
+	}
+	else if ( boost::filesystem::exists( rootdir / "vasprun.xml" ) )
+	{
+		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+		nBnd = xmlReader_.get_nBnd();
+	}
+}
+
+void
 VASPInterface::read_electronic_structure(
 		std::string root_directory,
 		int & nBnd,
@@ -255,11 +275,10 @@ VASPInterface::read_electronic_structure(
 	xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
 	fermiEnergy = xmlReader_.get_Fermi_energy();
 
-	wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
-	energies = wfcReader_.get_energies();
+	energies = xmlReader_.get_energies();
 
-	nBnd = wfcReader_.get_num_bands();
-	nkptsIrred = wfcReader_.get_num_kpts();
+	nBnd = xmlReader_.get_nBnd();
+	nkptsIrred = xmlReader_.get_nkp();
 }
 
 
@@ -404,7 +423,7 @@ void VASPInterface::modify_incar_file(std::string filename,
 void VASPInterface::read_kpt_sampling(
 		std::string root_directory,
 		std::vector<int> & kptSampling,
-		std::vector<double> & shifts) const
+		std::vector<double> & shifts)
 {
 	boost::filesystem::path root(root_directory);
 	auto filename = (root / "KPOINTS").string();

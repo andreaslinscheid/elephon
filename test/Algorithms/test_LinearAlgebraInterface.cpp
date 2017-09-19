@@ -58,6 +58,31 @@ BOOST_AUTO_TEST_CASE( Diagonalization )
 		BOOST_CHECK_CLOSE( refEVal[i], resultEVal[i], 0.000001 );
 }
 
+BOOST_AUTO_TEST_CASE( Diagonalization_sym_real )
+{
+	//Reproduce numpy
+	std::vector<double> A{	1.0,  1.0, 0.0,
+							1.0, -1.0, 0.0,
+							0.0,  0.0, 1.0 };
+	for ( auto &a : A)
+		a /= std::sqrt(2);
+	auto EV = A;
+	std::vector<double> refEVal{-1.0, 1.0/std::sqrt(2), 1.0};
+
+	elephon::Algorithms::LinearAlgebraInterface linalg;
+	std::vector<double> resultEVal(3);
+	linalg.call_syev( 'V', 'U', 3, EV.data(), 3, resultEVal.data());
+	for ( int i = 0 ; i < resultEVal.size(); ++i )
+		BOOST_CHECK_CLOSE( refEVal[i], resultEVal[i], 0.000001 );
+
+	// check that the eigenvector is correctly taken
+	for ( int i = 0 ; i < resultEVal.size(); ++i )
+	{
+		double v = A[i*3 + 0]*EV[0*3 + i] + A[i*3 + 1]*EV[1*3 + i] + A[i*3 + 2]*EV[2*3 + i];
+		BOOST_CHECK_CLOSE( v, resultEVal[i]*EV[i*3 + i], 0.000001 );
+	}
+}
+
 BOOST_AUTO_TEST_CASE( Pseudo_Inverse )
 {
 	//Reproduce numpy

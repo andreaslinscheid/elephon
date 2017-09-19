@@ -21,6 +21,7 @@
 #define TEST_FIXTURES_DATALOADER_H_
 
 #include "IOMethods/VASPInterface.h"
+#include "ElectronicStructure/ElectronicBands.h"
 #include <string>
 #include <memory>
 
@@ -41,6 +42,10 @@ public:
 		load_unit_cell(		std::string const & contentInputFile,
 							std::string fileName = std::string()) const;
 
+	elephon::ElectronicStructure::ElectronicBands
+		create_symmetric_cosine_model(
+				std::vector<int> griddims,
+				std::vector<double> gridshift) const;
 private:
 
 	void process_fileName(std::string & fileName ) const;

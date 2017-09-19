@@ -110,8 +110,7 @@ ElectronicBands::generate_reducible_grid_bands(
 		redIndices[i] = i;
 
 	grid_.convert_reducible_irreducible( redIndices, irredIndices );
-	if ( bands.size() != bIndices.size()*redIndices.size() )
-		bands = std::vector<double>(bIndices.size()*redIndices.size());
+	bands.resize(bIndices.size()*redIndices.size());
 	int nBRequest = static_cast<int>(bIndices.size());
 	for ( int ired = 0 ; ired < grid_.get_np_red(); ++ired )
 		for ( int i = 0 ; i < nBRequest; ++i )
@@ -140,6 +139,22 @@ ElectronicBands::get_bands_crossing_energy_lvls(
 				}
 		}
 	return std::vector<int>(bandset.begin(),bandset.end());
+}
+
+std::vector<int>
+ElectronicBands::get_bands_crossing_energy_window(
+		std::vector<double> const & energies ) const
+{
+	assert( energies.size() == 2 );
+	std::vector<int> bandset;
+	for ( int ib = 0 ; ib < nBnd_; ++ib )
+		for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik )
+			if ( (dataIrred_[ik*nBnd_ + ib] >= energies[0]) and (dataIrred_[ik*nBnd_ + ib] <= energies[1]) )
+			{
+				bandset.push_back(ib);
+				break;
+			}
+	return bandset;
 }
 
 LatticeStructure::RegularSymmetricGrid const &
@@ -216,6 +231,15 @@ ElectronicBands::fft_interpolate(
 				   newGrid);
 }
 
+std::pair<double, double>
+ElectronicBands::get_min_max() const
+{
+	if ( dataIrred_.empty() )
+		return std::make_pair(0.0, 0.0);
+	auto mm = std::minmax_element(dataIrred_.begin(), dataIrred_.end());
+
+	return std::make_pair(*mm.first, *mm.second);
+}
 
 } /* namespace ElectronicStructure */
 } /* namespace elephon */

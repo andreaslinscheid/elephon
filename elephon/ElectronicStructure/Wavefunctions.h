@@ -21,10 +21,10 @@
 #define ELEPHON_ELECTRONICSTRUCTURE_WAVEFUNCTIONS_H_
 
 #include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "LatticeStructure/RegularSymmetricGrid.h"
 #include <vector>
 #include <complex>
 #include <memory>
-#include "LatticeStructure/RegularSymmetricGrid.h"
 
 namespace elephon
 {
@@ -86,7 +86,7 @@ private:
 		double kpG_[3] = {0,0,0};
 	} KPlusGVector;
 
-	int nBnd_;
+	int nBnd_ = -1;
 
 	std::string rootDir_;
 

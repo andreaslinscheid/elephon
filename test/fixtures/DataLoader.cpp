@@ -68,6 +68,49 @@ DataLoader::load_unit_cell(		std::string const & contentInputFile,
 	return uc;
 }
 
+elephon::ElectronicStructure::ElectronicBands
+DataLoader::create_symmetric_cosine_model(
+		std::vector<int> griddims,
+		std::vector<double> gridshift) const
+{
+	int nB = 2;
+
+	std::vector<double> data(nB*griddims[2]*griddims[1]*griddims[0]);
+	for ( int iz = 0 ; iz < griddims[2]; ++iz )
+		for ( int iy = 0 ; iy < griddims[1]; ++iy )
+			for ( int ix = 0 ; ix < griddims[0]; ++ix )
+			{
+				int cnsq = ix + griddims[0]*(iy + griddims[1]*iz);
+				data[cnsq*nB+0] = std::cos((2*M_PI/griddims[0])*(ix+gridshift[0]))
+								 +std::cos((2*M_PI/griddims[1])*(iy+gridshift[1]));
+
+				data[cnsq*nB+1] = std::cos((2*M_PI/griddims[2])*(iz+gridshift[2]));
+			}
+
+	elephon::ElectronicStructure::ElectronicBands bands;
+	elephon::LatticeStructure::Symmetry sym;
+	std::vector<int> symops{ 	1,  0,  0,  0,  1,  0,  0,  0,  1, // identity
+							   -1,  0,  0,  0, -1,  0,  0,  0, -1, // inversion
+								0,  1,  0, -1,  0,  0,  0,  0,  1, // rotation 90deg
+								0, -1,  0,  1,  0,  0,  0,  0,  1, // rotation -90deg
+								0, -1,  0,  1,  0,  0,  0,  0, -1, // rotation 90deg + inv
+								0,  1,  0, -1,  0,  0,  0,  0, -1, // rotation 90deg + inv
+								1,  0,  0,  0,  1,  0,  0,  0, -1,
+							   -1,  0,  0,  0, -1,  0,  0,  0,  1,};// rotation 180 deg
+	std::vector<double> frac(symops.size()/3, 0.0);
+	sym.initialize(1e-6, symops, frac, elephon::LatticeStructure::LatticeModule(), true);
+	sym.set_reciprocal_space_sym();
+	elephon::LatticeStructure::RegularSymmetricGrid grid;
+	grid.initialize(
+			griddims,
+			1e-6,
+			gridshift,
+			sym,
+			elephon::LatticeStructure::LatticeModule());
+	bands.initialize(nB, 0.0, data, grid);
+	return bands;
+}
+
 void
 DataLoader::process_fileName(std::string & fileName ) const
 {

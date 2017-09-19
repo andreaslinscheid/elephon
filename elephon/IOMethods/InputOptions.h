@@ -136,6 +136,40 @@ class InputOptions : public InputBase<InputOptions>
 			"0.0 0.0 0.0",
 			{0.0 COMMA_SUBSTITUTION 0.0 COMMA_SUBSTITUTION 0.0},
 			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			f_mtens,
+			"If this string is set, the code will compute and print the mass tensor at band extrema to this file.\n"
+			"The file is binary and contains 16 floats per band extrema. Per extrema, the code prints:\n"
+			"\t1.) '+/-1.0', is the flag for minima (<0) or maxima (>0)\n"
+			"\t2.) '<integer as float>', is the band index starting to count from 0\n"
+			"\t3.) '<3 floats>', the k location of the maximum in the first BZ in units of the reciprocal lattice\n"
+			"\t4.) '3x<1+3 floats>', 3 combinations of (eigenvalue plus eigenvector;"
+			"3 components in units of the reciprocal lattice) in ascending order of the eigenvalue\n\n"
+			"Only symmetry non-equivalent extrema are recognized\n"
+			"",
+			"",
+			"",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			ewinbnd,
+			"Energy window for the band structure. Only bands will be considered that cross this energy window in "
+			"some points of the unit cell.\n"
+			"Must be empty or a list of 2 floats representing the lower and upper limit in eV, respectively.",
+			" <empty> ",
+			{ },
+			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			dmeth,
+			"string that sets the way the code computes derivatives of the band structure.\n"
+			"Methods are 'fft' or 'pol'. fft requires the bands to be ordered by continuity and not by energy.\n"
+			"Currently, this ordering is not implemented.\n"
+			"pol perform a local least square fit to a quadratic polynomial using nearest and next nearest neighbor points.",
+			"pol",
+			"pol",
+			std::string);
 };
 
 } /* namespace IOMethods */

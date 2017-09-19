@@ -465,6 +465,8 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 	test::fixtures::MockStartup ms;
 	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
 
+	boost::filesystem::remove( (phonyDir / "WAVECAR") );
+
 	elephon::IOMethods::InputOptions opts;
 	ms.simulate_elephon_input((phonyDir/"infile").string(),"\n",opts);
 
@@ -603,6 +605,8 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 	//We start by reading parameters of other files in this directory for lattice matrices and kpoints
 	test::fixtures::MockStartup ms;
 	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
+
+	boost::filesystem::remove( (phonyDir / "WAVECAR") );
 
 	std::string input = std::string()+
 			"root_dir = "+phonyDir.string()+"\n";

@@ -206,11 +206,17 @@ FFTInterface::fft_sparse_data(
 
 		if ( converterBkwd.complex_to_real )
 			if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
-				throw std::runtime_error(
-						std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
-						+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) +
-						" on average per data point");
-
+			{
+				auto realIne = decltype(converterBkwd.imagAccumalate)(0);
+				for (int id = 0 ; id < nDataPerGridPt; ++id)
+					for (int ig = 0 ; ig < ngrid; ++ig)
+						realIne += std::real(dataResult [ id*ngrid + ig]);
+				if ( std::abs(converterBkwd.imagAccumalate)/std::abs(realIne) > 1e-6 )
+					throw std::runtime_error(
+							std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
+							+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) +
+							" on average per data point");
+			}
 	};
 
 	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
@@ -255,9 +261,17 @@ FFTInterface::fill_result(int ngrid, int nDataPerGridPt, std::vector<TR> & dataR
 		}
 	if ( converterBkwd.complex_to_real )
 		if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
-			throw std::runtime_error(
-					std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
-					+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) + " on average per data point");
+		{
+			auto realIne = decltype(converterBkwd.imagAccumalate)(0);
+			for (int id = 0 ; id < nDataPerGridPt; ++id)
+				for (int ig = 0 ; ig < ngrid; ++ig)
+					realIne += std::real(dataResult [ id*ngrid + ig]);
+			if ( std::abs(converterBkwd.imagAccumalate)/std::abs(realIne) > 1e-6 )
+				throw std::runtime_error(
+						std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
+						+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) +
+						" on average per data point");
+		}
 };
 
 template<typename TI, typename TR>

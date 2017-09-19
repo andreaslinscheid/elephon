@@ -59,7 +59,7 @@ public:
 	virtual std::map<std::string,std::string>
 			options_scf_supercell_no_wfctns_no_relax() const = 0;
 
-	virtual std::vector<int> get_max_fft_dims() const = 0;
+	virtual std::vector<int> get_max_fft_dims() = 0;
 
 	virtual void read_wavefunctions(
 			std::string root_directory,
@@ -102,7 +102,11 @@ public:
 	virtual void read_kpt_sampling(
 			std::string root_directory,
 			std::vector<int> & kptSampling,
-			std::vector<double> & shifts) const = 0;
+			std::vector<double> & shifts) = 0;
+
+	virtual void read_nBnd(
+			std::string root_directory,
+			int & nBnd) = 0;
 
 	std::vector<std::string> gen_input_file_list( std::string directory ) const;
 

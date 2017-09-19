@@ -119,6 +119,18 @@ LinearAlgebraInterface::call_gesdd(
 	return LAPACKE_dgesdd_work( matrix_order, jobz, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork, iwork );
 }
 
+int
+LinearAlgebraInterface::call_syev(char jobz, char uplo, int n, double * a, int lda, double * w, int matrix_layout)
+{
+	return LAPACKE_dsyev(matrix_layout, jobz, uplo, n, a, lda, w);
+}
+
+int
+LinearAlgebraInterface::call_syev(char jobz, char uplo, int n, float * a, int lda, float * w, int matrix_layout)
+{
+	return LAPACKE_ssyev(matrix_layout, jobz, uplo, n, a, lda, w);
+}
+
 void
 LinearAlgebraInterface::check_library_info(int returnCode, std::string const & calledByWhat ) const
 {

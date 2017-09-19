@@ -40,10 +40,12 @@ public:
 	using RegularBareGrid::get_vector_direct;
 	using RegularBareGrid::get_grid_prec;
 	using RegularBareGrid::get_xyz_to_reducible;
+	using RegularBareGrid::get_reducible_to_xyz;
 	using RegularBareGrid::get_grid_dim;
 	using RegularBareGrid::get_grid_shift;
 	using RegularBareGrid::compute_grid_cubes_surrounding_nongrid_points;
 	using RegularBareGrid::get_lattice;
+	using RegularBareGrid::get_list_reducible_lattice_point_indices;
 
 	RegularBareGrid view_bare_grid() const;
 
