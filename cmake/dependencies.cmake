@@ -11,12 +11,12 @@ list(APPEND elephon_LD_LIBS  ${subdirlist} ${subdirlist} ${subdirlist})
 list(APPEND elephon_INCLUDE ${elephon_src_tree})
 
 # BOOST
-find_package(Boost 1.36.0 COMPONENTS program_options unit_test_framework regex filesystem system REQUIRED)
+find_package(Boost COMPONENTS program_options unit_test_framework regex filesystem system REQUIRED)
 list(APPEND elephon_LD_LIBS ${Boost_LIBRARIES} )
 list(APPEND elephon_INCLUDE ${Boost_INCLUDE_DIRS})
 
 # VTK 
-find_package(VTK 6.0 REQUIRED NO_MODULE)
+find_package(VTK REQUIRED NO_MODULE)
 include( ${VTK_USE_FILE} )
 list(APPEND elephon_LD_LIBS ${VTK_LIBRARIES} )
 
