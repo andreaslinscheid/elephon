@@ -18,10 +18,6 @@ find_package( FFTW3 )
 list(APPEND elephon_INCLUDE ${FFTW3_INCLUDES})
 list(APPEND elephon_LD_LIBS ${FFTW3_LIBRARIES})
 
-# LAPACKE
-find_package( LAPACKE REQUIRED )
-list(APPEND elephon_LD_LIBS ${LAPACKE_LIBRARIES} )
-
 # BLAS
 if(NOT APPLE)
   set(BLAS "Atlas" CACHE STRING "Selected BLAS library")
