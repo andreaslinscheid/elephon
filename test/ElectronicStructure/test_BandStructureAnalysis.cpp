@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor )
 	bands.initialize(1, 0.0, bandData, grid);
 
 	ElectronicStructure::BandStructureAnalysis::write_mass_tensor_file(
-			massTens.string(), bands, std::vector<double>{0.0, 0.0}, 0);
+			massTens.string(), bands, 0, std::vector<double>{-4.0, 4.0}, 0);
 
 	BOOST_REQUIRE(boost::filesystem::exists(massTens));
 
@@ -68,26 +68,35 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor )
 	file.read(&buf[0], size);
 
 	// there is one maximum and one minimum in the first unit cell
-	BOOST_REQUIRE_EQUAL( size/sizeof(float), 17*2 );
+	BOOST_REQUIRE_EQUAL( size/sizeof(float), 18*2 );
 
+	int c = 0;
 	auto ptr = reinterpret_cast<float*>(buf.data());
-	BOOST_CHECK_EQUAL(ptr[ 0], 1); // maximum
-	BOOST_CHECK_EQUAL(ptr[ 1], 0); // band 1
-	BOOST_CHECK_EQUAL(ptr[ 2], 0.0); // kx = 0.0
-	BOOST_CHECK_EQUAL(ptr[ 3], 0.0); // ky = 0.0
-	BOOST_CHECK_EQUAL(ptr[ 4], 0.0); // kz = 0.0
-	BOOST_CHECK_SMALL(ptr[ 5]-(-1), 1e-3f); // eigenvalues, eigenvectors are degenerate and arbitrary
-	BOOST_CHECK_SMALL(ptr[ 9]-(-1), 1e-3f); //
-	BOOST_CHECK_SMALL(ptr[13]-(-1), 1e-3f); //
+	BOOST_CHECK_EQUAL(ptr[c++], 1); // maximum
+	BOOST_CHECK_EQUAL(ptr[c++], 0); // band 1
+	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kx = 0.0
+	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // ky = 0.0
+	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kz = 0.0
+	BOOST_CHECK_EQUAL(ptr[c++], 3.0); // energy maxium
+	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-3f); // eigenvalues, eigenvectors are degenerate and arbitrary
+	c += 3;
+	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-3f); //
+	c += 3;
+	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-3f); //
+	c += 3;
 
-	BOOST_CHECK_EQUAL(ptr[17],-1); // minimum
-	BOOST_CHECK_EQUAL(ptr[18], 0); // band 1
-	BOOST_CHECK_EQUAL(ptr[19],-0.5); // kx =-0.5
-	BOOST_CHECK_EQUAL(ptr[20],-0.5); // ky =-0.5
-	BOOST_CHECK_EQUAL(ptr[21],-0.5); // kz =-0.5
-	BOOST_CHECK_SMALL(ptr[22]-1, 1e-3f); // eigenvalues, eigenvectors are degenerate and arbitrary
-	BOOST_CHECK_SMALL(ptr[26]-1, 1e-3f); //
-	BOOST_CHECK_SMALL(ptr[30]-1, 1e-3f); //
+	BOOST_CHECK_EQUAL(ptr[c++],-1); // minimum
+	BOOST_CHECK_EQUAL(ptr[c++], 0); // band 1
+	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kx =-0.5
+	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // ky =-0.5
+	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kz =-0.5
+	BOOST_CHECK_EQUAL(ptr[c++],-3.0); // energy maxium
+	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-3f); // eigenvalues, eigenvectors are degenerate and arbitrary
+	c += 3;
+	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-3f); //
+	c += 3;
+	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-3f); //
+	c += 3;
 }
 
 BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
@@ -131,7 +140,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	bands.initialize(1, 0.0, data, kgrid);
 
 	ElectronicStructure::BandStructureAnalysis::write_mass_tensor_file(
-			massTens.string(), bands, std::vector<double>{0.0, 0.0}, 0);
+			massTens.string(), bands, 0, std::vector<double>{-4.0, 4.0}, 0);
 
 	BOOST_REQUIRE(boost::filesystem::exists(massTens));
 
@@ -149,7 +158,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	file.read(&buf[0], size);
 
 	// there are 2 maxima and 2 minima in the first unit cell
-	BOOST_REQUIRE_EQUAL( size/sizeof(float), 17*4 );
+	BOOST_REQUIRE_EQUAL( size/sizeof(float), 18*4 );
 
 	int c = 0;
 	auto ptr = reinterpret_cast<float*>(buf.data());
@@ -158,6 +167,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kx = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // ky = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kz = 0.0
+	BOOST_CHECK_EQUAL(ptr[c++], 3.0); // energy maxium
 	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-2f); // eigenvalues, eigenvectors are degenerate and arbitrary
 	c += 3;
 	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-2f); //
@@ -170,6 +180,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kx =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // ky =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kz = 0.0
+	BOOST_CHECK_EQUAL(ptr[c++], 3.0); // energy maxium
 	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-2f);
 	c += 3;
 	BOOST_CHECK_SMALL(ptr[c++]-(-1), 1e-2f);
@@ -182,6 +193,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kx =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // ky = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kz =-0.5
+	BOOST_CHECK_EQUAL(ptr[c++],-3.0); // energy maxium
 	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-2f);
 	c += 3;
 	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-2f);
@@ -194,6 +206,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kx = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // ky =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kz =-0.5
+	BOOST_CHECK_EQUAL(ptr[c++],-3.0); // energy maxium
 	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-2f);
 	c += 3;
 	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-2f);

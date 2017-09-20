@@ -37,11 +37,16 @@ namespace BandStructureAnalysis
  * A type to hold a single band extrema containing a band index
  * and the k point location in the Brillouin zone.
  */
-typedef std::pair<int, std::vector<double>> b_extrema;
+typedef struct {
+	int ibnd;
+	std::vector<double> k;
+	double energy;
+} b_extrema;
 
 void write_mass_tensor_file(
 		std::string const & filename,
 		ElectronicBands const & bands,
+		int startBand,
 		std::vector<double> const & energyWindow,
 		int method);
 

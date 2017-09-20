@@ -20,6 +20,7 @@
 #ifndef ELEPHON_IOMETHODS_READVASPXMLFILE_H_
 #define ELEPHON_IOMETHODS_READVASPXMLFILE_H_
 
+#include "LatticeStructure/Atom.h"
 #include <vector>
 #include <string>
 
@@ -47,6 +48,10 @@ public:
 	int get_nBnd() const;
 
 	int get_nkp() const;
+
+	std::vector<double> const & get_lattice_matrix() const;
+
+	std::vector<LatticeStructure::Atom> const & get_atoms_list() const;
 private:
 
 	int nBnd_ = 0;
@@ -63,7 +68,7 @@ private:
 
 	std::vector<double> latticeMat_;
 
-	std::vector<std::vector<double>> atomicPos_;
+	std::vector<LatticeStructure::Atom> atoms_;
 };
 
 } /* namespace IOMethods */

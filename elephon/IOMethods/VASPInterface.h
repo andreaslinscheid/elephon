@@ -26,6 +26,7 @@
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPWaveFunction.h"
 #include "IOMethods/ReadVASPxmlFile.h"
+#include "LatticeStructure/Atom.h"
 #include <vector>
 #include <map>
 #include "ReadVASPLocpot.h"
@@ -107,6 +108,10 @@ public:
 			int & nkptsIrred,
 			std::vector<double> & energies,
 			double & fermiEnergy);
+
+	void read_atoms_list(
+			std::string root_directory,
+			std::vector<LatticeStructure::Atom> & atoms);
 
 	void read_nBnd(
 			std::string root_directory,

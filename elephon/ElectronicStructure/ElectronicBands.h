@@ -112,6 +112,24 @@ public:
 			std::vector<double> const & gridShift);
 
 	/**
+	 * Generate a new object with FFT interpolated data of selected bands.
+	 *
+	 * @param startBnD	relative new first band. Must be >= 0.
+	 * @param endBnd	one past the relative new last band. Must be > \p startBnD and <= this->get_nBnd() .
+	 * @param newDims	1) A list of 3 positive numbers representing the new grid dimension. If a dimension is '0'
+	 * 						the number will be replaced by the internal grid number (i.e. remains unchanged).
+	 * 					2) A single positive number in which case the internal grid will be scaled in each direction.
+	 * @param gridShift	A list of 3 floating values in the range [0,1[ representing a shift within a single cube of the
+	 * 					grid. Thus, to know the shift in absolute numbers, multiply by the inverse grid dimension e.g.
+	 * 					for a grid 5 5 5 with shift 0.5 0.0 0.0 the absolute shift will be (1.0/5.0)*0.5 in x direction.
+	 * @return A new band object with interpolated data.
+	 */
+	ElectronicBands fft_interpolate_part(
+			int startBnD, int endBnd,
+			std::vector<int> const & newDims,
+			std::vector<double> const & gridShift) const;
+
+	/**
 	 * Compute the minimal and maximal value of the band data.
 	 *
 	 * @return	pair of first minimal and second maximal value in eV

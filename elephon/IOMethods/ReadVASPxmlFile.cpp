@@ -21,8 +21,10 @@
 #include <boost/foreach.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/optional/optional.hpp>
 #include <algorithm>
 #include <iostream>
+#include <map>
 
 namespace elephon
 {
@@ -50,8 +52,23 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	boost::property_tree::ptree pt;
 	read_xml(file, pt);
 
-	latticeMat_.clear();
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.calculation.structure.crystal") )
+	// at this point we determine the last modeling.calculation node, where the data
+	// will be read from
+	auto calculationLeaf = pt.get_child("modeling");
+	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling") )
+	{
+	    if(val.first == "calculation")
+	    {
+	    	boost::optional< const ptree& > child = val.second.get_child_optional("eigenvalues");
+	    	if ( child )
+	    		calculationLeaf = val.second;
+	    }
+	}
+	if ( calculationLeaf == pt.get_child("modeling"))
+		throw std::runtime_error("Could not locate the caluclation with the eigenvalues in vasprun.xml");
+
+	std::vector<double> lmat;
+	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf.get_child("structure.crystal") )
 	{
 	    if(val.first == "varray")
 	    {
@@ -67,17 +84,22 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	        			for ( int i = 0 ; i < 3 ; ++i)
 	        			{
 	        				ss >> tmp;
-	        				latticeMat_.push_back( tmp );
+	        				lmat.push_back( tmp );
 	        			}
 	        		}
 				}
-	        	if ( latticeMat_.size() != 9 )
+	        	if ( lmat.size() != 9 )
 	        		throw std::runtime_error("Problem reading lattice matrix - size incorrect");
 	        }
 	    }
 	}
+	latticeMat_.resize(9);
+	for ( int  i = 0 ; i < 3 ; ++i)
+		for ( int  j = 0 ; j < 3 ; ++j)
+			latticeMat_[i*3+j] = lmat[j*3+i];
 
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.calculation.structure") )
+	std::vector<std::vector<double>> atomicPos;
+	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf.get_child("structure") )
 	{
 	    if(val.first == "varray")
 	    {
@@ -92,16 +114,62 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						std::stringstream ss( val2.second.data() );
 						for ( int i = 0 ; i < 3 ; ++i)
 							ss >> p[i];
-						atomicPos_.push_back( std::move(p) );
+						atomicPos.push_back( std::move(p) );
 					}
 				}
 			}
 	    }
 	}
+	std::map<int,std::vector<std::string>> typeInfo;
+	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.atominfo") )
+	{
+	    if(val.first == "array")
+	    	if(val.second.get_child("<xmlattr>.name").data().compare("atomtypes") == 0 )
+	    	{
+	    		int c = 0;
+				BOOST_FOREACH( ptree::value_type const& val2, val.second.get_child("set") )
+				{
+					if ( val2.first == "rc" )
+					{
+						c++;
+						BOOST_FOREACH( ptree::value_type const& val3, val2.second )
+						{
+							if ( val3.first == "c" )
+								typeInfo[c].push_back(val3.second.data());
+						}
+					}
+				}
+	    	}
+	}
+	atoms_.clear();
+	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.atominfo") )
+	{
+	    if(val.first == "array")
+	    	if(val.second.get_child("<xmlattr>.name").data().compare("atoms") == 0 )
+	    	{
+				BOOST_FOREACH( ptree::value_type const& val2, val.second.get_child("set") )
+				{
+					if ( val2.first == "rc" )
+					{
+			    		std::vector<std::string> atomInfo;
+						BOOST_FOREACH( ptree::value_type const& val3, val2.second )
+						{
+							if ( val3.first == "c" )
+								atomInfo.push_back(val3.second.data());
+						}
+						if (atomInfo.size() != 2)
+							throw std::runtime_error("Problem parsing atominfo from vasprun.xml");
+						int type = std::stoi(atomInfo[1]);
+						int numAtom = atoms_.size();
+						atoms_.push_back( LatticeStructure::Atom(atomInfo[0], atomicPos[numAtom], {false, false, false}, 1e-6) );
+					}
+				}
+	    	}
+	}
 
 	std::vector<double> newForces;
 	std::vector<double> newEV;
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.calculation") )
+	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf )
 	{
 	    if(val.first == "varray")
 	    {
@@ -171,7 +239,7 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	energies_.clear();
 	nBnd_ = 0;
 	int nkp = kpoints_.size()/3;
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.calculation.eigenvalues.array.set") )
+	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf.get_child("eigenvalues.array.set") )
 	{
 	    if(val.first == "set")
 	    {
@@ -251,6 +319,18 @@ int
 ReadVASPxmlFile::get_nkp() const
 {
 	return kpoints_.size()/3;
+}
+
+std::vector<double> const &
+ReadVASPxmlFile::get_lattice_matrix() const
+{
+	return latticeMat_;
+}
+
+std::vector<LatticeStructure::Atom> const &
+ReadVASPxmlFile::get_atoms_list() const
+{
+	return atoms_;
 }
 
 } /* namespace IOMethods */

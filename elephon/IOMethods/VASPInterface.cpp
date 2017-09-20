@@ -26,6 +26,7 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
+#include <stdexcept>
 
 namespace elephon
 {
@@ -138,11 +139,11 @@ VASPInterface::read_cell_paramters(
 		std::vector<LatticeStructure::Atom> & atoms,
 		LatticeStructure::Symmetry & symmetry)
 {
-	this->check_open_poscar(root_directory);
-	lattice.initialize( posReader_.get_lattice_matrix() );
-	atoms = posReader_.get_atoms_list();
+	boost::filesystem::path rootdir(root_directory);
+	this->read_lattice_structure(root_directory, lattice);
+	this->read_atoms_list(root_directory, atoms);
 	if ( symReader_.get_symmetries().empty() )
-		symReader_.read_file( (boost::filesystem::path(root_directory) / "OUTCAR").string() );
+		symReader_.read_file( (rootdir / "OUTCAR").string() );
 	symmetry.initialize( symPrec, symReader_.get_symmetries(),
 			symReader_.get_fractionTranslations(), lattice, symReader_.get_time_revesal_symmetry() );
 
@@ -153,7 +154,6 @@ VASPInterface::read_cell_paramters(
 	LatticeStructure::Symmetry kpointSymmetry = symmetry;
 
 	//make sure that the irreducible zone of elephon and VASP agree
-	boost::filesystem::path rootdir(root_directory);
 	std::vector<double> irreducibleKPoints;
 	if ( boost::filesystem::exists( rootdir / "WAVECAR" ) )
 	{
@@ -175,8 +175,51 @@ VASPInterface::read_lattice_structure(
 		std::string root_directory,
 		LatticeStructure::LatticeModule & lattice)
 {
-	this->check_open_poscar(root_directory);
-	lattice.initialize( posReader_.get_lattice_matrix() );
+	boost::filesystem::path rootdir(root_directory);
+	if ( boost::filesystem::exists(rootdir / "POSCAR" ) )
+	{
+		if ( posReader_.get_atoms_list().empty() )
+		{
+			std::vector<std::string> atomOrder;
+			if ( boost::filesystem::exists(rootdir / "POTCAR" ) )
+				atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
+			posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
+		}
+		lattice.initialize( posReader_.get_lattice_matrix() );
+	}
+	else if (boost::filesystem::exists(rootdir / "vasprun.xml" ))
+	{
+		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+		lattice.initialize( xmlReader_.get_lattice_matrix() );
+	}
+	else
+		throw std::runtime_error("No file to parse structure from");
+}
+
+void
+VASPInterface::read_atoms_list(
+		std::string root_directory,
+		std::vector<LatticeStructure::Atom> & atoms)
+{
+	boost::filesystem::path rootdir(root_directory);
+	if ( boost::filesystem::exists(rootdir / "POSCAR" ) )
+	{
+		if ( posReader_.get_atoms_list().empty() )
+		{
+			std::vector<std::string> atomOrder;
+			if ( boost::filesystem::exists(rootdir / "POTCAR" ) )
+				atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
+			posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
+		}
+		atoms = posReader_.get_atoms_list();
+	}
+	else if (boost::filesystem::exists(rootdir / "vasprun.xml" ))
+	{
+		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+		atoms = xmlReader_.get_atoms_list();
+	}
+	else
+		throw std::runtime_error("No file to parse structure from");
 }
 
 void

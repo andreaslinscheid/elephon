@@ -231,6 +231,25 @@ ElectronicBands::fft_interpolate(
 				   newGrid);
 }
 
+ElectronicBands
+ElectronicBands::fft_interpolate_part(
+		int startBnD, int endBnd,
+		std::vector<int> const & newDims,
+		std::vector<double> const & gridShift) const
+{
+	assert( startBnD >= 0 );
+	assert( (endBnd > startBnD) && (endBnd <= nBnd_) );
+	std::vector<double> bndData( (endBnd-startBnD)*grid_.get_np_irred() );
+	for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik)
+		for ( int ib = startBnD ; ib < endBnd; ++ib)
+			bndData[ik*(endBnd-startBnD)+(ib-startBnD)] = dataIrred_[ik*nBnd_+ib];
+	ElectronicBands newBands;
+	newBands.initialize((endBnd-startBnD), 0.0, std::move(bndData), grid_);
+
+	newBands.fft_interpolate(newDims, gridShift);
+	return newBands;
+}
+
 std::pair<double, double>
 ElectronicBands::get_min_max() const
 {
