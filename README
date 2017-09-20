@@ -1,0 +1,22 @@
+Installation instructions:
+
+elephon requires the Boost libraries, the VTK libary, BLAS / LAPACK, fftw3  and cmake to be installed on the system.
+
+###   HIPERGATOR specific   ###
+
+load the following modules with the command
+
+$ module load cmake gcc vtk fftw mkl boost/1.54.0
+
+### END HIPERGATOR specific ###
+
+To compile a production code binary, go to the elephon main folder and do
+
+$ cd /path/to/your/elephon/main/dir
+$ mkdir release
+$ cd release
+$ cmake -DCMAKE_BUILD_TYPE=Release -DBLAS="mkl" ../elephon
+$ make
+<optional> $ make test
+
+the last make test will run the test-suite. It is recommended to check if everything is determined working on the current system.

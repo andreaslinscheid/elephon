@@ -23,6 +23,8 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmessage-length=0")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
+include(../cmake/dependencies.cmake)
+
 #Break up the test sources from test fixtures
 set(sources_test)
 set(fixtures_test)
@@ -48,24 +50,33 @@ MACRO(SUBDIRLIST result curdir)
 ENDMACRO()
 SUBDIRLIST( subdirlist ${CMAKE_CURRENT_SOURCE_DIR} )
 
+list(APPEND elephon_OPTS "-Wall" "-Wno-sign-compare" "-Wno-deprecated-declarations")
+
 #add a library each
 foreach(libElephon ${subdirlist})
 	file(GLOB_RECURSE sources ${libElephon}/*.cpp ${libElephon}/*.h)
 	add_library( ${libElephon} ${sources} )
-	target_include_directories(${libElephon} PUBLIC ${elephon_src_tree})
+	target_compile_options(${libElephon} PUBLIC ${elephon_OPTS} )
+	target_include_directories(${libElephon} PUBLIC ${elephon_src_tree} ${elephon_INCLUDE})
 endforeach(libElephon)
+
+# The projects own libraries
+# %%%% HACK (!!!) %%%%
+# ${subdirlist} appears twice to resolve cross dependencies of symbols
+# the linker should stop searching once it hits the first, so this should work without causing harm ..
+list(INSERT elephon_LD_LIBS 0 ${subdirlist} ${subdirlist} ${subdirlist})
+list(INSERT elephon_INCLUDE 0 ${elephon_src_tree})
 
 #add a library with the tests
 add_library( libTest ${fixtures_test} )
-target_include_directories(libTest PUBLIC ${elephon_src_tree} "${PROJECT_SOURCE_DIR}/../test/")
+
+target_compile_options(libTest PUBLIC ${elephon_OPTS} )
+target_include_directories(libTest PUBLIC ${elephon_src_tree} "${PROJECT_SOURCE_DIR}/../test/" ${elephon_INCLUDE})
 
 add_executable(elephon main.cpp)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -mtune=generic")
 
-include(../cmake/dependencies.cmake)
-
-list(APPEND elephon_OPTS "-Wall" "-Wno-sign-compare")
 
 target_compile_options(elephon PUBLIC ${elephon_OPTS} )
 target_include_directories(elephon PUBLIC ${elephon_INCLUDE})
