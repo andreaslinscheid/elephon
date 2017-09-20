@@ -239,14 +239,28 @@ ElectronicBands::fft_interpolate_part(
 {
 	assert( startBnD >= 0 );
 	assert( (endBnd > startBnD) && (endBnd <= nBnd_) );
-	std::vector<double> bndData( (endBnd-startBnD)*grid_.get_np_irred() );
-	for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik)
-		for ( int ib = startBnD ; ib < endBnd; ++ib)
-			bndData[ik*(endBnd-startBnD)+(ib-startBnD)] = dataIrred_[ik*nBnd_+ib];
 	ElectronicBands newBands;
-	newBands.initialize((endBnd-startBnD), 0.0, std::move(bndData), grid_);
+	std::vector<double> bndData( grid_.get_np_irred() );
+	std::vector<double> allData;
+	LatticeStructure::RegularSymmetricGrid newGrid;
+	for ( int ib = startBnD ; ib < endBnd; ++ib)
+	{
+		for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik)
+			bndData[ik] = dataIrred_[ik*nBnd_+ib];
+		ElectronicBands thisBands;
+		thisBands.initialize(1, 0.0, bndData, grid_);
+		thisBands.fft_interpolate(newDims, gridShift);
+		if ( allData.empty() )
+		{
+			newGrid =  thisBands.get_grid();
+			allData.resize( newGrid.get_np_irred()*(endBnd-startBnD));
+		}
 
-	newBands.fft_interpolate(newDims, gridShift);
+		for ( int ik = 0 ; ik < newGrid.get_np_irred(); ++ik)
+			allData[ik*(endBnd-startBnD)+(ib-startBnD)] = thisBands(ik, 0);
+	}
+
+	newBands.initialize((endBnd-startBnD), 0.0, std::move(allData), std::move(newGrid));
 	return newBands;
 }
 
