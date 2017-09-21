@@ -20,3 +20,53 @@ $ make
 <optional> $ make test
 
 the last make test will run the test-suite. It is recommended to check if everything is determined working on the current system.
+
+==============================
+Applications (prelimnary):
+
+*** mass tensor calculation:
+
+
+In order to use it to compute the mass tensor,
+1) put a file, say 'infile', into a folder with the vasp calculation. The program reads the vasprun.xml (and the OUTCAR) if its there
+2) into that file 'infile' put, e.g.
+
+f_mtens = name_of_the_mass_tensor_file
+fftd = 128 128 128
+ewinbnd = -4.0 4.0
+
+to interpolate the band structure to 128 128 128 and compute the mass tensor at the extrema located in a range from -4.0 to 4.0 w.r.p.t. the Fermi level(!)
+of cause you can change those numbers.
+
+3) (unfortuenately) run VASP with nwrite=3; 
+you don't have to complete the calculation, it is just needs to print the symmetry operations 
+to the OUTCAR which happens before the first self-consistent step.
+4) run the code as
+$ /path/to/your/elephon/main/release/elephon infile
+
+After running the calculation, you can open the file using python such as with the code snipped below
+
+data = numpy.fromfile("name_of_the_mass_tensor_file", dtype=np.float32).reshape((-1,18))
+
+This will give you a list of extrema in the energy range ewinbnd with their mass tensor.
+
+Here is an explanation of data
+data[0,:] = [
+pos 	1:  +(-)1 = maximum (minimum) ,
+	2: band index in VASP measure ,
+	3-5: kx , ky , kz ,
+	6: energy value of the band in eV,
+	7: eigenvalue 1, (smallest)
+	8-10,: eigenvector 1 x, y , z ,
+	11,12-14: eigenpair 2,
+	15,16-18, eigenpair 3(largest)]
+
+makes 1+1+3+1+4+4+4 = 18 values
+
+units of the k vector are in reciprocal crystal axis of the lattice, i.e. to get in inverse angstroem multiply the reciprocal lattice matrix from the left.
+The energy is eV and the mass tensor is eV * AA^2, (if I am not mistaken). We can discuss what units would be desirable.
+
+Please let me know if you have problems
+a) getting the source code.
+b) following the README to install the source code
+c) setting up a real-world calculation. 
