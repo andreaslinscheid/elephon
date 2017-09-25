@@ -39,9 +39,15 @@ public:
 	int operator() (int ikir, int ib) const;
 private:
 
+	const double energyGradientCutoff_ = 15.0; // eV * \AA
+
 	int nB_ = 0;
 
 	std::vector<int> bandOrder_;
+
+	void compute_irred_BZ_paths(
+			LatticeStructure::RegularSymmetricGrid const& kgrid,
+			std::vector<std::vector<int>> & paths) const;
 
 	void compute_band_overlap_matrix(
 			Wavefunctions const & wfct,

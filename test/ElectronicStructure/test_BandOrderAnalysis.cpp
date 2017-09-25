@@ -28,11 +28,12 @@
 
 BOOST_AUTO_TEST_CASE( Al_fcc_vasp )
 {
-	exit(0);
+//	exit(0);
 	// the algorithm has to be redesigned.
 	using namespace elephon;
 	test::fixtures::MockStartup ms;
-	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+//	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+	auto testd = boost::filesystem::path("/media/alinsch/data/materials/vasp_tests/Al/clean");
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
 	elephon::IOMethods::InputOptions opts;

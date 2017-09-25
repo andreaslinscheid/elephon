@@ -90,6 +90,8 @@ public:
 
 	int get_num_symmetries() const;
 
+	int get_num_symmetries_no_T_rev() const;
+
 	void small_group(std::vector<double> const& point);
 
 	/**

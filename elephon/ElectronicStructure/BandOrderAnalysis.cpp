@@ -34,6 +34,9 @@ BandOrderAnalysis::compute_band_order_overlap(
 		ElectronicBands const & bands,
 		Wavefunctions const & wfct)
 {
+	throw std::exception("not implemented. The overlap algorithm appears to be a weak classification.\n"
+			"Degeneracy or close-to degenereacy pose a serious problem - difficult to implement");
+
 	nB_ = wfct.get_num_bands();
 	auto & kgrid = wfct.get_k_grid();
 	auto d = kgrid.get_grid_dim();
@@ -51,45 +54,19 @@ BandOrderAnalysis::compute_band_order_overlap(
 	// the seed. This should be able to deal with degenerate points and lines. Degenerate planes
 	// or even volumes would require a non-local probe.
 
-	// lambda to check if bands are degenerate.
-	const double degeneracy_thrhld = 1e-3;
-	auto check_degenerate_bands = [&] (int ikir, int ib){
-		// Since bands by default are ordered in energy, we only check neighbors
-		if ( ib + 1 < nB_ )
-			if ( std::abs(bands(ikir, ib) - bands(ikir, ib+1)) < degeneracy_thrhld )
-				return true;
-		if ( ib - 1 >= 0 )
-			if ( std::abs(bands(ikir, ib) - bands(ikir, ib-1)) < degeneracy_thrhld )
-				return true;
-		return false;
-	};
 
 	auto fftMax = wfct.get_max_fft_dims();
 
-	// step 1: set up a structure which tells for a k point all its neighbors up to 2 away in the grid
-	// 			each element of the set points to a index of the map and thereby establishes neighbors.
-	// choose the irreducible wedge with the smallest x, then smallest y then smallest z.
-	// because the k grid is ordered x major, this means we simply search the smallest ikr in the star of k
-	auto irreducible_wedge = [&kgrid] (int ikir){
-		std::pair<int, int> symLow = std::make_pair(0, std::numeric_limits<int>::max() );
-		for ( int istar = 0 ; istar < kgrid.get_maps_sym_irred_to_reducible()[ikir].size(); ++istar)
-		{
-			int ikrTest = kgrid.get_maps_irreducible_to_reducible()[ikir][istar];
-			if ( ikrTest < symLow.second )
-				symLow = std::make_pair(istar, ikrTest);
-		}
-		return kgrid.get_maps_irreducible_to_reducible()[ikir][symLow.first];
-	};
-	std::map<int, std::vector<int>> linkedGrid;
+	std::map<int, std::pair<bool, std::vector<int> >> linkedGrid;
 	for ( int ikir = 0; ikir < kgrid.get_np_irred(); ++ikir )
 	{
-		int ikr = irreducible_wedge(ikir);
+		int ikr = kgrid.get_maps_irreducible_to_reducible()[ikir][0];
 		auto xyz = kgrid.get_reducible_to_xyz(ikr);
 		auto xyzMod = xyz;
 		std::map<int, int> neighbors;
-		for ( int pz = -2; pz <= 2; ++pz)
-			for ( int py = -2; py <= 2; ++py)
-				for ( int px = -2; px <= 2; ++px)
+		for ( int pz = -1; pz <= 1; ++pz)
+			for ( int py = -1; py <= 1; ++py)
+				for ( int px = -1; px <= 1; ++px)
 				{
 					if ( (px == 0) and (py == 0) and (pz == 0) )
 						continue;
@@ -104,9 +81,16 @@ BandOrderAnalysis::compute_band_order_overlap(
 					int neighIkR = kgrid.get_xyz_to_reducible(xyzMod);
 					int neigIkIr = kgrid.get_maps_red_to_irreducible()[neighIkR];
 					// remove the point itself from its neighbors even for periodic boundary conditions, symmetry etc
-					if ( ikr == irreducible_wedge(neigIkIr) )
+					if ( ikr == kgrid.get_maps_irreducible_to_reducible()[neigIkIr][0] )
 						continue;
-					int distanceOrder = abs(px)+abs(py)+abs(pz);
+					auto xyz2 = kgrid.get_reducible_to_xyz(kgrid.get_maps_irreducible_to_reducible()[neigIkIr][0]);
+					int distanceOrder = 0;
+					for (int i = 0 ; i < 3 ; ++i)
+					{
+						distanceOrder += abs(xyz2[i]-xyz[i]);
+					}
+					if ( distanceOrder > 3 )
+						continue;
 					auto el = neighbors.find(neigIkIr);
 					neighbors[neigIkIr] = (el == neighbors.end()) ? distanceOrder : std::min(neighbors[neigIkIr], distanceOrder);
 				}
@@ -115,116 +99,254 @@ BandOrderAnalysis::compute_band_order_overlap(
 		for ( auto n : neighbors)
 			uniqNeigDistanceSorted.insert(std::make_pair(n.second, n.first));
 
-		// we map from irreducible back to reducible. Thus uniqNeighborsDistanceSorted contains reducible
-		// indices of the irreducible wedge of the BZ. The must be by logic valid keys of the map once we have completed this
-		// step.
 		std::vector<int> uniqNeighborsDistanceSorted;
 		uniqNeighborsDistanceSorted.reserve(uniqNeighborsDistanceSorted.size());
 		for ( auto n : uniqNeigDistanceSorted )
-			uniqNeighborsDistanceSorted.push_back(irreducible_wedge(n.second));
-		linkedGrid[ikr] = std::move(uniqNeighborsDistanceSorted);
+			uniqNeighborsDistanceSorted.push_back(kgrid.get_maps_irreducible_to_reducible()[n.second][0]);
+
+		bool isHighSymmertryK;
+		auto ksym = kgrid.get_symmetry();
+		auto k = kgrid.get_vector_direct(ikr);
+		ksym.small_group(k);
+		isHighSymmertryK = (ksym.get_num_symmetries_no_T_rev() > 1);
+
+		linkedGrid[ikr] = std::move(std::make_pair(isHighSymmertryK, std::move(uniqNeighborsDistanceSorted)) );
 	}
 
 	// check the logic that neighbors are also in the irredcuble wedge
 	for ( auto k : linkedGrid )
-		for ( auto n : k.second )
+		for ( auto n : k.second.second )
 			if ( linkedGrid.find(n) == linkedGrid.end() )
 				throw std::logic_error("Linked grid neighbors lead out of the irreducible zone");
 	if ( linkedGrid.size() != kgrid.get_np_irred() )
 		throw std::logic_error("Linked grid does not span the irreducible zone");
 
-	// Build a set of paths of points. The first one starts at ikr = 0.
-	std::vector<std::pair<int, std::vector<int>>> paths;
+	// Build a set of paths of non-high-symmetry k points.
+	std::vector<std::vector<int>> paths;
 	bool lastIn = false;
+	std::map<int, std::pair<int,int>> assignedKptsPaths;
+	bool seed = true;
+
+	auto start_new_path = [&] (int ikr, std::vector<int> const & neighbors)
+		{
+			int ikn = -1;
+			for (  int ik ; ik < neighbors.size() ; ++ik )
+			{
+				auto test = assignedKptsPaths.find(neighbors[ik]);
+				if ( test != assignedKptsPaths.end())
+				{
+					ikn = neighbors[ik];
+					break;
+				}
+			}
+			if ( ikn < 0 )
+			{
+				if (seed == false )
+					throw std::logic_error("Unable to find a previous k point in close proximity");
+				paths.push_back(std::vector<int>{ikr});
+				seed = false;
+			}
+			else
+			{
+				paths.push_back(std::vector<int>{ikn,ikr});
+			}
+
+		};
+
 	for ( int ikr = 0; ikr < kgrid.get_np_red(); ++ikr )
 	{
-		if ( linkedGrid.find(ikr) == linkedGrid.end() )
+		auto el = linkedGrid.find(ikr);
+		if ( el == linkedGrid.end() )
 		{
 			lastIn = false;
 			continue; // not in the irreducible zone
 		}
-		if (not lastIn)
+		if ( el->second.first )
 		{
-			paths.push_back(std::make_pair(ikr, std::vector<int>{ikr}));
+			lastIn = false;
+			continue; // is a high symmetry point
+		}
+
+		if (not lastIn) // start a new path
+		{
+			assignedKptsPaths[ikr] = std::make_pair(int(paths.size()), seed ? 0 : 1);
+			start_new_path( ikr, el->second.second );
 			lastIn = true;
 			continue;
 		}
-		paths.rbegin()->second.push_back(ikr);
+		// check if the last entry is adjacent to the current location in the cell [0,1[
+		auto xyzLast = kgrid.get_reducible_to_xyz(*paths.rbegin()->rbegin());
+		auto xyzNew = kgrid.get_reducible_to_xyz(ikr);
+		double sum = 0;
+		for (int i = 0 ; i < 3 ; ++i)
+			sum += std::pow(std::abs(xyzNew[i]-xyzLast[i]),2);
+		bool close = std::sqrt(sum) <= std::sqrt(3.1);
+
+		if ( not close )
+		{
+			start_new_path( ikr, el->second.second );
+		}
+
+		assignedKptsPaths[ikr] = std::make_pair(int(paths.size())-1, int(paths.rbegin()->size()));
+		paths.rbegin()->push_back(ikr);
 	}
 
-	// place a seed order
-	std::vector<bool> bandConventionFixed(nB_, false);
-	for ( int ib = 0 ; ib < nB_; ++ib)
+	std::vector<int> bandorder= {0, 1, 2, 3, 4};
+	auto bandorderNext = bandorder;
+	std::map<int,std::vector<int>> bandOrderMap;
+	bandOrderMap[paths[0][0]] = bandorder;
+
+	std::vector<float> overlaps;
+	this->compute_band_overlap_matrix(wfct, 1066, bandorder , 1068, bandorder,overlaps );
+	for (int ib  : bandorder )
 	{
-		bandOrder_[ib] = ib;
-		if ( not check_degenerate_bands(0, ib) )
-			bandConventionFixed[ib] = true;
+		for (int ibp  : bandorder )
+			std::cout << '\t'<< overlaps[ib*nB_ + ibp] ;
+		std::cout <<std::endl;
 	}
 
-	const double significant_overlap = 0.05;
+for (int ip = 0 ; ip < paths.size(); ++ip )
+{
+	bandorder = bandOrderMap[paths[ip][0]];
+	assert(not bandorder.empty());
+for (int ikp = 1 ; ikp < paths[ip].size(); ++ikp )
+{
+	int ikr1 = paths[ip][ikp-1];
+	int ikr2 = paths[ip][ikp];
+	std::vector<int> b = {0, 1, 2, 3, 4};
+	this->compute_band_overlap_matrix(wfct, ikr1, b , ikr2, b,overlaps );
+	auto xyz = kgrid.get_reducible_to_xyz(ikr1);
+	auto k1 = kgrid.get_vector_direct(ikr1);
+	auto k2 = kgrid.get_vector_direct(ikr2);
+	double norm = std::sqrt(std::pow(k1[0]-k2[0],2)+std::pow(k1[1]-k2[1],2)+std::pow(k1[2]-k2[2],2));
+	int ikir = kgrid.get_maps_red_to_irreducible()[ikr1];
+	std::cout << ip << '\t' << ikr1 << '\t' << ikr2<<" **********" << std::endl;
+	std::cout << xyz[0] << '\t'<< xyz[1] << '\t'<< xyz[2]<<'\t'<<norm<<'\t';
+	std::cout << std::endl;
 
+	std::vector<int> bandMatrix(nB_*nB_, 0);
+	bool AssignComplete = true;
+	for (int ib  : b )
+	{
+		bool failAssign = true;
+		std::map<float, int> ovlp;
+		std::pair<int, float> mp = std::make_pair(ib, 0);
+		for (int ibp  : b )
+		{
+			ovlp.insert(std::make_pair(overlaps[ib*nB_ +ibp],ibp));
+			std::cout << '\t'<< overlaps[ib*nB_ +ibp] ;
+			if ( (overlaps[ib*nB_ +ibp] > mp.second) and ( overlaps[ib*nB_ +ibp] > 0.8) )
+			{
+				failAssign = false;
+				mp = std::make_pair(ibp, overlaps[ib*nB_ +ibp]);
+			}
+		}
+		if ( not failAssign )
+			bandMatrix[ib*nB_ + ovlp.rbegin()->second] = 1;
+		AssignComplete = AssignComplete and (not failAssign);
+		bandorderNext[ib] = bandorder[mp.first];
+		std::cout << std::endl;
+	}
+	std::vector<int> clmnSm(nB_, 0);
+	std::vector<int> rowSm(nB_, 0);
+	for (int ib  : b )
+	{
+		for (int ibp  : b )
+		{
+			clmnSm[ib] += bandMatrix[ib*nB_ + ibp];
+			rowSm[ib] += bandMatrix[ibp*nB_ + ib];
+		}
+	}
+	std::cout << std::boolalpha << AssignComplete <<std::endl;
+
+	for (int ib  : b )
+		std::cout << bands(ikir, bandorder[ib]) << '\t';
+	std::cout << std::endl;
+	for (int ib  : b )
+	{
+		for (int ibp  : b )
+			std::cout << '\t'<< bandMatrix[ib*nB_ + ibp] ;
+		std::cout <<std::endl;
+	}
+	bandorder = bandorderNext;
+	bandOrderMap[paths[ip][ikp]] = bandorder;
+	std::cout << std::endl;
+	std::cout << "**********" << std::endl<< std::endl;
+}
+}
+std::exit(0);
 	// step 2: walk through the structure and compare with neighbors.
 	//	if a point has degenerate bands, replace the wavefunction with one of the closest neighbors for these bands
 	std::vector<std::complex<float>> wfct1c(fftMax[0]*fftMax[1]*fftMax[2]);
-	double progress = 0.0;
-	for ( auto kpath : paths )
+	for ( int ib = 0 ; ib < nB_; ++ib)
 	{
-		std::cout << "Progress: "<< progress*100 << "%"<< std::endl;
-		progress += double(kpath.second.size())/kgrid.get_np_irred();
-		for ( int ikr : kpath.second )
+		bool bandConventionFixed = false;
+		std::cout << "Progress: "<< ib*100.0/nB_ << "%"<< std::endl;
+		for ( int ip = 0; ip < paths.size(); ++ip )
 		{
-			auto it = linkedGrid.find(ikr);
-			auto const & neighbors = it->second;
-			int ikir = kgrid.get_maps_red_to_irreducible()[ikr];
-
-			// in the set of this point and its neighbors classify into
-			// points already set and those that are not. We only look at band 0.
-			std::vector<int> sources;
-			std::vector<int> targets;
-			if ( bandOrder_[ikir*nB_] >= 0 )
-				sources.push_back(ikr);
-			else
-				targets.push_back(ikr);
-			for (int n : neighbors )
-				if ( bandOrder_[kgrid.get_maps_red_to_irreducible()[n]*nB_] >= 0 )
-					sources.push_back(n);
-				else
-					targets.push_back(n);
-
-			assert(sources.size() > 0);
-			if ( targets.size() == 0 )
-				continue;
-
-			std::vector<std::map<float,int>> overlapMatrixNeigbors(nB_*targets.size());
-			std::vector<std::pair<int,float>> bandsEnergySource(nB_);
-			for ( int ib = 0 ; ib < nB_; ++ib)
+			for ( int ikr : paths[ip] )
 			{
-				auto s = sources.begin();
-				while( check_degenerate_bands(kgrid.get_maps_red_to_irreducible()[*s], ib) )
+auto xyz = kgrid.get_reducible_to_xyz(ikr);
+//std::cout << ip << '\t' << xyz[0]  << '\t' << xyz[1]  << '\t'<<xyz[2] << std::endl;
+if ( (xyz[1] != 2) or (xyz[2] != 1 ) )
+	continue;
+				auto it = linkedGrid.find(ikr);
+				auto neighbors = it->second.second;
+				int ikir = kgrid.get_maps_red_to_irreducible()[ikr];
+
+				bool high_symmetry_k =
+						kgrid.get_maps_sym_irred_to_reducible()[ikir].size() != kgrid.get_symmetry().get_num_symmetries();
+				if ( high_symmetry_k )
+					continue;
+
+				std::vector<std::pair<int,int>> sources; // kpt, pos of the band index ib
+				std::vector<int> targets;
+				int ibMap = ib;
+				if ( not bandConventionFixed )
 				{
-					if ( (++s) == sources.end() )
+					sources.push_back(std::make_pair(ikr,ib));
+					for (int n : neighbors )
+						targets.push_back(n);
+				}
+				else
+				{
+					auto neighborsp = neighbors;
+					neighborsp.push_back(ikr);
+					for (int n : neighborsp )
 					{
-						if ( bandConventionFixed[ib] )
-							throw std::logic_error(std::string("Unable to find a source for "
-									"propagating a band convention for band ")+std::to_string(ib));
-						// here we treat the (may be not so) special case that the first k points have degenerate bands
-						// in that case, we promote a target with non-degenerate bands to the source and mark the convention as fixed.
-						auto t = targets.begin();
-						while( check_degenerate_bands(kgrid.get_maps_red_to_irreducible()[*t], ib) )
+auto xyz = kgrid.get_reducible_to_xyz(n);
+if ( (xyz[1] != 1) or (xyz[2] != 1 ) )
+	continue;
+						bool isSource = false;
+						for ( int ibp = 0 ; ibp < nB_; ++ibp)
+							if ( bandOrder_[kgrid.get_maps_red_to_irreducible()[n]*nB_ + ibp] == ib )
+							{
+								// make sure high symmetry points are never a source
+								int iksir = kgrid.get_maps_red_to_irreducible()[n];
+								if ( kgrid.get_maps_sym_irred_to_reducible()[iksir].size() !=
+										kgrid.get_symmetry().get_num_symmetries() )
+									continue;
+								sources.push_back(std::make_pair(n, ibp));
+								isSource = true;
+								break;
+							}
+						if (not isSource)
 						{
-							if ( (++t) == targets.end() )
-								throw std::runtime_error(std::string("Unable to fix band convention"
-										" for band ")+std::to_string(ib)+". This can happen when a band is highly degenerate."
-												" Try different grids.");
+//							auto xyz = kgrid.get_reducible_to_xyz(n);
+//							auto xyz0 = kgrid.get_reducible_to_xyz(ikr);
+//							if ( (abs(xyz[0]-xyz0[0]) <= 1) and (abs(xyz[1]-xyz0[1]) <= 1) and (abs(xyz[2]-xyz0[2]) <= 1))
+								targets.push_back(n);
 						}
-						bandOrder_[(kgrid.get_maps_red_to_irreducible()[*t])*nB_+ib]
-								   = bandOrder_[(kgrid.get_maps_red_to_irreducible()[*s])*nB_+ib];
-						bandConventionFixed[ib] = true;
-						s = t;
-						break;
 					}
 				}
-				int iksr = *s;
+
+				if ( sources.size() < 1 )
+					throw std::runtime_error("Continuation of bands failed - no source point in range");
+				if ( targets.size() == 0 )
+					continue;
+
+				int iksr = sources.begin()->first;
+				int iksir = kgrid.get_maps_red_to_irreducible()[iksr];
 
 				// first load the source wfct and save it in a regular mesh
 				std::vector<std::vector<int>> fftmaps;
@@ -233,22 +355,58 @@ BandOrderAnalysis::compute_band_order_overlap(
 				int npws = fftmaps[0].size()/3;
 				auto fms = fftmaps[0];
 
+				double bnd1 = bands(iksir, ibMap);
+				auto k1 = kgrid.get_vector_direct(iksr);
+				std::vector<std::vector<int>> candidateCrossings(targets.size());
+				for ( int it = 0;  it < targets.size(); ++it)
+				{
+					int iktr = targets[it];
+					if ( iksr == iktr )
+						continue;
+					int iktir = kgrid.get_maps_red_to_irreducible()[iktr];
+					for ( int ibp = 0 ; ibp < nB_; ++ibp)
+					{
+						// estimate gradient and discard bands unrealistically far away
+						double bnd2 = bands(iktir, ibp);
+						auto k2 = kgrid.get_vector_direct(iktr);
+						for ( int i = 0 ; i < 3 ; ++i)
+							k2[i] -= k1[i];
+						kgrid.get_lattice().reci_direct_to_cartesian_2pibya(k2);
+						double grad = (bnd2-bnd1)/std::sqrt(std::pow(k2[0],2)+std::pow(k2[1],2)+std::pow(k2[2],2));
+						if( std::abs(grad) < energyGradientCutoff_ )
+							candidateCrossings[it].push_back(ibp);
+					}
+					if ( candidateCrossings[it].size() == 0 )
+						throw std::runtime_error("No candidate for band continuation - cutoff too tight");
+				}
+				bool needOverlapCheck = false;
+				for ( int it = 0;  it < targets.size(); ++it)
+				{
+					int iktir = kgrid.get_maps_red_to_irreducible()[targets[it]];
+					needOverlapCheck = needOverlapCheck or (candidateCrossings[it].size() > 1);
+					if ( candidateCrossings[it].size() == 1 )
+					{
+						bandOrder_[iktir*nB_ + ib] = candidateCrossings[it][0];
+					}
+				}
+				if ( ! needOverlapCheck )
+					continue;
+
 				std::vector<std::vector<std::complex<float>>> reducWfcts;
 				std::vector<int> npwPerK;
-				wfct.generate_reducible_grid_wfcts(std::vector<int>{ib}, std::vector<int>{iksr}, reducWfcts, npwPerK);
+				wfct.generate_reducible_grid_wfcts(std::vector<int>{ibMap}, std::vector<int>{iksr}, reducWfcts, npwPerK);
 				assert( npws == npwPerK[0] );
 				std::fill(wfct1c.begin(), wfct1c.end(), std::complex<float>(0.0f));
 				for (int ig = 0; ig < npws; ++ig)
 					wfct1c[fms[ig*3+0]+fftMax[0]*(fms[ig*3+1]+fftMax[1]*fms[ig*3+2])] =
 							std::conj(reducWfcts[0][ig]);
 
-				int iksir = kgrid.get_maps_red_to_irreducible()[iksr];
-				bandsEnergySource[ib] = std::make_pair(iksir, bands(iksir, ib));
 
-				for ( auto itt = targets.begin(); itt != targets.end(); ++itt)
+				for ( int it = 0;  it < targets.size(); ++it)
 				{
-					int iktr = *itt;
-					if ( iksr == iktr )
+					int iktr = targets[it];
+					int iktir = kgrid.get_maps_red_to_irreducible()[targets[it]];
+					if ( candidateCrossings[it].size() == 1 )
 						continue;
 
 					auto kt = kgrid.get_vector_direct(iktr);
@@ -256,26 +414,11 @@ BandOrderAnalysis::compute_band_order_overlap(
 					int npwt = fftmaps[0].size()/3;
 					auto const & fmt = fftmaps[0];
 
-					int nei_d = std::distance(targets.begin(), itt);
-
-
-					// get a list with bands sorted by closest to farthest in the current order
-					// the hope is that matching bands are close in energy, too.
-					std::vector<int> bandIndices(nB_);
-					for ( int ibp = 0 ; ibp < nB_; ++ibp)
-						bandIndices[ibp] = ibp;
-					std::vector<int> lbdist = bandIndices;
-					for ( auto &b : lbdist)
-						b -= ib;
-					std::sort(lbdist.begin(), lbdist.end(), [](int a, int b){return abs(a)<abs(b); } );
-
 					// here comes the part where we propagate the band convention from the k point iksr
 					// to the target k point iktr
 					std::map<float,int> ovlap;
-					float sum = 0.0f;
-					for ( int ibo : lbdist)
+					for ( int ibp : candidateCrossings[it])
 					{
-						int ibp = ib + ibo;
 						assert((ibp >= 0) and (ibp < nB_));
 						wfct.generate_reducible_grid_wfcts(std::vector<int>{ibp}, std::vector<int>{iktr}, reducWfcts, npwPerK);
 						assert( npwt == npwPerK[0] );
@@ -283,105 +426,21 @@ BandOrderAnalysis::compute_band_order_overlap(
 						for (int ig = 0; ig < npwt; ++ig)
 							overlap += wfct1c[fmt[ig*3+0]+fftMax[0]*(fmt[ig*3+1]+fftMax[1]*fmt[ig*3+2])]
 											 *reducWfcts[0][ig];
-						sum += std::abs(overlap);
 						ovlap.insert(std::make_pair(std::abs(overlap), ibp));
-						// Unfortunately sum is not normalized to 1 because the wavefunctions are not
-						// normalized. However, they are close ~5% so this should work in practice.
-//						if ( ovlap.rbegin()->first > (1.0f-sum) )
-//							break;
 					}
-					int iktir = kgrid.get_maps_red_to_irreducible()[iktr];
-					// handle the case where the band in not degenerate, i.e. no problem
-					if ( (ovlap.rbegin()->first > significant_overlap)
-							and not check_degenerate_bands(iktir, ovlap.rbegin()->second))
-						bandOrder_[iktir*nB_+ovlap.rbegin()->second] = bandOrder_[iksir*nB_+ib];
-					// for high energy bands, it is possible that they are not continued and another one
-					// takes over. Also if the band overlaps into a degenerate set, we simply order according to heuristics
-					overlapMatrixNeigbors[ib+nB_*nei_d] = std::move(ovlap);
+					auto c = ovlap.rbegin();
+					bandOrder_[iktir*nB_ + ib] = c->second;
 				}
 			}
-
-			// at this point we need to fill gaps where target bands are degenerate or bands leave the
-			// energy window and another band takes over.
-			for ( auto itt = targets.begin(); itt != targets.end(); ++itt)
-			{
-				int iktr = *itt;
-				int iktir = kgrid.get_maps_red_to_irreducible()[iktr];
-
-				int nei_d = std::distance(targets.begin(), itt);
-
-				// find degenerate subspaces and store the band indices in each one
-				std::vector<std::vector<int>> degenSubsets;
-				for ( int ib = 0 ; ib < nB_; ++ib)
-					if ( ib + 1 < nB_ )
-						if ( std::abs(bands(ikir, ib) - bands(ikir, ib+1)) < degeneracy_thrhld )
-						{
-							if ( degenSubsets.empty() )
-								degenSubsets.push_back( std::vector<int>{ib, ib+1} );
-							else
-							{
-								if ( *degenSubsets.rbegin()->rbegin() == ib )
-									degenSubsets.rbegin()->push_back(ib+1);
-								else
-									degenSubsets.push_back( std::vector<int>{ib, ib+1} );
-							}
-						}
-
-				// consult the overlap matrix if bands from the source overlap
-				// with a given subspace. They are assigned in ascending order
-				for ( auto & deg : degenSubsets)
-				{
-					std::set<int> sourceBandsThatOverlap;
-					for ( int ib : deg)
-						for ( int ibp = 0 ; ibp < nB_; ++ibp)
-						{
-							auto itr = overlapMatrixNeigbors[ibp+nB_*nei_d].begin();
-							for ( ; itr !=  overlapMatrixNeigbors[ibp+nB_*nei_d].end(); ++itr)
-							{
-								if ( (itr->second == ib) and (itr->first >= significant_overlap) )
-								{
-									// significant overlap into degenerate subspace
-									sourceBandsThatOverlap.insert(ibp);
-								}
-							}
-						}
-					auto it = sourceBandsThatOverlap.begin();
-					for ( int ib : deg)
-					{
-						if ( it == sourceBandsThatOverlap.end())
-							break;
-						bandOrder_[iktir*nB_+ib] = *(it++);
-					}
-				}
-
-				// last resort: use the closest in energy band of the source that has not been assigned.
-				std::set<int> assigned;
-				for ( int ib = 0 ; ib < nB_; ++ib)
-					if ( bandOrder_[iktir*nB_+ib] >= 0 )
-						assigned.insert(bandOrder_[iktir*nB_+ib]);
-
-				for ( int ib = 0 ; ib < nB_ ; ++ib )
-				{
-					if ( bandOrder_[iktir*nB_+ib] < 0 )
-					{
-						std::map<float, int> closestUnassignedBands;
-						for ( int ibp = 0 ; ibp < nB_ ; ++ibp )
-							if ( assigned.find(ibp) == assigned.end() )
-								closestUnassignedBands.insert(
-									std::make_pair(std::abs(bands(iktir, ib)-bandsEnergySource[ibp].second), ibp));
-						assert(closestUnassignedBands.size() > 0);
-						bandOrder_[iktir*nB_+ib] = closestUnassignedBands.begin()->second;
-					}
-				}
-
-				std::vector<int> unassigned;
-				unassigned.reserve(nB_ - int(assigned.size()));
-				for ( int ib = 0 ; ib < nB_; ++ib)
-					if ( assigned.find(ib) == assigned.end() )
-						unassigned.push_back(ib);
-			}
-
 		}
+
+//for ( auto l : linkedGrid )
+//{
+//	int ikr = l.first;
+//	int ikir = kgrid.get_maps_red_to_irreducible()[ikr];
+//	auto xyz = kgrid.get_reducible_to_xyz(ikr);
+//	std::cout << xyz[0] << '\t'<< xyz[1] << '\t'<< xyz[2] << '\t'<< bandOrder_[ikir*nB_ + ib] << '\t' << std::endl;
+//}
 	}
 }
 
@@ -393,60 +452,77 @@ BandOrderAnalysis::compute_band_overlap_matrix(
 		std::vector<float> & overlaps) const
 {
 	auto const & kgrid = wfct.get_k_grid();
+	auto const & d = kgrid.get_grid_dim();
 
+	// represent both wavefunctions in the zone [0,1[
 	std::vector<std::vector<int>> fftmaps;
 	auto ks = kgrid.get_vector_direct(ikr1);
+	auto kt = kgrid.get_vector_direct(ikr2);
+	std::vector<int> g1zone(3);
+	auto xyz1 = kgrid.get_reducible_to_xyz(ikr1);
+	auto xyz2 = kgrid.get_reducible_to_xyz(ikr2);
+	for ( int xi =0 ; xi < 3 ; ++xi )
+	{
+		double g = double(xyz1[xi])/double(d[xi]) - ks[xi];
+		g1zone[xi] = std::floor( g + 0.5 );
+		assert( std::abs(g - g1zone[xi]) < 1e-6 );
+		g = double(xyz2[xi])/double(d[xi]) - kt[xi];
+		assert( std::abs(g - std::floor( g + 0.5 )) < 1e-6 );
+		g1zone[xi] = g1zone[xi] - std::floor( g + 0.5 );
+	}
+//
+//	if ((g2zone[0] != g1zone[0])or((g2zone[1] != g1zone[1]))or(g2zone[2] != g1zone[2]))
+//		std::cout << xyz1[0] <<'\t' << xyz1[1] <<'\t' << xyz1[2] <<
+//		g1zone[0] <<'\t' << g1zone[1] <<'\t' << g1zone[2] <<'\t' <<
+//		g2zone[0] <<'\t' << g2zone[1] <<'\t' << g2zone[2] <<'\t' << std::endl;
+
+
 	wfct.compute_Fourier_maps(ks, fftmaps);
 	int npws = fftmaps[0].size()/3;
 	auto fms = fftmaps[0];
 
-	Algorithms::FFTInterface fft;
-
 	auto fftMax = wfct.get_max_fft_dims();
-	std::vector<std::complex<float>> wfct1c, wfct2;
+	int npts = fftMax[0]*fftMax[1]*fftMax[2];
+	std::vector<std::complex<float>> wfct1c(npts*bands1.size());
 
-	std::vector<int> star1;
-	int ikir1 = kgrid.get_maps_red_to_irreducible()[ikr1];
-	for (int is1 = 0 ;is1 < kgrid.get_maps_sym_irred_to_reducible()[ikir1].size() ; ++is1)
-		star1.push_back(kgrid.get_maps_irreducible_to_reducible()[ikir1][is1]);
-
-	std::vector<int> star2;
-	int ikir2 = kgrid.get_maps_red_to_irreducible()[ikr2];
-	for (int is2 = 0 ;is2 < kgrid.get_maps_sym_irred_to_reducible()[ikir2].size() ; ++is2)
-		star2.push_back(kgrid.get_maps_irreducible_to_reducible()[ikir2][is2]);
+	std::vector<int> igocc;
+	igocc.reserve(npws);
+	std::vector<int> g(3);
+	for (int ig = 0; ig < npws; ++ig)
+	{
+		for (int i=0 ;i <3 ; ++i)
+			g[i] = fms[ig*3+i];
+		Algorithms::FFTInterface::inplace_to_freq(g,fftMax);
+		for (int i=0 ;i <3 ; ++i)
+			g[i] -= g1zone[i];
+		if ( (g[0] <= -fftMax[0]/2-fftMax[0]%2) or (g[0] > fftMax[0]/2)
+				or (g[1] <= -fftMax[1]/2-fftMax[1]%2) or (g[1] > fftMax[1]/2)
+				or (g[2] <= -fftMax[2]/2-fftMax[2]%2) or (g[2] > fftMax[2]/2))
+			continue;
+		Algorithms::FFTInterface::freq_to_inplace(g,fftMax);
+		igocc.push_back(ig);
+		for (int i=0 ;i <3 ; ++i)
+			fms[ig*3+i] = g[i];
+	}
 
 	std::vector<std::vector<std::complex<float>>> reducWfcts;
 	std::vector<int> npwPerK;
-	wfct.generate_reducible_grid_wfcts(bands1, star1, reducWfcts, npwPerK);
+	wfct.generate_reducible_grid_wfcts(bands1, {ikr1}, reducWfcts, npwPerK);
 	std::fill(wfct1c.begin(), wfct1c.end(), std::complex<float>(0.0f));
-	for ( int is =1 ; is < star1.size(); ++is)
-	{
-		assert(reducWfcts[0].size() == reducWfcts[is].size());
-		for ( int i = 0 ; i < reducWfcts[0].size(); ++i )
-			reducWfcts[0][i] += reducWfcts[is][i];
-	}
-	for ( auto & w: reducWfcts[0] )
-		w = std::conj(w)/float(star1.size());
-	fft.fft_sparse_data(fms, fftMax, reducWfcts[0], nB_, +1, wfct1c, fftMax);
+	for ( int ib1 : bands1)
+		for (int ig : igocc)
+		{
+			wfct1c[fms[ig*3+0]+fftMax[0]*(fms[ig*3+1]+fftMax[1]*(fms[ig*3+2]+fftMax[2]*ib1))] =
+					std::conj(reducWfcts[0][ig + npws*ib1]);
+		}
 
-	auto kt = kgrid.get_vector_direct(ikr2);
 	wfct.compute_Fourier_maps(kt, fftmaps);
 	int npwt = fftmaps[0].size()/3;
-	auto const & fmt = fftmaps[0];
+	auto fmt = fftmaps[0];
 
 
-	wfct.generate_reducible_grid_wfcts(bands2, star2, reducWfcts, npwPerK);
-	for ( int is =1 ; is < star2.size(); ++is)
-	{
-		assert(reducWfcts[0].size() == reducWfcts[is].size());
-		for ( int i = 0 ; i < reducWfcts[0].size(); ++i )
-			reducWfcts[0][i] += reducWfcts[is][i];
-	}
-	for ( auto & w: reducWfcts[0] )
-		w /= star2.size();
-	fft.fft_sparse_data(fmt, fftMax, reducWfcts[0], nB_, -1, wfct2, fftMax);
+	wfct.generate_reducible_grid_wfcts(bands2, {ikr2}, reducWfcts, npwPerK);
 
-	int npts = fftMax[0]*fftMax[1]*fftMax[2];
 	overlaps.assign(nB_*nB_, 0.0f);
 	for ( int ib1 = 0 ; ib1 < bands1.size(); ++ib1 )
 		for (int ib2 = 0 ; ib2 < bands2.size(); ++ib2 )
@@ -455,41 +531,12 @@ BandOrderAnalysis::compute_band_overlap_matrix(
 				continue;
 
 			std::complex<float> c(0.0f);
-			auto it1 = wfct1c.begin()+npts*ib1;
-			auto it2 = wfct2.begin()+npts*ib2;
-			for (; it1 != (wfct1c.begin()+npts*(ib1+1)); ++it1, ++it2)
-			{
-				c += (*it1)*(*it2);
-			}
-//			for (int ig = 0; ig < npwt; ++ig)
-//				c += wfct1c[fmt[ig*3+0]+fftMax[0]*(fmt[ig*3+1]+fftMax[1]*(fmt[ig*3+2]+fftMax[2]*ib1))]
-//								 *reducWfcts[0][ig+npwt*ib2];
+			for (int ig = 0 ; ig < npwt; ++ig)
+				c += wfct1c[fmt[ig*3+0]+fftMax[0]*(fmt[ig*3+1]+fftMax[1]*(fmt[ig*3+2]+fftMax[2]*ib1))]
+								 *reducWfcts[0][ig+npwt*ib2];
 			overlaps[bands1[ib1]+nB_*bands2[ib2]] = std::abs(c);
 			overlaps[bands2[ib2]+nB_*bands1[ib1]] = overlaps[bands1[ib1]+nB_*bands2[ib2]];
 		}
-
-	LatticeStructure::UnitCell uc;
-	LatticeStructure::Atom al("Al",{0.0,0.0,0.0},{false,false,false});
-	std::vector<LatticeStructure::Atom> atoms(1, al);
-	auto sym = wfct.get_k_grid().get_symmetry();
-	sym.set_reciprocal_space_sym(false);
-	uc.initialize(atoms, wfct.get_k_grid().get_lattice(), sym);
-
-	std::vector<double> data(npts);
-	for (int ir = 0 ; ir < npts; ++ir)
-	{
-		data[ir] = std::real(wfct1c[ir + npts*(nB_-1)]*std::conj(wfct1c[ir + npts*(nB_-1)]));
-	}
-
-	IOMethods::WriteVASPRealSpaceData writer;
-	writer.write_file("/tmp/LOCPOT", "bla", fftMax, uc, data);
-
-	for (int ir = 0 ; ir < npts; ++ir)
-	{
-		data[ir] = std::real(wfct2[ir + npts*(nB_-1)]*std::conj(wfct2[ir + npts*(nB_-1)]));
-	}
-\
-	writer.write_file("/tmp/CHGCAR", "bla", fftMax, uc, data);
 }
 
 int

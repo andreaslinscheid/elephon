@@ -367,6 +367,12 @@ Symmetry::get_num_symmetries() const
 	return isReciprocalSpace_ ? numRotations_ : numSymmetries_ ;
 }
 
+int
+Symmetry::get_num_symmetries_no_T_rev() const
+{
+	return numSymmetries_ ;
+}
+
 void
 Symmetry::small_group(std::vector<double> const& point)
 {
