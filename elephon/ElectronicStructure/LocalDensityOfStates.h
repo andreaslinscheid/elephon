@@ -41,7 +41,9 @@ public:
 			LatticeStructure::UnitCell unitcell,
 			int nkpointsPerSurface,
 			std::vector<int> realSpaceRes,
-			ElectronicBands const & bands);
+			ElectronicBands const & bands,
+			LatticeStructure::RegularBareGrid const & interpolGrid,
+			bool symmetrize);
 
 	/**
 	 * Compute the local density of states.

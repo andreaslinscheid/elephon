@@ -23,6 +23,7 @@
 #include <map>
 #include <set>
 #include <iostream>
+#include <stdexcept>
 
 namespace elephon
 {
@@ -34,8 +35,7 @@ BandOrderAnalysis::compute_band_order_overlap(
 		ElectronicBands const & bands,
 		Wavefunctions const & wfct)
 {
-	throw std::exception("not implemented. The overlap algorithm appears to be a weak classification.\n"
-			"Degeneracy or close-to degenereacy pose a serious problem - difficult to implement");
+	throw std::logic_error("not implemented. The overlap algorithm appears to be a weak classification.");
 
 	nB_ = wfct.get_num_bands();
 	auto & kgrid = wfct.get_k_grid();

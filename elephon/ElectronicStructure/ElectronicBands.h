@@ -135,6 +135,13 @@ public:
 	 * @return	pair of first minimal and second maximal value in eV
 	 */
 	std::pair<double, double> get_min_max() const;
+
+	template<typename T>
+	void compute_derivatives_sqr_polynom(
+			std::vector<int> const & bandIndices,
+			std::vector<int> const & reducibleKPTIndices,
+			std::vector<T> * gradientFieldPtr,
+			std::vector<T> * hessianFieldPtr ) const;
 private:
 
 	int nBnd_;
@@ -147,4 +154,5 @@ private:
 } /* namespace ElectronicStructure */
 } /* namespace elephon */
 
+#include "ElectronicStructure/ElectronicBands.hpp"
 #endif /* ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_ */

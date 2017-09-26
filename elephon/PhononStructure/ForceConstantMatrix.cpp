@@ -338,7 +338,6 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 	assert( qVect.size()%3 == 0 );
 	int nq = int(qVect.size())/3;
 	int nM = this->get_num_modes();
-	int nAtoms = nM/3;
 
 	data.assign( nq*nM*nM , 0.0 );
 

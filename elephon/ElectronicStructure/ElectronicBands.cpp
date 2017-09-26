@@ -19,6 +19,7 @@
 
 #include "ElectronicBands.h"
 #include "Algorithms/FFTInterface.h"
+#include "Algorithms/LinearAlgebraInterface.h"
 #include <stdexcept>
 #include <set>
 

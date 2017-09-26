@@ -159,7 +159,6 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						}
 						if (atomInfo.size() != 2)
 							throw std::runtime_error("Problem parsing atominfo from vasprun.xml");
-						int type = std::stoi(atomInfo[1]);
 						int numAtom = atoms_.size();
 						atoms_.push_back( LatticeStructure::Atom(atomInfo[0], atomicPos[numAtom], {false, false, false}, 1e-6) );
 					}
@@ -246,7 +245,6 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	        std::string temp = val.second.get_child("<xmlattr>.comment").data();
 			if ( temp == "spin 1")
 			{
-				int ispin = 0;
 				BOOST_FOREACH( ptree::value_type const& val2, val.second )
 				{
 					if ( val2.first == "set" )

@@ -55,10 +55,6 @@ UnitCell::set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const
 	// lattice representation and then reset the cartesian representation.
 	// TODO clean up and disentangle the symmetries. In principle the lattice could change the symmetries,
 	//		too. We do not allow nor check for this at this point.
-	const double d = symmetry.get_symmetry_prec();
-
-	typedef std::vector<double> V;
-
 	std::set< Atom > atomsSet;
 	for ( auto a : atoms_ )
 	{
@@ -250,13 +246,6 @@ UnitCell::get_site_displacements(Atom const & atomicSite,
 	int nullDim;
 	V nullSpace;
 	linAlg.null_space(redDisplTmp,rotated.size(),3,nullDim,nullSpace, 0.01);
-
-	auto normalize = [] (V & v ){
-		assert(v.size() == 3 );
-		double norm = std::sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-		for ( auto &a : v)
-			a /= norm;
-	};
 
 	auto check_overlap_is_small = [] ( V const & nullSpace, int nullDim, V const & trialVector) {
 		const double small = 0.01;

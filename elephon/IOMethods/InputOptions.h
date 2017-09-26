@@ -170,6 +170,14 @@ class InputOptions : public InputBase<InputOptions>
 			"pol",
 			"pol",
 			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			symOut,
+			"Switch to symmetrize output data.\n"
+			"Setting this to true means data will be symmetrized using the symmetries of the crystal",
+			"true",
+			true,
+			bool);
 };
 
 } /* namespace IOMethods */

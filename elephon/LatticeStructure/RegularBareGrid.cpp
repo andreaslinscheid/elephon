@@ -85,6 +85,9 @@ int
 RegularBareGrid::get_xyz_to_reducible(std::vector<int> const & xyzTouple) const
 {
 	assert( xyzTouple.size() == 3 );
+	assert( (xyzTouple[0] >= 0) && (xyzTouple[0] < pointMesh_[0]) );
+	assert( (xyzTouple[1] >= 0) && (xyzTouple[1] < pointMesh_[1]) );
+	assert( (xyzTouple[2] >= 0) && (xyzTouple[2] < pointMesh_[2]) );
 	return (xyzTouple[2]*pointMesh_[1]+xyzTouple[1])*pointMesh_[0]+xyzTouple[0];
 }
 

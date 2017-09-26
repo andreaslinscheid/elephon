@@ -291,7 +291,6 @@ Wavefunctions::fill_G_symmetry_buffer(int isym) const
 	if ( int(gSymBuffer_[isym].size()) != fftDims[0]*fftDims[1]*fftDims[2] )
 	{
 		gSymBuffer_[isym].assign( fftDims[0]*fftDims[1]*fftDims[2] , -1);
-		auto S = grid_.get_symmetry().get_sym_op(isym);
 		for ( int k = 0 ; k < fftDims[2]; ++k )
 			for ( int j = 0 ; j < fftDims[1]; ++j )
 				for ( int i = 0 ; i < fftDims[0]; ++i )
@@ -443,7 +442,6 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 
 	std::vector<int> npwPerK(8);
 	std::vector<std::vector< std::complex<float> > > wfctCornerPoints(8);
-	int iIrrKCounter = 0;
 	for ( int ic = 0 ; ic < gridCubes.size(); ++ic)
 	{
 	// Step 2.: Fetch the coefficients needed at this very k point.

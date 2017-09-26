@@ -37,6 +37,7 @@ BOOST_AUTO_TEST_CASE( ldos_MgB2_vasp )
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n"
 			"f_ldos = "+outfile.string()+"\n"
+			"fftd = 64 64 64\n"
 			"eldos = 0.0\n";
 	elephon::IOMethods::InputOptions opts;
 	ms.simulate_elephon_input(
@@ -62,6 +63,7 @@ BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n"
 			"f_ldos = "+outfile.string()+"\n"
+			"fftd = 128 128 128\n"
 			"eldos = 0.0\n";
 	elephon::IOMethods::InputOptions opts;
 	ms.simulate_elephon_input(

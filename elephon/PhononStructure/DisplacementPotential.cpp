@@ -22,6 +22,7 @@
 #include "LatticeStructure/Atom.h"
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "IOMethods/WriteVASPRealSpaceData.h"
+#include "Algorithms/GridRotationMap.h"
 
 namespace elephon
 {
@@ -106,8 +107,6 @@ DisplacementPotential::build(  LatticeStructure::UnitCell unitCell,
 	std::map< LatticeStructure::Atom, int > primitiveCellLookup;
 	for ( int ia = 0 ; ia < unitCell.get_atoms_list().size(); ++ia )
 		primitiveCellLookup.insert( std::move( std::make_pair( unitCell.get_atoms_list()[ia], ia ) ) );
-
-	int naSC = superCell.get_atoms_list().size();
 
 	Algorithms::LinearAlgebraInterface linAlg;
 
@@ -279,40 +278,7 @@ DisplacementPotential::compute_rot_map(
 		LatticeStructure::Symmetry const & siteSymmetry,
 		std::vector< std::vector<int> > & rotMap) const
 {
-	int nR = supercellGrid.get_np_red();
-	int iS = siteSymmetry.get_num_symmetries();
-	rotMap = std::vector< std::vector<int> >(iS, std::vector<int>(nR) );
-	std::vector<double> shiftedGrid(nR*3);
-	for ( int i = 0 ; i < nR ; ++i)
-	{
-		auto r = supercellGrid.get_vector_direct(i);
-		for ( int xi = 0 ; xi < 3; ++xi)
-			shiftedGrid[i*3+xi] = r[xi] - shift[xi];
-	}
-
-	for ( int isym = 0 ; isym < iS; ++isym)
-	{
-		//rotate all grid points
-		siteSymmetry.rotate<double>(isym,shiftedGrid.begin(),shiftedGrid.end(),true);
-		//since the grid is regular, we must obtain the (x,y,z) indices by scaling with the grid dimension
-		//in each direction
-		std::vector<int> xyz(3);
-		for ( int ir = 0 ; ir < nR; ++ir)
-		{
-			for ( int j = 0 ; j < 3; ++j)
-			{
-				shiftedGrid[ir*3+j] -= std::floor(shiftedGrid[ir*3+j]);
-				shiftedGrid[ir*3+j] *= supercellGrid.get_grid_dim()[j];
-				xyz[j] = std::floor(shiftedGrid[ir*3+j]+0.5);
-				if ( std::abs(shiftedGrid[ir*3+j]-xyz[j]) > 0.01 )
-					throw std::logic_error("The symmetry operation does not map the grid to itself which can't be.");
-
-			}
-			int cnsq = supercellGrid.get_xyz_to_reducible(xyz);
-			assert( (cnsq >= 0) and (cnsq < nR));
-			rotMap[isym][cnsq] = ir;
-		}
-	}
+	Algorithms::compute_grid_rotation_map(shift, supercellGrid.view_bare_grid(), siteSymmetry, rotMap);
 }
 
 void

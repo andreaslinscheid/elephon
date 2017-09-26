@@ -22,6 +22,7 @@
 #include "Algorithms/TrilinearInterpolation.h"
 #include "LatticeStructure/UnitCell.h"
 #include "Algorithms/FFTInterface.h"
+#include "Algorithms/GridRotationMap.h"
 #include "IOMethods/WriteVASPRealSpaceData.h"
 
 namespace elephon
@@ -36,22 +37,13 @@ LocalDensityOfStates::compute_ldos(
 		LatticeStructure::UnitCell unitcell,
 		int nkpointsPerSurface,
 		std::vector<int> realSpaceRes,
-		ElectronicBands const & bands)
+		ElectronicBands const & bands,
+		LatticeStructure::RegularBareGrid const & interpolGrid,
+		bool symmetrize)
 {
 	uc_ = std::move(unitcell);
 	isoEnergies_ = std::move(energies);
 	rsDims_ = std::move(realSpaceRes);
-	auto reqBandIds = bands.get_bands_crossing_energy_lvls(isoEnergies_);
-	std::vector<double> regularData;
-	bands.generate_reducible_grid_bands(reqBandIds, regularData);
-
-	GradientFFTReciprocalGrid gradE;
-	gradE.compute_gradient(
-			bands.get_grid().get_grid_dim(),
-			uc_.get_lattice(),
-			reqBandIds.size(),
-			regularData);
-
 	Algorithms::TrilinearInterpolation triLin( wfcts.get_k_grid().view_bare_grid() );
 	Algorithms::FFTInterface fft;
 
@@ -64,25 +56,50 @@ LocalDensityOfStates::compute_ldos(
 	std::vector< std::complex<float> > wfctsOneBand;
 	int nrs = rsDims_[0]*rsDims_[1]*rsDims_[2];
 	ldos_.assign( isoEnergies_.size()*nrs , 0.0 );
+	std::vector<double> regularData, interpolData;
+	Algorithms::FFTInterface fftInt;
+
+	LatticeStructure::RegularSymmetricGrid interpolKGrid;
+	interpolKGrid.initialize(
+			interpolGrid.get_grid_dim(),
+			interpolGrid.get_grid_prec(),
+			interpolGrid.get_grid_shift(),
+			bands.get_grid().get_symmetry(),
+			bands.get_grid().get_lattice());
+
 	for ( int ie = 0 ; ie < isoEnergies_.size(); ++ie )
 	{
 		double e = isoEnergies_[ie];
+		auto reqBandId = bands.get_bands_crossing_energy_lvls({e});
+		bands.generate_reducible_grid_bands(reqBandId, regularData);
+		fftInt.fft_interpolate(
+				bands.get_grid().get_grid_dim(),
+				bands.get_grid().get_grid_shift(),
+				regularData,
+				interpolGrid.get_grid_dim(),
+				interpolGrid.get_grid_shift(),
+				interpolData,
+				reqBandId.size());
+
 		ElectronicStructure::FermiSurface fs;
 		fs.triangulate_surface(
-				bands.get_grid().get_grid_dim(),
+				interpolGrid.get_grid_dim(),
 				uc_.get_lattice(),
-				reqBandIds.size(),
-				regularData,
+				reqBandId.size(),
+				interpolData,
 				nkpointsPerSurface,
 				e);
 
 		wfcts.generate_wfcts_at_arbitray_kp(
 				fs.get_Fermi_vectors(),
-				reqBandIds,
+				reqBandId,
 				wfctsFs,
 				fftMapsWfctsFs);
 
-		for ( int ibRel = 0 ; ibRel < reqBandIds.size(); ++ibRel )
+		ElectronicBands bandsThisKGrid;
+		bandsThisKGrid.initialize( reqBandId.size(), 0.0, std::move(interpolData), interpolKGrid);
+
+		for ( int ibRel = 0 ; ibRel < reqBandId.size(); ++ibRel )
 		{
 			int bandOffset = fs.get_band_offset(ibRel);
 			auto const & kfv = fs.get_Fermi_vectors_for_band(ibRel);
@@ -92,8 +109,12 @@ LocalDensityOfStates::compute_ldos(
 
 			//Compute the Fermi velocities
 			triLin.data_query( kfv, reqestedIndices );
-			gradE.copy_data( reqestedIndices, std::vector<int>{ibRel}, gradDataAtRequestedIndices );
-			triLin.interpolate(3,gradDataAtRequestedIndices,FermiVelocities);
+			bandsThisKGrid.compute_derivatives_sqr_polynom<double>(
+					{reqBandId[ibRel]},
+					reqestedIndices,
+					&gradDataAtRequestedIndices,
+					nullptr);
+			triLin.interpolate(3, gradDataAtRequestedIndices, FermiVelocities);
 
 			for (int ikf = 0 ; ikf < kfv.size()/3; ++ikf)
 			{
@@ -119,7 +140,7 @@ LocalDensityOfStates::compute_ldos(
 										+std::pow(FermiVelocities[ikf*3+2],2));
 				if ( modGradE < 1e-6) //cutoff
 					modGradE = 1e-6;
-				double contrib = kfw[ikf]/modGradE*unitcell.get_lattice().get_volume()/std::pow(2*M_PI,3);
+				double contrib = kfw[ikf]/modGradE*uc_.get_lattice().get_volume()/std::pow(2*M_PI,3);
 				for ( int ir = 0 ; ir < nrs; ++ir )
 				{
 					ldos_[ie*nrs+ir] += contrib*(std::pow(std::real(wfctsRealSpace[ir]), 2)
@@ -127,6 +148,31 @@ LocalDensityOfStates::compute_ldos(
 					assert( ! std::isnan(ldos_[ie*nrs+ir]) );
 				}
 			}
+		}
+	}
+
+	if ( symmetrize )
+	{
+		// create a rotation map of grid indices
+		LatticeStructure::RegularBareGrid rsGrid;
+		auto const & S = uc_.get_symmetry();
+		rsGrid.initialize( rsDims_, false, interpolGrid.get_grid_prec(), {0.0, 0.0, 0.0}, uc_.get_lattice());
+
+		int nsym = S.get_num_symmetries();
+		std::vector<std::vector<int>> rotMap;
+		Algorithms::compute_grid_rotation_map({0.0, 0.0, 0.0}, rsGrid, S, rotMap);
+		assert( rotMap.size() == nsym );
+
+		for ( int ie = 0 ; ie < isoEnergies_.size(); ++ie )
+		{
+			std::vector<double> ldsym(nrs, 0.0);
+			for ( int isym = 0 ; isym < nsym; ++isym)
+			{
+				assert(rotMap[isym].size() == nrs);
+				for ( int ir = 0 ; ir < nrs; ++ir)
+					ldsym[rotMap[isym][ir]] += ldos_[ie*nrs+ir]/double(nsym);
+			}
+			std::copy(ldsym.begin(), ldsym.end(), &ldos_[ie*nrs]);
 		}
 	}
 }
@@ -155,7 +201,32 @@ LocalDensityOfStates::compute_ldos(
 	LatticeStructure::UnitCell uc;
 	uc.initialize(atoms, lattice, sym);
 
-	bands.fft_interpolate(loader->get_optns().get_fftd(), loader->get_optns().get_ffts());
+	auto fftd = loader->get_optns().get_fftd();
+	auto gridShift = loader->get_optns().get_ffts();
+	if ( fftd.size() == 1 )
+	{
+		int scale = fftd.at(0);
+		fftd = kgrid.get_grid_dim();
+		if ( scale != 0 )
+			for ( auto &d : fftd )
+				d *= scale;
+	}
+	else
+	{
+		if ( fftd.size() != 3 )
+			throw std::runtime_error("Incorrect grid dimension for bands interpolate.");
+		for ( int id = 0 ; id < 3; ++id)
+			fftd[id] = fftd[id] == 0 ? kgrid.get_grid_dim()[id] : fftd[id];
+	}
+
+	LatticeStructure::RegularBareGrid interpolGrid;
+	if ( (kgrid.get_grid_dim() == fftd) and
+			(    (std::abs(kgrid.get_grid_shift()[0]-gridShift[0]) < kgrid.get_grid_prec())
+			 and (std::abs(kgrid.get_grid_shift()[1]-gridShift[1]) < kgrid.get_grid_prec())
+			 and (std::abs(kgrid.get_grid_shift()[2]-gridShift[2]) < kgrid.get_grid_prec()) ))
+		interpolGrid = kgrid.view_bare_grid();
+	else
+		interpolGrid.initialize(fftd, true, kgrid.get_grid_prec(), gridShift, kgrid.get_lattice());
 
 	Wavefunctions wfcts;
 	wfcts.initialize(
@@ -173,7 +244,9 @@ LocalDensityOfStates::compute_ldos(
 			uc,
 			loader->get_optns().get_numFS(),
 			rsgrid,
-			bands);
+			bands,
+			interpolGrid,
+			loader->get_optns().get_symOut());
 }
 
 void

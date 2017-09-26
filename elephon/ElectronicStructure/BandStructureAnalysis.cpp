@@ -21,6 +21,7 @@
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "Algorithms/FFTInterface.h"
 #include <fstream>
+#include <set>
 #include <stdexcept>
 
 #include "ElectronicStructure/GradientFFTReciprocalGrid.h"
@@ -125,83 +126,35 @@ void compute_mass_tensor_at_extrema_poly(
 	kgrid.get_list_reducible_lattice_point_indices(kvects, kIndicesExtrema);
 	auto d = kgrid.get_grid_dim();
 
-	elephon::Algorithms::LinearAlgebraInterface linalg;
+	std::set<int> bandSet(bandIndicesExtrema.begin(), bandIndicesExtrema.end());
+	std::vector<float> hessian;
+	bands.compute_derivatives_sqr_polynom<float>(
+			std::vector<int>(bandSet.begin(), bandSet.end()),
+			kIndicesExtrema,
+			nullptr,
+			&hessian );
+	assert( hessian.size() == 6*bandSet.size()*kIndicesExtrema.size() );
 
-	// construct the cubic model pseudo inverse matrix for least square fit
-	int nKn = 27;
-	std::vector<double> k(3);
-	std::vector<double> A((1+3+6)*nKn, 1);
-	int n = 0;
-	for ( int ipz = -1; ipz <= 1; ++ipz)
-		for ( int ipy = -1; ipy <= 1; ++ipy)
-			for ( int ipx = -1; ipx <= 1; ++ipx)
-			{
-				k[0] = ipx/double(d[0]);
-				k[1] = ipy/double(d[1]);
-				k[2] = ipz/double(d[2]);
-				// go to cartesian coords in units of inverse angstroems
-				kgrid.get_lattice().reci_direct_to_cartesian_2pibya(k);
-
-				double x = k[0];
-				double y = k[1];
-				double z = k[2];
-				A[(1+3+6)*n + 0] = 1; // constant
-				A[(1+3+6)*n + 1] = x;
-				A[(1+3+6)*n + 2] = y;
-				A[(1+3+6)*n + 3] = z;
-				A[(1+3+6)*n + 4] = x*x;
-				A[(1+3+6)*n + 5] = x*y;
-				A[(1+3+6)*n + 6] = x*z;
-				A[(1+3+6)*n + 7] = y*y;
-				A[(1+3+6)*n + 8] = y*z;
-				A[(1+3+6)*n + 9] = z*z;
-				n++;
-			}
-	std::vector<double> AInv;
-	linalg.pseudo_inverse(std::move(A), nKn, 10, AInv );
-
-	std::vector<double> bval(nKn);
-	std::vector<double> fit(10);
+	std::set<int> kptSet(kIndicesExtrema.begin(), kIndicesExtrema.end());
 	massTensor.resize( extrema.size() );
 	for ( int ie = 0 ; ie < extrema.size(); ++ie)
 	{
 		int ikr = kIndicesExtrema[ie];
 		int ib = bandIndicesExtrema[ie];
-
-		auto xyz = kgrid.get_reducible_to_xyz(ikr);
-		auto xyzMod = xyz;
-		int n = 0;
-		for ( int ipz = -1; ipz <= 1; ++ipz)
-			for ( int ipy = -1; ipy <= 1; ++ipy)
-				for ( int ipx = -1; ipx <= 1; ++ipx)
-				{
-					xyzMod[0] = xyz[0] + ipx;
-					xyzMod[1] = xyz[1] + ipy;
-					xyzMod[2] = xyz[2] + ipz;
-
-					for ( int i = 0 ; i < 3 ; ++i)
-					{
-						xyzMod[i] = xyzMod[i] < 0 ? xyzMod[i] + d[i] : xyzMod[i];
-						xyzMod[i] = xyzMod[i] >= d[i] ? xyzMod[i] - d[i] : xyzMod[i];
-					}
-					int ikrn = kgrid.get_xyz_to_reducible(xyzMod);
-					bval[n] = bands(kgrid.get_maps_red_to_irreducible()[ikrn], ib);
-					n++;
-				}
-
-		std::fill(fit.begin(), fit.end(), 0.0);
-		for ( int ip = 0 ; ip < 10; ++ip)
-			for ( int ikn = 0 ; ikn < nKn; ++ikn)
-				fit[ip] += AInv[ip*nKn+ikn]*bval[ikn];
+		int ibm = std::distance(bandSet.begin(), bandSet.find(ib));
+		int ikm = std::distance(kptSet.begin(), kptSet.find(ikr));
+		assert(ibm < bandSet.size());
+		assert(ikm < kptSet.size());
 
 		// note: the factor 2 is from d^2 (x^2)/dx^2 = 2
 		massTensor[ie].resize(9);
-		massTensor[ie][0*3+0] = 2*fit[4+0];
-		massTensor[ie][1*3+0] = massTensor[ie][0*3+1] = fit[4+1];
-		massTensor[ie][2*3+0] = massTensor[ie][0*3+2] = fit[4+2];
-		massTensor[ie][1*3+1] = 2*fit[4+3];
-		massTensor[ie][2*3+1] = massTensor[ie][1*3+2] = fit[4+4];
-		massTensor[ie][2*3+2] = 2*fit[4+5];
+		int offset = (ikm*bandSet.size()+ibm)*6;
+		massTensor[ie][0*3+0] = hessian[offset+0];
+		massTensor[ie][1*3+0] = massTensor[ie][0*3+1] = hessian[offset+1];
+		massTensor[ie][2*3+0] = massTensor[ie][0*3+2] = hessian[offset+2];
+		massTensor[ie][1*3+1] = hessian[offset+3];
+		massTensor[ie][2*3+1] = massTensor[ie][1*3+2] = hessian[offset+4];
+		massTensor[ie][2*3+2] = hessian[offset+5];
 	}
 }
 

@@ -394,9 +394,6 @@ ReadVASPWaveFunction::compute_fourier_max(
 	auto d_prod = [] (V const & v1, V const & v2 ) {
 		return v1[0]*v2[0] + v1[1]*v2[1] + v1[2]*v2[2];
 	};
-	auto sliceBV = [] (V const& matrix3x3, int bv ) {
-		return V({matrix3x3[3*0+bv],matrix3x3[3*1+bv],matrix3x3[3*2+bv]});
-	};
 
 	//Check the possible G vectors for plane wave coefficient
 	//We compare 4 values - the simple guess below and a modifier
