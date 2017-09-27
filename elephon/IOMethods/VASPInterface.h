@@ -26,6 +26,7 @@
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "IOMethods/ReadVASPWaveFunction.h"
 #include "IOMethods/ReadVASPxmlFile.h"
+#include "IOMethods/ReadVASPKpoints.h"
 #include "LatticeStructure/Atom.h"
 #include <vector>
 #include <map>
@@ -128,6 +129,8 @@ private:
 	ReadVASPWaveFunction wfcReader_;
 
 	ReadVASPxmlFile xmlReader_;
+
+	ReadVASPKpoints kpointReader_;
 
 	void overwrite_POSCAR_file( std::string filename,
 			std::vector<std::string > const & potcarAtomOrder,

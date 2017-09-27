@@ -471,47 +471,12 @@ void VASPInterface::read_kpt_sampling(
 	boost::filesystem::path root(root_directory);
 	auto filename = (root / "KPOINTS").string();
 
-	//make sure this is an automatic mesh
-	std::ifstream file( filename.c_str() );
-	if ( ! file.good() )
-		throw std::runtime_error( filename + ": file not readable" );
-	std::string buffer;
-	std::getline( file , buffer );//Comment
-	std::getline( file , buffer );
-	std::stringstream ss(buffer);
-	int num = 1;
-	ss >> num;
-	if ( num != 0 )
-		throw std::runtime_error( std::string("Can only use automatic k meshes in file ")+filename);
+	LatticeStructure::LatticeModule lattice;
+	this->read_lattice_structure(root.string(), lattice);
+	kpointReader_.read_kpoints(filename, lattice);
 
-	kptSampling = std::vector<int>(3);
-	shifts = std::vector<double>(3,0.0);
-
-	std::getline( file , buffer );//Monkhorst-Pack flag
-	bool isGammaSet = false;
-	if ( ! buffer.empty() )
-		isGammaSet = ((buffer.front()  == 'G') || (buffer.front()  == 'g'));
-
-	std::getline( file , buffer );//Sampling
-	std::stringstream ssKpts(buffer);
-	ssKpts.exceptions( std::ios::failbit );
-	for (int i = 0 ; i < 3 ; ++i)
-		ssKpts >> kptSampling[i];
-
-	std::getline( file , buffer );//shift - optional
-	if ( buffer.empty() )
-	{
-		//For even meshes shift by half a cell
-		for ( int  i = 0 ; i < 3 ; ++i )
-			if ( (kptSampling[i]%2 == 0) and (not isGammaSet) )
-				shifts[i] = 0.5;
-		return;
-	}
-	std::stringstream ssKptshift(buffer);
-	ssKptshift.exceptions( std::ios::failbit );
-	for (int i = 0 ; i < 3 ; ++i)
-		ssKptshift >> shifts[i];
-
+	kptSampling = kpointReader_.get_grid_dim();
+	shifts = kpointReader_.get_grid_shift();
 }
 
 std::string VASPInterface::get_textfile_content( std::string filename ) const
