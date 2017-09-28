@@ -43,7 +43,6 @@ elephon::ElectronicStructure::Wavefunctions get_MgB2_vasp_wfct()
 {
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
-	auto outfile = testd / "ldos.dat";
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
 	elephon::IOMethods::InputOptions opts;

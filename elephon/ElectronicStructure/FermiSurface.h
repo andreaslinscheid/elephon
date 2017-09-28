@@ -20,7 +20,7 @@
 #ifndef ELECTRONICSTRUCTURE_FERMISURFACE_H_
 #define ELECTRONICSTRUCTURE_FERMISURFACE_H_
 
-#include "LatticeStructure/LatticeModule.h"
+#include "LatticeStructure/RegularBareGrid.h"
 #include <vector>
 #include <cstdlib>
 
@@ -32,11 +32,10 @@ namespace ElectronicStructure
 class FermiSurface
 {
 public:
-	FermiSurface();
 
+	// TODO make this package symmetry aware
 	void triangulate_surface(
-			std::vector<int> kgrid,
-			LatticeStructure::LatticeModule const& lattice,
+			LatticeStructure::RegularBareGrid grid,
 			int nbnd,
 			std::vector<double> const& energies,
 			int numTargetPoints,
@@ -84,9 +83,31 @@ public:
 	std::vector<double> get_Fermi_vectors_for_band(int ib) const;
 
 	std::vector<double> get_Fermi_weights_for_band(int ib) const;
+
+	/**
+	 * select only those k vectors which are in the irreducible zone.
+	 *
+	 * The algorithm rotates every k vector with all symmetry operations.
+	 * From the star, the one with the largest x, in case of equallity first y and then z coordinate
+	 * is chosen. Two k vector components are equal when they differ by no more than
+	 * the symmetry precision.
+	 * This choice is compared with the present vector. The they are identical, the present one is in the irreducible zone.
+	 *
+	 * @param ib		index of the band to be investigated (input)
+	 * @param symmetry	symmetry group to be applied (input)
+	 * @param kpoints	on output contains the k vectors in the irreducible zone.
+	 * 					A vector of 3*#kvectors doubles with x,y,z for each vector.
+	 * @param weights	on output contains the weughts for each k vectors in the irreducible zone.
+	 * 					A vector of #kvectors doubles for each vector.
+	 */
+	void obtain_irreducible_Fermi_vectors_for_band(
+			int ib,
+			LatticeStructure::Symmetry const & symmetry,
+			std::vector<double> & kpoints,
+			std::vector<double> & weights) const;
 private:
 
-	std::vector<int> kgrid_;
+	LatticeStructure::RegularBareGrid grid_;
 
 	std::vector<double> kfPoints_;
 

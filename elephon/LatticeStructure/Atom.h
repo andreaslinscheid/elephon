@@ -32,9 +32,11 @@ namespace LatticeStructure
 class Atom
 {
 public:
-	Atom(std::string kind, std::vector<double> pos,std::vector<bool> frozen, double gridPrec = 1e-6);
+	Atom(double mass, std::string kind, std::vector<double> pos,std::vector<bool> frozen, double gridPrec = 1e-6);
 
 	std::string get_kind() const;
+
+	double get_mass() const;
 
 	std::vector<double> const & get_position() const;
 
@@ -46,6 +48,8 @@ public:
 
 	friend bool operator< (Atom const & a1, Atom const & a2);
 private:
+
+	double mass_;
 
 	std::string kind_;
 

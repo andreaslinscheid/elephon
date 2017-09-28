@@ -22,33 +22,46 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/UnitCell.h"
-#include "IOMethods/ReadVASPSymmetries.h"
-#include "LatticeStructure/Symmetry.h"
-#include "LatticeStructure/LatticeModule.h"
-#include "IOMethods/ReadVASPPoscar.h"
+#include "IOMethods/VASPInterface.h"
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
 
+elephon::LatticeStructure::UnitCell
+load_unit_cell_Al_vasp_conventional()
+{
+	test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+	elephon::LatticeStructure::UnitCell uc;
+	loader->read_unit_cell(testd.string(), opts.get_gPrec(), uc);
+	return uc;
+}
+
 BOOST_AUTO_TEST_CASE( Generate_Al_fcc_primitive_displacements )
 {
-	using namespace elephon;
 	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
-	IOMethods::ReadVASPPoscar filerreader;
-	filerreader.read_file( (rootDir / "POSCAR").string() );
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
 
-	LatticeStructure::LatticeModule lattice;
-	lattice.initialize(filerreader.get_lattice_matrix());
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+	elephon::LatticeStructure::UnitCell uc;
+	loader->read_unit_cell(testd.string(), 1e-6, uc);
 
-	IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( (rootDir / "OUTCAR").string() );
-	LatticeStructure::Symmetry sym;
-	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
-
-	LatticeStructure::UnitCell uc;
-	uc.initialize( filerreader.get_atoms_list(), lattice, sym);
-
-	std::vector<LatticeStructure::AtomDisplacement> irreducibleDisplacements;
+	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDisplacements;
 	std::vector<int> mapRedToIrred, mapSymRedToIrred;
 	std::vector<std::vector<int>> mapIrredToRed, mapSymIrredToRed;
 	uc.generate_displacements( 0.01,
@@ -60,21 +73,7 @@ BOOST_AUTO_TEST_CASE( Generate_Al_fcc_primitive_displacements )
 
 BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 {
-	elephon::IOMethods::ReadVASPPoscar filerreader;
-	test::fixtures::MockStartup ms;
-	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
-	filerreader.read_file( (testd / "POSCAR").string() );
-
-	elephon::LatticeStructure::LatticeModule lattice;
-	lattice.initialize(filerreader.get_lattice_matrix());
-
-	elephon::IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( (testd / "OUTCAR").string() );
-	elephon::LatticeStructure::Symmetry sym;
-	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
-
-	elephon::LatticeStructure::UnitCell uc;
-	uc.initialize( filerreader.get_atoms_list(), lattice, sym);
+	auto uc = load_unit_cell_Al_vasp_conventional();
 
 	elephon::LatticeStructure::UnitCell trivialSupercell = uc.build_supercell( 1, 1, 1);
 
@@ -87,24 +86,9 @@ BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 
 BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 {
-	using namespace elephon;
-	IOMethods::ReadVASPPoscar filerreader;
-	test::fixtures::MockStartup ms;
-	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
-	filerreader.read_file( (testd / "POSCAR").string() );
+	auto uc = load_unit_cell_Al_vasp_conventional();
 
-	LatticeStructure::LatticeModule lattice;
-	lattice.initialize(filerreader.get_lattice_matrix());
-
-	IOMethods::ReadVASPSymmetries symreader;
-	symreader.read_file( (testd / "OUTCAR").string() );
-	LatticeStructure::Symmetry sym;
-	sym.initialize( 1e-6 , symreader.get_symmetries(), symreader.get_fractionTranslations(), lattice, true);
-
-	LatticeStructure::UnitCell uc;
-	uc.initialize( filerreader.get_atoms_list(), lattice, sym);
-
-	std::vector<LatticeStructure::AtomDisplacement> irreducibleDisplacements;
+	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDisplacements;
 	std::vector<int> mapRedToIrred, mapSymRedToIrred;
 	std::vector<std::vector<int>> mapIrredToRed, mapSymIrredToRed;
 	uc.generate_displacements( 0.01,
@@ -125,20 +109,8 @@ BOOST_AUTO_TEST_CASE( Load_Al_vasp_fcc_primitve )
 	test::fixtures::DataLoader dl;
 	auto loader = dl.create_vasp_loader( content );
 
-	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
-	elephon::LatticeStructure::LatticeModule  lattice;
-	loader->read_cell_paramters(
-			rootDir.string(),
-			loader->get_optns().get_gPrec(),
-			kgrid,
-			lattice,
-			atoms,
-			symmetry);
-
 	LatticeStructure::UnitCell uc;
-	uc.initialize(atoms, lattice, symmetry);
+	loader->read_unit_cell(rootDir.string(), loader->get_optns().get_gPrec(),uc);
 
 	BOOST_REQUIRE_EQUAL(uc.get_site_symmetry( 0 ).get_num_symmetries(), 48);
 }

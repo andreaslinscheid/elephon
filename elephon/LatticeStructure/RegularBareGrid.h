@@ -81,6 +81,14 @@ public:
 			std::map< RegularBareGrid::GridPoint, int > & reducibleSet) const;
 
 	LatticeStructure::LatticeModule const & get_lattice() const;
+
+	/**
+	 * Since input settings for grid dims require sensible defaults this function handles input interpretation.
+	 *
+	 * @param fftDim	see documentation of the input option fftd.
+	 * @return			A vector of dimension 3 with the interpreted grid dimension.
+	 */
+	std::vector<int> interpret_fft_dim_input(std::vector<int> fftDim) const;
 private:
 
 	int numPoints_ = 0;

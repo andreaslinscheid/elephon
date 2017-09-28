@@ -34,10 +34,10 @@ BOOST_AUTO_TEST_CASE( irreducible_zones )
 	std::vector<bool> F = {false,false,false};
 
 	//Set up the set of reducible atoms in the conventional unit cell of Al
-	std::vector<Atom> reducible(4, Atom("Al",V({ 0.000000, 0.000000, 0.000000 }),F) );
-	reducible[1] = Atom("Al",V({ 0.000000, 0.500000, 0.500000 }),F);
-	reducible[2] = Atom("Al",V({ 0.500000, 0.000000, 0.500000 }),F);
-	reducible[3] = Atom("Al",V({ 0.500000, 0.500000, 0.000000 }),F);
+	std::vector<Atom> reducible(4, Atom(26.981, "Al",V({ 0.000000, 0.000000, 0.000000 }),F) );
+	reducible[1] = Atom(26.981, "Al",V({ 0.000000, 0.500000, 0.500000 }),F);
+	reducible[2] = Atom(26.981, "Al",V({ 0.500000, 0.000000, 0.500000 }),F);
+	reducible[3] = Atom(26.981, "Al",V({ 0.500000, 0.500000, 0.000000 }),F);
 
 	//load the symmetry
 	elephon::IOMethods::ReadVASPSymmetries symReader;

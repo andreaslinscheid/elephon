@@ -36,10 +36,10 @@ class ElectronPhononCoupling
 public:
 
 	void generate_gkkp(
-			std::vector<double> const & kList,
-			std::vector<double> const & kpList,
-			std::vector<int> const & bandList,
-			std::vector<int> const & bandpList,
+			std::vector<double> kList,
+			std::vector<double> kpList,
+			std::vector<int> bandList,
+			std::vector<int> bandpList,
 			Phonon const & ph,
 			DisplacementPotential const & dvscf,
 			ElectronicStructure::Wavefunctions const & wfcts );
@@ -57,12 +57,6 @@ public:
 			std::vector< std::complex<float> >::iterator & rangeBegin,
 			std::vector< std::complex<float> >::iterator & rangeEnd );
 
-	void generate_wfcts_at_arbitray_kp(
-			std::vector<double> const & kList,
-			std::vector<int> const & bandList,
-			ElectronicStructure::Wavefunctions const & wfctsRegular,
-			std::vector< std::vector< std::complex<float> > > & wfctsArbitrayKp,
-			std::vector<std::vector<int>> & fftMapsArbitrayKp) const;
 private:
 
 	int nK_ = 0;

@@ -1,4 +1,4 @@
-/*	This file ReadVASPPoscar.h is part of elephon.
+/*	This file AlphaSquaredF.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,43 +13,42 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: Sep 26, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOSCAR_H_
+#ifndef ELEPHON_PHONONSTRUCTURE_ALPHASQUAREDF_H_
+#define ELEPHON_PHONONSTRUCTURE_ALPHASQUAREDF_H_
 
-#include "LatticeStructure/Atom.h"
-#include <string>
-#include <vector>
+#include "IOMethods/ElectronicStructureCodeInterface.h"
+#include <memory>
 
 namespace elephon
 {
-namespace IOMethods
+namespace PhononStructure
 {
 
-/**
- *
- */
-class ReadVASPPoscar
+class AlphaSquaredF
 {
 public:
-	void read_file( std::string filename,
-			std::vector<std::pair<std::string, double> > const & atoms );
 
-	std::vector<double> get_lattice_matrix() const;
-
-	std::vector<LatticeStructure::Atom> get_atoms_list() const;
+	/**
+	 * This is the main driver for the a2F calculation.
+	 *
+	 * Computes and sets the a2F coupling function internally.
+	 *
+	 * @param dataLoader	The interface on how to obtain all the data need for this task.
+	 */
+	void compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> dataLoader );
 
 private:
 
-	std::vector<double> latticeMatrix_;
+	std::vector<double> freqGrid_;
 
-	std::vector<LatticeStructure::Atom> atoms_;
+	std::vector<double> a2F_;
 };
 
-} /* namespace IOMethods */
+} /* namespace PhononStructure */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOSCAR_H_ */
+#endif /* ELEPHON_PHONONSTRUCTURE_ALPHASQUAREDF_H_ */

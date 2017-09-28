@@ -57,8 +57,11 @@ void VASPInterface::set_up_run(
 
 	//write parameters in POSCAR according to data in unitcell
 	auto atomOrder = this->read_potcar_atom_order( potcarNew.string() );
+	std::vector<std::string> atomNames(atomOrder.size());
+	for ( int i = 0 ; i < atomOrder.size(); ++i)
+		atomNames[i] = atomOrder[i].first;
 	boost::filesystem::path poscarNew = elphd / "POSCAR";
-	this->overwrite_POSCAR_file( poscarNew.string(), atomOrder, unitcell );
+	this->overwrite_POSCAR_file( poscarNew.string(), atomNames, unitcell );
 
 	//Write the KPOINTS file
 	boost::filesystem::path kpts = elphd / "KPOINTS";
@@ -142,10 +145,7 @@ VASPInterface::read_cell_paramters(
 	boost::filesystem::path rootdir(root_directory);
 	this->read_lattice_structure(root_directory, lattice);
 	this->read_atoms_list(root_directory, atoms);
-	if ( symReader_.get_symmetries().empty() )
-		symReader_.read_file( (rootdir / "OUTCAR").string() );
-	symmetry.initialize( symPrec, symReader_.get_symmetries(),
-			symReader_.get_fractionTranslations(), lattice, symReader_.get_time_revesal_symmetry() );
+	this->read_symmetry(root_directory, symPrec, lattice, symmetry);
 
 	//Read the k point in the irreducible zone
 	std::vector<int> kDim;
@@ -171,6 +171,22 @@ VASPInterface::read_cell_paramters(
 }
 
 void
+VASPInterface::read_unit_cell(
+		std::string root_directory,
+		double symprec,
+		LatticeStructure::UnitCell & unitcell )
+{
+	boost::filesystem::path rootdir(root_directory);
+	LatticeStructure::LatticeModule lattice;
+	this->read_lattice_structure(root_directory, lattice);
+	std::vector<LatticeStructure::Atom> atoms;
+	this->read_atoms_list(root_directory, atoms);
+	LatticeStructure::Symmetry symmetry;
+	this->read_symmetry(root_directory, symprec, lattice, symmetry);
+	unitcell.initialize(atoms, lattice, symmetry);
+}
+
+void
 VASPInterface::read_lattice_structure(
 		std::string root_directory,
 		LatticeStructure::LatticeModule & lattice)
@@ -180,9 +196,9 @@ VASPInterface::read_lattice_structure(
 	{
 		if ( posReader_.get_atoms_list().empty() )
 		{
-			std::vector<std::string> atomOrder;
-			if ( boost::filesystem::exists(rootdir / "POTCAR" ) )
-				atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
+			if ( ! boost::filesystem::exists(rootdir / "POTCAR" ) )
+				throw std::runtime_error("Cannot complete atom data without data from POTCAR");
+			auto atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
 			posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
 		}
 		lattice.initialize( posReader_.get_lattice_matrix() );
@@ -206,9 +222,9 @@ VASPInterface::read_atoms_list(
 	{
 		if ( posReader_.get_atoms_list().empty() )
 		{
-			std::vector<std::string> atomOrder;
-			if ( boost::filesystem::exists(rootdir / "POTCAR" ) )
-				atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
+			if ( ! boost::filesystem::exists(rootdir / "POTCAR" ) )
+				throw std::runtime_error("Cannot complete atom data without data from POTCAR");
+			auto atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
 			posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
 		}
 		atoms = posReader_.get_atoms_list();
@@ -223,13 +239,34 @@ VASPInterface::read_atoms_list(
 }
 
 void
+VASPInterface::read_symmetry(
+		std::string root_directory,
+		double symprec,
+		LatticeStructure::LatticeModule const& lattice,
+		LatticeStructure::Symmetry & symmetry)
+{
+	boost::filesystem::path rootdir(root_directory);
+
+	if ( symReader_.get_symmetries().empty() )
+		symReader_.read_file( (rootdir / "OUTCAR").string() );
+	symmetry.initialize(
+			symprec,
+			symReader_.get_symmetries(),
+			symReader_.get_fractionTranslations(),
+			lattice,
+			symReader_.get_time_revesal_symmetry() );
+}
+
+void
 VASPInterface::check_open_poscar(std::string const & root_dir )
 {
 	boost::filesystem::path rootdir(root_dir);
 	//See if we find a POTCAR file which supplies the atom names
-	auto atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
 	if ( posReader_.get_atoms_list().empty() )
+	{
+		auto atomOrder = read_potcar_atom_order((rootdir / "POTCAR").string());
 		posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
+	}
 }
 
 void
@@ -325,7 +362,7 @@ VASPInterface::read_electronic_structure(
 }
 
 
-std::vector<std::string >
+std::vector<std::pair<std::string, double> >
 VASPInterface::read_potcar_atom_order( std::string filename ) const
 {
 	//Read the POTCAR content
@@ -342,7 +379,7 @@ VASPInterface::read_potcar_atom_order( std::string filename ) const
 	const char * reAtom = "VRHFIN\\s*=\\s*(\\w+)\\s*:";
 	boost::regex atom(reAtom);
 
-	std::vector<std::string > result;
+	std::vector<std::string > atoms;
 	for ( int ib = 0 ;ib < static_cast<int>(blocks.size()); ++ib)
 	{
 		boost::match_results<std::string::const_iterator> res;
@@ -350,7 +387,36 @@ VASPInterface::read_potcar_atom_order( std::string filename ) const
 		if ( res.size() != 2 )
 			throw std::runtime_error(
 					std::string("Failed to parse the atom list from POTCAR file ")+filename );
-		result.push_back(std::string(res[1].first,res[1].second));
+		atoms.push_back(std::string(res[1].first,res[1].second));
+	}
+
+	std::vector<std::pair<std::string, double> > result(atoms.size());
+
+	const char * re_mass = "(POMASS\\s*=\\s*\\d+\\.\\d+\\s*;)";
+	boost::regex expression_mass(re_mass);
+
+	std::vector<std::string> blocks_mass;
+	std::copy(boost::sregex_token_iterator(filecontent.begin(), filecontent.end(), expression_mass),
+		boost::sregex_token_iterator(),
+		std::back_inserter(blocks_mass));
+
+	if ( (blocks_mass.size() != atoms.size()) or (blocks_mass.size() == 0) )
+		throw std::runtime_error(std::string("Error parsing POTCAR ")+filename+ " for atom names and mass");
+
+	const char * reAtomMass = "POMASS\\s*=\\s*(\\d+\\.\\d+)\\s*;";
+	boost::regex mass(reAtomMass);
+	for ( int ib = 0 ;ib < static_cast<int>(blocks_mass.size()); ++ib)
+	{
+		boost::match_results<std::string::const_iterator> res;
+		boost::regex_search(blocks_mass[ib], res, mass );
+		if ( ib >= result.size() )
+			throw std::runtime_error(
+					std::string("Failed to parse the atom mass; incompatible mass and names in POTCAR file ")+filename );
+
+		if ( res.size() != 2 )
+			throw std::runtime_error(
+					std::string("Failed to parse the atom mass list from POTCAR file ")+filename );
+		result[ib] = std::move(std::make_pair(atoms[ib], std::stof(std::string(res[1].first,res[1].second)) ));
 	}
 	return result;
 }

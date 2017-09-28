@@ -7,6 +7,10 @@
 #vim swap files
 *.swp
 *~
+#lyx swap files
+*\.lyx#
+#(all generated) infile
+*infile
 #hidden files except gitignore itself and htaccess
 .*
 !.gitignore

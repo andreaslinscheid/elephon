@@ -60,6 +60,8 @@ MockStartup::simulate_elephon_input(
 	inputOpts = input.get_opts();
 	delete [] prog;
 	delete [] arg;
+
+	boost::filesystem::remove( boost::filesystem::path(inputFileName) );
 }
 
 } /* namespace fixtures */

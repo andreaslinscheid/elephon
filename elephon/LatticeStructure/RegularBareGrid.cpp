@@ -251,6 +251,27 @@ RegularBareGrid::compute_grid_cubes_surrounding_nongrid_points(
 			nonGridPtToCubeMap[i] = ic;
 }
 
+std::vector<int>
+RegularBareGrid::interpret_fft_dim_input(std::vector<int> fftDim) const
+{
+	if ( fftDim.size() == 1 )
+	{
+		int scale = fftDim.at(0);
+		fftDim = pointMesh_;
+		if ( scale != 0 )
+			for ( auto &d : fftDim )
+				d *= scale;
+	}
+	else
+	{
+		if ( fftDim.size() != 3 )
+			throw std::runtime_error("Incorrect grid dimension for fft dimensions.");
+		for ( int id = 0 ; id < 3; ++id)
+			fftDim[id] = fftDim[id] == 0 ? pointMesh_[id] : fftDim[id];
+	}
+	return fftDim;
+}
+
 namespace detail
 {
 

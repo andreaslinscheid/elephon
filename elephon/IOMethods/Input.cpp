@@ -43,7 +43,13 @@ Input::Input( int argc, char* argv[] )
 		std::cout << "WARNING: Key '"+ key +"' defined in the input file has not been\n"
 				" matched to a variable used by the code. Typo?" ;
 
+	auto scd = opts_.get_scell();
+	if ( scd.size() != 3 )
+		throw std::runtime_error(" scell: incorrect size ; must be 3 ");
+	if ( (scd[0] < 1) or (scd[1] < 1) or (scd[2] < 1) )
+		throw std::runtime_error(" scell: incorrect supercell request ; a dimension cannot be < 1 ");
 	//TODO Here could be some consistency checks
+
 }
 
 InputOptions const & Input::get_opts() const

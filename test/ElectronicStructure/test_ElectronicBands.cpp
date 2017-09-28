@@ -67,31 +67,35 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 	}
 	BOOST_REQUIRE( diffIrreducibeWedge < 1e-6 );
 
-	elephon::IOMethods::ReadVASPSymmetries symread;
-	symread.read_file( (testd / "symmetric" / "OUTCAR").string() );
+	std::string input = std::string()+
+			"root_dir = "+(testd / "symmetric").string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
 
-	elephon::IOMethods::ReadVASPPoscar latRead;
-	latRead.read_file( (testd / "symmetric" / "POSCAR").string() );
-
-	elephon::LatticeStructure::LatticeModule lattice;
-	lattice.initialize( latRead.get_lattice_matrix() );
-
-	elephon::LatticeStructure::Symmetry sym;
-	sym.initialize(1e-6, symread.get_symmetries(), symread.get_fractionTranslations(), lattice, true );
-	sym.set_reciprocal_space_sym();
-
-	elephon::LatticeStructure::RegularSymmetricGrid grid;
-	grid.initialize( std::vector<int>({5,5,2}), 1e-6, std::vector<double>({0.0,0.0,0.5}), sym, lattice );
-
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
 	elephon::ElectronicStructure::ElectronicBands bands_sym;
-	bands_sym.initialize( wfcSymRead.get_num_bands(), 0.0, wfcSymRead.get_energies(), grid );
+	loader->read_band_structure((testd / "symmetric").string(), bands_sym);
+	bands_sym.initialize( wfcSymRead.get_num_bands(), 0.0, wfcSymRead.get_energies(), bands_sym.get_grid() );
 
 	elephon::LatticeStructure::Symmetry identity;
-	identity.initialize( 1e-6, std::vector<int>({1,0,0,0,1,0,0,0,1}), std::vector<double>({0,0,0}), lattice, false );
+	identity.initialize(
+			1e-6,
+			std::vector<int>({1,0,0,0,1,0,0,0,1}),
+			std::vector<double>({0,0,0}),
+			bands_sym.get_grid().get_lattice(),
+			false );
 	identity.set_reciprocal_space_sym();
 
 	elephon::LatticeStructure::RegularSymmetricGrid gridNoSym;
-	gridNoSym.initialize( std::vector<int>({5,5,2}), 1e-6, std::vector<double>({0.0,0.0,0.5}), identity, lattice );
+	gridNoSym.initialize(
+			std::vector<int>({5,5,2}),
+			1e-6,
+			std::vector<double>({0.0,0.0,0.5}),
+			identity,
+			bands_sym.get_grid().get_lattice() );
 
 	elephon::ElectronicStructure::ElectronicBands bands_nosym;
 	bands_nosym.initialize( wfcNoSymRead.get_num_bands(), 0.0, wfcNoSymRead.get_energies(), gridNoSym );

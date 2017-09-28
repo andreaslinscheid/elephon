@@ -83,6 +83,12 @@ public:
 			std::vector<int> const & bIndices,
 			std::vector<double> & bands) const;
 
+	void generate_interpolated_reducible_grid_bands(
+			std::vector<int> const & bIndices,
+			LatticeStructure::RegularBareGrid const & interpolationGrid,
+			std::vector<double> & interpolatedReducibleData) const;
+
+
 	LatticeStructure::RegularSymmetricGrid const & get_grid() const;
 
 	/**

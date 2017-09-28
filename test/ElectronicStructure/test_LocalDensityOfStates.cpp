@@ -33,6 +33,7 @@ BOOST_AUTO_TEST_CASE( ldos_MgB2_vasp )
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 	auto outfile = testd / "ldos.dat";
+	boost::filesystem::remove(outfile);
 
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n"
@@ -52,6 +53,7 @@ BOOST_AUTO_TEST_CASE( ldos_MgB2_vasp )
 	ldos.write_file(opts.get_f_ldos());
 
 	BOOST_REQUIRE( boost::filesystem::exists(outfile) );
+	boost::filesystem::remove(outfile);
 }
 
 BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
@@ -59,6 +61,7 @@ BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
 	test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
 	auto outfile = testd / "ldos.dat";
+	boost::filesystem::remove(outfile);
 
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n"
@@ -78,4 +81,5 @@ BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
 	ldos.write_file(opts.get_f_ldos());
 
 	BOOST_REQUIRE( boost::filesystem::exists(outfile) );
+	boost::filesystem::remove(outfile);
 }

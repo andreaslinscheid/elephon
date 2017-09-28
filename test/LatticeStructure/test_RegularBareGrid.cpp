@@ -33,11 +33,11 @@ BOOST_AUTO_TEST_CASE( G2S2_vasp_bare_kpoint_grid )
 	test::fixtures::MockStartup ms;
 	auto path = ms.get_data_for_testing_dir() / "Ge2S2" ;
 
-	std::vector<std::string> atoms;
+	std::vector<std::pair<std::string, double> > atoms;
 	// mass Ge 72.63
 	// mass S 32.065
-	atoms.push_back("Ge");
-	atoms.push_back("S");
+	atoms.push_back(std::make_pair("Ge", 72.63) );
+	atoms.push_back(std::make_pair("S", 32.065) );
 
 	elephon::IOMethods::ReadVASPPoscar poscarReader;
 	poscarReader.read_file( (path / "POSCAR").string(), atoms );

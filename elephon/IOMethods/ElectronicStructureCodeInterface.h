@@ -81,6 +81,11 @@ public:
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry) = 0;
 
+	virtual void read_unit_cell(
+			std::string root_directory,
+			double symprec,
+			LatticeStructure::UnitCell & unitcell ) = 0;
+
 	virtual void read_lattice_structure(
 			std::string root_directory,
 			LatticeStructure::LatticeModule & lattice) = 0;

@@ -81,6 +81,11 @@ public:
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry);
 
+	void read_unit_cell(
+			std::string root_directory,
+			double symprec,
+			LatticeStructure::UnitCell & unitcell );
+
 	void read_lattice_structure(
 			std::string root_directory,
 			LatticeStructure::LatticeModule & lattice);
@@ -118,6 +123,12 @@ public:
 			std::string root_directory,
 			int & nBnd);
 
+	void read_symmetry(
+			std::string root_directory,
+			double symprec,
+			LatticeStructure::LatticeModule const& lattice,
+			LatticeStructure::Symmetry & symmetry);
+
 private:
 
 	ReadVASPPoscar posReader_;
@@ -143,7 +154,7 @@ private:
 	void modify_incar_file(std::string filename,
 			std::map<std::string,std::string> const & optionsToBeReset) const;
 
-	std::vector<std::string > read_potcar_atom_order( std::string filename ) const;
+	std::vector<std::pair<std::string, double> > read_potcar_atom_order( std::string filename ) const;
 
 	std::string get_textfile_content( std::string filename ) const;
 

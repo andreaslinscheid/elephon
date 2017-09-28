@@ -1,4 +1,4 @@
-/*	This file ReadVASPPoscar.h is part of elephon.
+/*	This file LocalDerivatives.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,43 +13,36 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 14, 2017
+ *  Created on: Sep 28, 2017
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPPOSCAR_H_
-#define ELEPHON_IOMETHODS_READVASPPOSCAR_H_
+#ifndef ELEPHON_ALGORITHMS_LOCALDERIVATIVES_H_
+#define ELEPHON_ALGORITHMS_LOCALDERIVATIVES_H_
 
-#include "LatticeStructure/Atom.h"
-#include <string>
+#include "LatticeStructure/RegularBareGrid.h"
 #include <vector>
 
 namespace elephon
 {
-namespace IOMethods
+namespace Algorithms
+{
+namespace localDerivatives
 {
 
-/**
- *
- */
-class ReadVASPPoscar
-{
-public:
-	void read_file( std::string filename,
-			std::vector<std::pair<std::string, double> > const & atoms );
+template<typename T, class DataLoader>
+void
+compute_derivatives_sqr_polynom(
+		int nBnd,
+		std::vector<int> const & reducibleKPTIndices,
+		std::vector<T> * gradientFieldPtr,
+		std::vector<T> * hessianFieldPtr,
+		LatticeStructure::RegularBareGrid const & grid,
+		DataLoader const & reducibleData);
 
-	std::vector<double> get_lattice_matrix() const;
-
-	std::vector<LatticeStructure::Atom> get_atoms_list() const;
-
-private:
-
-	std::vector<double> latticeMatrix_;
-
-	std::vector<LatticeStructure::Atom> atoms_;
-};
-
-} /* namespace IOMethods */
+} /* namespace localDerivatives */
+} /* namespace Algorithms */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPPOSCAR_H_ */
+#include "Algorithms/LocalDerivatives.hpp"
+#endif /* ELEPHON_ALGORITHMS_LOCALDERIVATIVES_H_ */

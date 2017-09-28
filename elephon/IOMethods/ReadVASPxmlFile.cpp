@@ -131,12 +131,14 @@ ReadVASPxmlFile::parse_file( std::string filename )
 				{
 					if ( val2.first == "rc" )
 					{
-						c++;
+						c++; // vasp counts from 1
 						BOOST_FOREACH( ptree::value_type const& val3, val2.second )
 						{
 							if ( val3.first == "c" )
 								typeInfo[c].push_back(val3.second.data());
 						}
+						if ( typeInfo[c].size() < 3 )
+							throw std::runtime_error("Problem parsing atom info");
 					}
 				}
 	    	}
@@ -160,7 +162,12 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						if (atomInfo.size() != 2)
 							throw std::runtime_error("Problem parsing atominfo from vasprun.xml");
 						int numAtom = atoms_.size();
-						atoms_.push_back( LatticeStructure::Atom(atomInfo[0], atomicPos[numAtom], {false, false, false}, 1e-6) );
+						int typenum = std::stoi(atomInfo[1]);
+						auto it = typeInfo.find(typenum);
+						if ( it == typeInfo.end())
+							throw std::runtime_error("Problem finding atom typeinfo.");
+						double mass = std::stof(it->second.at(2));
+						atoms_.push_back( LatticeStructure::Atom(mass, atomInfo[0], atomicPos[numAtom], {false, false, false}, 1e-6) );
 					}
 				}
 	    	}

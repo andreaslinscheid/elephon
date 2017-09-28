@@ -97,6 +97,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor )
 	c += 3;
 	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-3f); //
 	c += 3;
+	boost::filesystem::remove(massTens);
 }
 
 BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
@@ -213,6 +214,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	c += 3;
 	BOOST_CHECK_SMALL(ptr[c++]-1, 1e-2f);
 	c += 3;
+	boost::filesystem::remove(massTens);
 }
 
 BOOST_AUTO_TEST_CASE( write_mass_tensor_fcc_Al_vasp )
@@ -237,7 +239,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_fcc_Al_vasp )
 
 	BOOST_REQUIRE(boost::filesystem::exists(massTens));
 
-
+	boost::filesystem::remove(massTens);
 }
 
 

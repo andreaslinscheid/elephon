@@ -26,10 +26,13 @@ namespace elephon
 namespace LatticeStructure
 {
 
-Atom::Atom(std::string kind, std::vector<double> pos,
+Atom::Atom(
+		double mass,
+		std::string kind,
+		std::vector<double> pos,
 		std::vector<bool> frozen,
 		double gridPrec)
-		: kind_(std::move(kind)),pos_(std::move(pos)),frozen_(std::move(frozen)), prec_(gridPrec)
+		: mass_(mass), kind_(std::move(kind)),pos_(std::move(pos)),frozen_(std::move(frozen)), prec_(gridPrec)
 {
 	for ( auto &xi : pos_ )
 		xi -= std::floor(xi + 0.5);
@@ -39,6 +42,14 @@ std::string Atom::get_kind() const
 {
 	return kind_;
 };
+
+double
+Atom::get_mass() const
+{
+	if ( mass_ == 0 )
+		throw std::logic_error("Trying to get atomic mass that was not set");
+	return mass_;
+}
 
 std::vector<double> const & Atom::get_position() const
 {

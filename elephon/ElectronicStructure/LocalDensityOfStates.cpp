@@ -23,6 +23,7 @@
 #include "LatticeStructure/UnitCell.h"
 #include "Algorithms/FFTInterface.h"
 #include "Algorithms/GridRotationMap.h"
+#include "Algorithms/LocalDerivatives.h"
 #include "IOMethods/WriteVASPRealSpaceData.h"
 
 namespace elephon
@@ -56,35 +57,30 @@ LocalDensityOfStates::compute_ldos(
 	std::vector< std::complex<float> > wfctsOneBand;
 	int nrs = rsDims_[0]*rsDims_[1]*rsDims_[2];
 	ldos_.assign( isoEnergies_.size()*nrs , 0.0 );
-	std::vector<double> regularData, interpolData;
+	std::vector<double> interpolData;
 	Algorithms::FFTInterface fftInt;
+//
+//	LatticeStructure::RegularSymmetricGrid interpolKGrid;
+//	interpolKGrid.initialize(
+//			interpolGrid.get_grid_dim(),
+//			interpolGrid.get_grid_prec(),
+//			interpolGrid.get_grid_shift(),
+//			bands.get_grid().get_symmetry(),
+//			bands.get_grid().get_lattice());
 
-	LatticeStructure::RegularSymmetricGrid interpolKGrid;
-	interpolKGrid.initialize(
-			interpolGrid.get_grid_dim(),
-			interpolGrid.get_grid_prec(),
-			interpolGrid.get_grid_shift(),
-			bands.get_grid().get_symmetry(),
-			bands.get_grid().get_lattice());
 
 	for ( int ie = 0 ; ie < isoEnergies_.size(); ++ie )
 	{
 		double e = isoEnergies_[ie];
 		auto reqBandId = bands.get_bands_crossing_energy_lvls({e});
-		bands.generate_reducible_grid_bands(reqBandId, regularData);
-		fftInt.fft_interpolate(
-				bands.get_grid().get_grid_dim(),
-				bands.get_grid().get_grid_shift(),
-				regularData,
-				interpolGrid.get_grid_dim(),
-				interpolGrid.get_grid_shift(),
-				interpolData,
-				reqBandId.size());
+		bands.generate_interpolated_reducible_grid_bands(
+				reqBandId,
+				interpolGrid,
+				interpolData);
 
 		ElectronicStructure::FermiSurface fs;
 		fs.triangulate_surface(
-				interpolGrid.get_grid_dim(),
-				uc_.get_lattice(),
+				interpolGrid,
 				reqBandId.size(),
 				interpolData,
 				nkpointsPerSurface,
@@ -96,9 +92,6 @@ LocalDensityOfStates::compute_ldos(
 				wfctsFs,
 				fftMapsWfctsFs);
 
-		ElectronicBands bandsThisKGrid;
-		bandsThisKGrid.initialize( reqBandId.size(), 0.0, std::move(interpolData), interpolKGrid);
-
 		for ( int ibRel = 0 ; ibRel < reqBandId.size(); ++ibRel )
 		{
 			int bandOffset = fs.get_band_offset(ibRel);
@@ -107,13 +100,24 @@ LocalDensityOfStates::compute_ldos(
 			if ( kfv.size() == 0 )
 				continue;
 
+			// define the data loader that fetches the correct band for given 'ibRel'
+			// note that compute_derivatives_sqr_polynom will call with ib = 0, since we only want this
+			// particular band ibRel.
+			auto interpolated_band_data_loader = [&interpolData, &reqBandId, &ibRel] (int ikr, int ib){
+				assert( ikr*reqBandId.size() + ibRel < interpolData.size());
+				return interpolData[ikr*reqBandId.size() + ibRel];
+				};
+
 			//Compute the Fermi velocities
 			triLin.data_query( kfv, reqestedIndices );
-			bandsThisKGrid.compute_derivatives_sqr_polynom<double>(
-					{reqBandId[ibRel]},
+			Algorithms::localDerivatives::compute_derivatives_sqr_polynom<double>(
+					1,
 					reqestedIndices,
 					&gradDataAtRequestedIndices,
-					nullptr);
+					nullptr,
+					interpolGrid,
+					interpolated_band_data_loader);
+			assert(gradDataAtRequestedIndices.size() == 3*reqestedIndices.size());
 			triLin.interpolate(3, gradDataAtRequestedIndices, FermiVelocities);
 
 			for (int ikf = 0 ; ikf < kfv.size()/3; ++ikf)
@@ -201,25 +205,9 @@ LocalDensityOfStates::compute_ldos(
 	LatticeStructure::UnitCell uc;
 	uc.initialize(atoms, lattice, sym);
 
-	auto fftd = loader->get_optns().get_fftd();
 	auto gridShift = loader->get_optns().get_ffts();
-	if ( fftd.size() == 1 )
-	{
-		int scale = fftd.at(0);
-		fftd = kgrid.get_grid_dim();
-		if ( scale != 0 )
-			for ( auto &d : fftd )
-				d *= scale;
-	}
-	else
-	{
-		if ( fftd.size() != 3 )
-			throw std::runtime_error("Incorrect grid dimension for bands interpolate.");
-		for ( int id = 0 ; id < 3; ++id)
-			fftd[id] = fftd[id] == 0 ? kgrid.get_grid_dim()[id] : fftd[id];
-	}
-
 	LatticeStructure::RegularBareGrid interpolGrid;
+	auto fftd = kgrid.view_bare_grid().interpret_fft_dim_input( loader->get_optns().get_fftd() );
 	if ( (kgrid.get_grid_dim() == fftd) and
 			(    (std::abs(kgrid.get_grid_shift()[0]-gridShift[0]) < kgrid.get_grid_prec())
 			 and (std::abs(kgrid.get_grid_shift()[1]-gridShift[1]) < kgrid.get_grid_prec())

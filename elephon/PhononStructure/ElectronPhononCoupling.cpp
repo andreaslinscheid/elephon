@@ -30,10 +30,10 @@ namespace PhononStructure
 
 void
 ElectronPhononCoupling::generate_gkkp(
-		std::vector<double> const & kList,
-		std::vector<double> const & kpList,
-		std::vector<int> const & bandList,
-		std::vector<int> const & bandpList,
+		std::vector<double> kList,
+		std::vector<double> kpList,
+		std::vector<int> bandList,
+		std::vector<int> bandpList,
 		Phonon const & ph,
 		DisplacementPotential const & dvscf,
 		ElectronicStructure::Wavefunctions const & wfcts)
@@ -52,6 +52,11 @@ ElectronPhononCoupling::generate_gkkp(
 	std::vector< std::vector<int> > fftMapsK, fftMapsKp;
 	wfcts.generate_wfcts_at_arbitray_kp( kList, bandList, wfcsk, fftMapsK);
 	wfcts.generate_wfcts_at_arbitray_kp( kpList, bandpList, wfcskp, fftMapsKp );
+
+	// conjugate the left wfct of the scalar product
+	for ( auto & wfk : wfcsk )
+		for ( auto & cg : wfk )
+			cg = std::conj(cg);
 
 	std::vector<int> potentialFFTGrid = dvscf.get_real_space_grid().get_grid_dim();
 
@@ -138,6 +143,22 @@ ElectronPhononCoupling::tensor_layout(int ik, int ikp, int ib, int ibp, int imu)
 	assert( imu < nM_);
 	return (((ik*nKp_+ikp)*nB_+ib)*nBp_+ibp)*nM_+imu;
 }
+
+void
+ElectronPhononCoupling::write_gkkp_file(
+		std::string const & filename,
+		std::vector<double> const & kList,
+		std::vector<double> const & kpList,
+		std::vector<int> const & bandList,
+		std::vector<int> const & bandpList) const
+{
+	std::ofstream file( filename.c_str(), std::ios::binary | std::ios::out );
+	if ( not file.good() )
+		throw std::runtime_error(std::string("Unable to open file ")+filename+" for writing the gkkp file.");
+
+	// write the header
+}
+
 
 } /* namespace PhononStructure */
 } /* namespace elephon */

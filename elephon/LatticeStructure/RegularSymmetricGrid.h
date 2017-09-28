@@ -46,6 +46,7 @@ public:
 	using RegularBareGrid::compute_grid_cubes_surrounding_nongrid_points;
 	using RegularBareGrid::get_lattice;
 	using RegularBareGrid::get_list_reducible_lattice_point_indices;
+	using RegularBareGrid::interpret_fft_dim_input;
 
 	RegularBareGrid view_bare_grid() const;
 

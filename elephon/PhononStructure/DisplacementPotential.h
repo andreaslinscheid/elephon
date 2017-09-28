@@ -24,7 +24,7 @@
 #include "LatticeStructure/AtomDisplacement.h"
 #include <vector>
 #include <complex>
-#include "../LatticeStructure/RegularSymmetricGrid.h"
+#include "LatticeStructure/RegularSymmetricGrid.h"
 
 namespace elephon
 {

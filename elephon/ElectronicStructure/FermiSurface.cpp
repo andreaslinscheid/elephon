@@ -31,42 +31,36 @@
 #include "vtkMath.h"
 #include <cmath>
 #include <assert.h>
+#include <set>
 
 namespace elephon
 {
 namespace ElectronicStructure
 {
 
-FermiSurface::FermiSurface()
-{
-
-}
-
 void FermiSurface::triangulate_surface(
-		std::vector<int> kgrid,
-		LatticeStructure::LatticeModule const& lattice,
+		LatticeStructure::RegularBareGrid grid,
 		int nbnd,
 		std::vector<double> const& energies,
 		int numTargetPoints,
 		double energyVal)
 {
-	kgrid_ = std::move(kgrid);
-	if ( kgrid_.size() != 3 )
-		throw std::logic_error("Can only triangulate 3D Fermi surfaces!");
-	if ( kgrid_[0]*kgrid_[1]*kgrid_[2]*nbnd != energies.size() )
+	grid_ = std::move(grid);
+	auto d = grid_.get_grid_dim();
+	if ( d[0]*d[1]*d[2]*nbnd != energies.size() )
 		throw std::logic_error("Grid energy data size mismatch!");
 
-	auto SurfaceGrid = kgrid_;
+	auto SurfaceGrid = d;
 	for (auto &ki : SurfaceGrid )
 		ki++;
 
 	//Define the grid
 	//We need to extend the grid to the first periodic point so that the surfaces will be correctly computed
-	vtkSmartPointer<vtkImageData> grid =
+	vtkSmartPointer<vtkImageData> dataGrid =
 			vtkSmartPointer<vtkImageData>::New();
-	grid->SetOrigin(0,0,0);
-	grid->SetExtent(0,kgrid_[0],0,kgrid_[1],0,kgrid_[2]);
-	grid->SetSpacing(1.0/double(kgrid_[0]),1.0/double(kgrid_[1]),1.0/double(kgrid_[2]));
+	dataGrid->SetOrigin(grid_.get_grid_shift()[0], grid_.get_grid_shift()[1], grid_.get_grid_shift()[2]);
+	dataGrid->SetExtent(0,d[0],0,d[1],0,d[2]);
+	dataGrid->SetSpacing(1.0/double(d[0]),1.0/double(d[1]),1.0/double(d[2]));
 
 	//Loop the bands and compute the points, weights and gradient
 	bandsMap_ = std::vector<int>( nbnd, -1 );
@@ -85,18 +79,18 @@ void FermiSurface::triangulate_surface(
 				{
 					//Note that vtk stores x,y,z in fast to slow running variables
 					int consq = (k*SurfaceGrid[1]+j)*SurfaceGrid[0]+i;
-					int ii = i%kgrid_[0];
-					int jj = j%kgrid_[1];
-					int kk = k%kgrid_[2];
-					int consqEnergies = (kk*kgrid_[1]+jj)*kgrid_[0]+ii;
+					int ii = i%d[0];
+					int jj = j%d[1];
+					int kk = k%d[2];
+					int consqEnergies = (kk*d[1]+jj)*d[0]+ii;
 					doubleArray->SetValue(consq,energies[consqEnergies*nbnd+ib]);
 				}
-		grid->GetPointData()->SetScalars( doubleArray );
+		dataGrid->GetPointData()->SetScalars( doubleArray );
 
 		// Create a 3D model using marching cubes
 		vtkSmartPointer<vtkMarchingCubes> mc =
 				vtkSmartPointer<vtkMarchingCubes>::New();
-		mc->SetInputData(grid);
+		mc->SetInputData(dataGrid);
 		mc->ComputeNormalsOff();
 		mc->ComputeGradientsOff();//We need that for the adaptive weights
 		mc->ComputeScalarsOff();
@@ -149,9 +143,9 @@ void FermiSurface::triangulate_surface(
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(2),p2);
 
 			//transform to Cartesian coordinates
-			lattice.reci_direct_to_cartesian_2pibya(p0,3);
-			lattice.reci_direct_to_cartesian_2pibya(p1,3);
-			lattice.reci_direct_to_cartesian_2pibya(p2,3);
+			grid_.get_lattice().reci_direct_to_cartesian_2pibya(p0,3);
+			grid_.get_lattice().reci_direct_to_cartesian_2pibya(p1,3);
+			grid_.get_lattice().reci_direct_to_cartesian_2pibya(p2,3);
 
 			for (int xi = 0 ; xi < 3; xi++)
 			{
@@ -248,6 +242,61 @@ FermiSurface::get_Fermi_weights_for_band(int ib) const
 	this->band_index_range(ib,indexBandStart,indexBandEnd);
 	std::vector<double> result( &kfWeights_[ indexBandStart ], &kfWeights_[ indexBandEnd ] );
 	return result;
+}
+
+void
+FermiSurface::obtain_irreducible_Fermi_vectors_for_band(
+		int ib,
+		LatticeStructure::Symmetry const & symmetry,
+		std::vector<double> & kpoints,
+		std::vector<double> & weights) const
+{
+	int indexBandStart,indexBandEnd;
+	this->band_index_range(ib,indexBandStart,indexBandEnd);
+	assert(symmetry.is_reci());
+
+	const double equalThresh = symmetry.get_symmetry_prec();
+	typedef struct KPoint_{
+		KPoint_(double x, double y, double z) : xi{x,y,z} {};
+		std::vector<double> xi;
+	} KPoint;
+
+	auto compare_k_points = [&equalThresh] (KPoint const & k1, KPoint const & k2) {
+		for ( int i = 0 ; i < 3; ++i)
+			if ( std::abs(k1.xi[i] - k2.xi[i]) > equalThresh )
+				return  k1.xi[i] < k2.xi[i];
+		return false;
+	};
+
+	auto itKf = kfPoints_.begin();
+	int nkf = indexBandEnd-indexBandStart;
+	std::set<int> kfInIrred;
+	for (int ikf = 0 ; ikf < nkf; ++ikf)
+	{
+		bool isIrreducibleZone = false;
+		KPoint orig( *(itKf + ikf*3 ), *(itKf + ikf*3 + 1), *(itKf + ikf*3 + 2) );
+		for ( int isym = 0 ; isym < symmetry.get_num_symmetries(); ++isym)
+		{
+			KPoint rot = orig;
+			symmetry.rotate<double>(isym, rot.xi.begin(), rot.xi.end(), true);
+			if ( compare_k_points(orig,rot) )
+				break;
+			// no rotated vector is smaller than the originial one
+			isIrreducibleZone = true;
+		}
+		if ( isIrreducibleZone )
+			kfInIrred.insert(ikf);
+	}
+	kpoints.resize( kfInIrred.size()*3 );
+	weights.resize( kfInIrred.size() );
+
+	auto it = kfInIrred.begin();
+	for (int ikfirr = 0; ikfirr < kfInIrred.size(); ++ikfirr )
+	{
+		int ikf = *it++;
+		std::copy(&kfPoints_[ikf*3], &kfPoints_[ikf*3]+3, &kpoints[ikfirr*3]);
+		weights[ikfirr] = kfWeights_[ikf];
+	}
 }
 
 void FermiSurface::band_index_range(

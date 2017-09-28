@@ -122,6 +122,26 @@ ElectronicBands::generate_reducible_grid_bands(
 		}
 }
 
+void
+ElectronicBands::generate_interpolated_reducible_grid_bands(
+		std::vector<int> const & bIndices,
+		LatticeStructure::RegularBareGrid const & interpolationGrid,
+		std::vector<double> & interpolatedReducibleData) const
+{
+	std::vector<double> reducibleData;
+	this->generate_reducible_grid_bands(bIndices, reducibleData);
+
+	Algorithms::FFTInterface fft;
+	fft.fft_interpolate(
+			grid_.get_grid_dim(),
+			grid_.get_grid_shift(),
+			reducibleData,
+			interpolationGrid.get_grid_dim(),
+			interpolationGrid.get_grid_shift(),
+			interpolatedReducibleData,
+			bIndices.size()	);
+}
+
 std::vector<int>
 ElectronicBands::get_bands_crossing_energy_lvls(
 		std::vector<double> const & energies ) const
@@ -177,22 +197,7 @@ ElectronicBands::fft_interpolate(
 		std::vector<double> const & gridShift)
 {
 	assert( gridShift.size() == 3 );
-	auto fftd = newDims;
-	if ( fftd.size() == 1 )
-	{
-		int scale = fftd.at(0);
-		fftd = grid_.get_grid_dim();
-		if ( scale != 0 )
-			for ( auto &d : fftd )
-				d *= scale;
-	}
-	else
-	{
-		if ( newDims.size() != 3 )
-			throw std::runtime_error("Incorrect grid dimension for bands interpolate.");
-		for ( int id = 0 ; id < 3; ++id)
-			fftd[id] = fftd[id] == 0 ? grid_.get_grid_dim()[id] : fftd[id];
-	}
+	auto fftd = grid_.interpret_fft_dim_input(newDims);
 	if ( (grid_.get_grid_dim() == fftd) and
 			(    (std::abs(grid_.get_grid_shift()[0]-gridShift[0]) < grid_.get_grid_prec())
 			 and (std::abs(grid_.get_grid_shift()[1]-gridShift[1]) < grid_.get_grid_prec())

@@ -118,6 +118,15 @@ class InputOptions : public InputBase<InputOptions>
 			std::vector<double>);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			ea2f,
+			"The energies relative to the Fermi level at which the a2F will be calculated.\n"
+			"If more than one number is given, the 'f_a2f' will be preceded by an integer number indicating the position\n"
+			"In the list.",
+			"0.0",
+			{ 0.0 },
+			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			fftd,
 			"Grid dimension for the electronic structure fft interpolation.\n"
 			"Can be a list of 3 non-negative integers which will be the grid.\n"

@@ -31,7 +31,7 @@ namespace IOMethods
 {
 
 void ReadVASPPoscar::read_file( std::string filename,
-		std::vector<std::string> const & defaultAtoms )
+		std::vector<std::pair<std::string, double> > const & atoms  )
 {
 	std::ifstream file( filename.c_str() );
 	if ( ! file.good() )
@@ -104,19 +104,12 @@ void ReadVASPPoscar::read_file( std::string filename,
 
 	if ( not atomsList.empty() )
 	{
-		//Prefer the default atoms over the ones presented here
-		if ( not defaultAtoms.empty() )
-		{
-			if ( atomsList.size() != defaultAtoms.size() )
-				throw std::runtime_error("Error parsing POSCAR file: # of default atoms and atoms in file different");
-			atomsList = defaultAtoms;
-		}
+		if ( atomsList.size() != atoms.size() )
+				throw std::runtime_error("Error parsing POSCAR file: # of atoms and read-in atoms in file different");
 		//The list of atoms was provided - we need to read the next line with
 		//the number of atoms per atom type which is parsed in the next step
 		std::getline( file , buffer );
 	}
-	else
-		atomsList = defaultAtoms;
 
 	//Now that we know how many atom types, read the number of ions per type
 	std::vector<int> numAtomPerType(nAtomTypes);
@@ -132,7 +125,7 @@ void ReadVASPPoscar::read_file( std::string filename,
 	int counter = 0;
 	for ( int i = 0 ; i < nAtomTypes; ++i)
 		for ( int j = 0 ; j < numAtomPerType[i]; ++j)
-			typeForAtom[counter++] = atomsList.empty() ? std::to_string(i) : atomsList[i];
+			typeForAtom[counter++] = atoms[i].first;
 	assert(counter==totalNumAtoms);
 
 	//Check for the selective dynamics switch, or the direct/cartesian switch
@@ -194,7 +187,7 @@ void ReadVASPPoscar::read_file( std::string filename,
 				frozen[xi] = fortran_bool_parser(word);
 			}
 		}
-		LatticeStructure::Atom a(typeForAtom[i],tauI,frozen);
+		LatticeStructure::Atom a(atoms[i].second, typeForAtom[i], tauI, frozen);
 		atoms_.push_back( std::move(a) );
 	}
 }

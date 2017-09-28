@@ -40,25 +40,25 @@ BOOST_AUTO_TEST_CASE( Check_surface_sphere )
 {
 	//construct data which will yield a sphere of radius r
 	double const r = 0.25;
-	std::vector<int> grid = {100,100,100};
-	std::vector<double> data(grid[0]*grid[1]*grid[2]);
-	for (int k = 0 ; k < grid[2]; ++k)
-	  for (int j = 0 ; j < grid[1]; ++j)
-			for (int i = 0 ; i < grid[0]; ++i)
+	elephon::LatticeStructure::RegularBareGrid grid;
+	grid.initialize( {100,100,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	auto d = grid.get_grid_dim();
+	std::vector<double> data(d[0]*d[1]*d[2]);
+	for (int k = 0 ; k < d[2]; ++k)
+	  for (int j = 0 ; j < d[1]; ++j)
+			for (int i = 0 ; i < d[0]; ++i)
 		  {
-			  double x = (i<grid[0]/2?double(i):double(i)-grid[0])/double(grid[0]);
-			  double y = (j<grid[1]/2?double(j):double(j)-grid[1])/double(grid[1]);
-			  double z = (k<grid[2]/2?double(k):double(k)-grid[2])/double(grid[2]);
-			  data[(k*grid[1]+j)*grid[0]+i] = std::sqrt(x*x+y*y+z*z)/r;
+			  double x = (i<d[0]/2?double(i):double(i)-d[0])/double(d[0]);
+			  double y = (j<d[1]/2?double(j):double(j)-d[1])/double(d[1]);
+			  double z = (k<d[2]/2?double(k):double(k)-d[2])/double(d[2]);
+			  data[(k*d[1]+j)*d[0]+i] = std::sqrt(x*x+y*y+z*z)/r;
 		  }
 
-	elephon::LatticeStructure::LatticeModule lattice;
 
 	int targetNumPoints = 10000;
 	elephon::ElectronicStructure::FermiSurface fs;
 	fs.triangulate_surface(
 			grid,
-			lattice,
 			1,
 			data,
 			targetNumPoints,
@@ -87,29 +87,28 @@ BOOST_AUTO_TEST_CASE( free_electron_gas )
 	double const Ne = 0.001;
 
 	double const Ef = 1.0/(2.0*meStar)*std::pow(3*M_PI*M_PI*Ne,2.0/3.0);
-	std::vector<int> grid = {100,100,100};
-	std::vector<double> data(grid[0]*grid[1]*grid[2]);
-	for (int k = 0 ; k < grid[2]; ++k)
-		for (int j = 0 ; j < grid[1]; ++j)
-			for (int i = 0 ; i < grid[0]; ++i)
+	elephon::LatticeStructure::RegularBareGrid grid;
+	grid.initialize( {100,100,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	std::vector<int> d = grid.get_grid_dim();
+	std::vector<double> data(d[0]*d[1]*d[2]);
+	for (int k = 0 ; k < d[2]; ++k)
+		for (int j = 0 ; j < d[1]; ++j)
+			for (int i = 0 ; i < d[0]; ++i)
 			  {
-				  double kx = (i<grid[0]/2?double(i):double(i)-grid[0])/double(grid[0]);
-				  double ky = (j<grid[1]/2?double(j):double(j)-grid[1])/double(grid[1]);
-				  double kz = (k<grid[2]/2?double(k):double(k)-grid[2])/double(grid[2]);
-				  data[(k*grid[1]+j)*grid[0]+i] = (kx*kx+ky*ky+kz*kz)/(2.0*meStar)-Ef;
+				  double kx = (i<d[0]/2?double(i):double(i)-d[0])/double(d[0]);
+				  double ky = (j<d[1]/2?double(j):double(j)-d[1])/double(d[1]);
+				  double kz = (k<d[2]/2?double(k):double(k)-d[2])/double(d[2]);
+				  data[(k*d[1]+j)*d[0]+i] = (kx*kx+ky*ky+kz*kz)/(2.0*meStar)-Ef;
 			  }
 
-	elephon::LatticeStructure::LatticeModule lattice;
-
 	elephon::ElectronicStructure::GradientFFTReciprocalGrid gradE;
-	gradE.compute_gradient(grid,
-			lattice,
+	gradE.compute_gradient(
+			d,
+			grid.get_lattice(),
 			1,
 			data);
 
-	elephon::LatticeStructure::RegularBareGrid rgrid;
-	rgrid.initialize(grid);
-	elephon::Algorithms::TrilinearInterpolation triLin(rgrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(grid);
 
 	//Here we compute if the DOS is computed correctly for the analytically solvable model
 	const int numESteps = 20;
@@ -124,7 +123,6 @@ BOOST_AUTO_TEST_CASE( free_electron_gas )
 		elephon::ElectronicStructure::FermiSurface fs;
 		fs.triangulate_surface(
 				grid,
-				lattice,
 				1,
 				data,
 				targetNumPoints,
@@ -175,17 +173,19 @@ BOOST_AUTO_TEST_CASE( Check_surface_sphere_plus_spheroid )
 	double const a = 0.25;
 	double const c = 0.35;
 	const int nBnd = 2;
-	std::vector<int> grid = {100,100,100};
-	std::vector<double> data(grid[0]*grid[1]*grid[2]*nBnd);
-	for (int k = 0 ; k < grid[2]; ++k)
-		for (int j = 0 ; j < grid[1]; ++j)
-			for (int i = 0 ; i < grid[0]; ++i)
+	elephon::LatticeStructure::RegularBareGrid grid;
+	grid.initialize( {100,100,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	std::vector<int> d = grid.get_grid_dim();
+	std::vector<double> data(d[0]*d[1]*d[2]*nBnd);
+	for (int k = 0 ; k < d[2]; ++k)
+		for (int j = 0 ; j < d[1]; ++j)
+			for (int i = 0 ; i < d[0]; ++i)
 			{
-			  double x = (i<grid[0]/2?double(i):double(i)-grid[0])/double(grid[0]);
-			  double y = (j<grid[1]/2?double(j):double(j)-grid[1])/double(grid[1]);
-			  double z = (k<grid[2]/2?double(k):double(k)-grid[2])/double(grid[2]);
-			  data[((k*grid[1]+j)*grid[0]+i)*2] = (x*x+y*y+z*z)/(r1*r1);
-			  data[((k*grid[1]+j)*grid[0]+i)*2+1] = (x*x+y*y)/(a*a)+z*z/(c*c);
+			  double x = (i<d[0]/2?double(i):double(i)-d[0])/double(d[0]);
+			  double y = (j<d[1]/2?double(j):double(j)-d[1])/double(d[1]);
+			  double z = (k<d[2]/2?double(k):double(k)-d[2])/double(d[2]);
+			  data[((k*d[1]+j)*d[0]+i)*2] = (x*x+y*y+z*z)/(r1*r1);
+			  data[((k*d[1]+j)*d[0]+i)*2+1] = (x*x+y*y)/(a*a)+z*z/(c*c);
 			}
 
 	elephon::LatticeStructure::LatticeModule lattice;
@@ -194,7 +194,6 @@ BOOST_AUTO_TEST_CASE( Check_surface_sphere_plus_spheroid )
 	elephon::ElectronicStructure::FermiSurface fs;
 	fs.triangulate_surface(
 			grid,
-			lattice,
 			nBnd,
 			data,
 			targetNumPoints,
@@ -230,17 +229,19 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 	double const Eg = 10;
 	int nBnd = 2;
 
-	std::vector<int> grid = {99,101,100};
-	std::vector<double> data(grid[0]*grid[1]*grid[2]*nBnd);
-	for (int k = 0 ; k < grid[2]; ++k)
-		for (int j = 0 ; j < grid[1]; ++j)
-			for (int i = 0 ; i < grid[0]; ++i)
+	elephon::LatticeStructure::RegularBareGrid grid;
+	grid.initialize(  {99,101,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	std::vector<int> d = grid.get_grid_dim();
+	std::vector<double> data(d[0]*d[1]*d[2]*nBnd);
+	for (int k = 0 ; k < d[2]; ++k)
+		for (int j = 0 ; j < d[1]; ++j)
+			for (int i = 0 ; i < d[0]; ++i)
 			{
-				double kx = (i<grid[0]/2?double(i):double(i)-grid[0])/double(grid[0]);
-				double ky = (j<grid[1]/2?double(j):double(j)-grid[1])/double(grid[1]);
-				data[((k*grid[1]+j)*grid[0]+i)*nBnd+0] =
+				double kx = (i<d[0]/2?double(i):double(i)-d[0])/double(d[0]);
+				double ky = (j<d[1]/2?double(j):double(j)-d[1])/double(d[1]);
+				data[((k*d[1]+j)*d[0]+i)*nBnd+0] =
 					  W1*(std::cos( 2*M_PI*kx )+std::cos( 2*M_PI*ky )-2.0)+Ee;
-				data[((k*grid[1]+j)*grid[0]+i)*nBnd+1] =
+				data[((k*d[1]+j)*d[0]+i)*nBnd+1] =
 					  W2*(std::cos( 2*M_PI*kx )+std::cos( 2*M_PI*ky )-2.0)+Eg;
 			}
 
@@ -253,7 +254,7 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 	//Here we use a very simple delta function
 	//approximation to estimate the DOS
 	std::vector<double> dos_ref(numESteps, 0.0 );
-	double dKV = 1.0/double(grid[0]*grid[1]*grid[2]);//Unit volume
+	double dKV = 1.0/double(d[0]*d[1]*d[2]);//Unit volume
 	for (int i = 0 ; i < numESteps; ++i)
 	{
 		double eWinMin = estart+de*(double(i)-1.0);
@@ -263,17 +264,14 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 				dos_ref[i] += dKV/de;
 	}
 
-	elephon::LatticeStructure::LatticeModule lattice;
-
 	elephon::ElectronicStructure::GradientFFTReciprocalGrid gradE;
-	gradE.compute_gradient(grid,
-			lattice,
+	gradE.compute_gradient(
+			d,
+			grid.get_lattice(),
 			nBnd,
 			data);
 
-	elephon::LatticeStructure::RegularBareGrid rgrid;
-	rgrid.initialize(grid);
-	elephon::Algorithms::TrilinearInterpolation triLin(rgrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(grid);
 
 	double Nelec = 0;
 
@@ -286,7 +284,6 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 		elephon::ElectronicStructure::FermiSurface fs;
 		fs.triangulate_surface(
 				grid,
-				lattice,
 				nBnd,
 				data,
 				targetNumPoints,
@@ -369,18 +366,22 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 	int nkx = std::round(buffer[1]);
 	int nky = std::round(buffer[2]);
 	int nkz = std::round(buffer[3]);
-	std::vector<int> grid({nkx,nky,nkz});
-	assert( nBnd*nkx*nky*nkz == (buffer.size()-4) );
-
-	std::vector<double> energies(&buffer[4],&buffer[4]+nBnd*nkx*nky*nkz);
 
 	elephon::LatticeStructure::LatticeModule lattice(
 										{   7.050131 , 0.000000 , 0.000000 ,
 											0.000000 , 7.050131 , 0.000000 ,
 											0.000000 , 0.000000 , 11.45919 } );
 
+	elephon::LatticeStructure::RegularBareGrid grid;
+	grid.initialize({nkx,nky,nkz}, true, 1e-6, {0.0, 0.0, 0.0}, lattice );
+	std::vector<int> d = grid.get_grid_dim();
+	assert( nBnd*nkx*nky*nkz == (buffer.size()-4) );
+
+	std::vector<double> energies(&buffer[4],&buffer[4]+nBnd*nkx*nky*nkz);
+
+
 	elephon::ElectronicStructure::GradientFFTReciprocalGrid gradE;
-	gradE.compute_gradient(grid,
+	gradE.compute_gradient(d,
 			lattice,
 			nBnd,
 			energies);
@@ -402,12 +403,10 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 		double eWinMax = estart+de*(double(i)+0.5);
 		for ( auto e : energies )
 			if ( e >= eWinMin and e < eWinMax )
-				dos_ref[i] += 1.0/de/double(grid[0]*grid[1]*grid[2]);
+				dos_ref[i] += 1.0/de/double(d[0]*d[1]*d[2]);
 	}
 
-	elephon::LatticeStructure::RegularBareGrid rgrid;
-	rgrid.initialize(grid);
-	elephon::Algorithms::TrilinearInterpolation triLin(rgrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(grid);
 
 	for ( int ie = 0 ; ie < numESteps; ++ie)
 	{
@@ -417,12 +416,10 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 		elephon::ElectronicStructure::FermiSurface fs;
 		fs.triangulate_surface(
 				grid,
-				lattice,
 				nBnd,
 				energies,
 				targetNumPoints,
 				e);
-
 
 		for ( int ib = 0 ; ib < nBnd; ++ib)
 		{
