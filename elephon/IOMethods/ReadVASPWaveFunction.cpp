@@ -103,6 +103,9 @@ void ReadVASPWaveFunction::prepare_wavecar(std::string filename)
 	recl_ = static_cast<std::size_t>( std::floor(viewAsFloat[0]+0.5) );
 	nspin_ = nint(viewAsFloat[1]);
 
+	if ( nspin_ > 1 )
+		throw std::runtime_error("Currently, spin resolved calculations are not implemented. Sorry.");
+
 	int version = nint(viewAsFloat[2]);
 	if ( version == 53300 ) // "VASP.5.3 WAVECAR encountered"
 	{
