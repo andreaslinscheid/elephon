@@ -51,12 +51,15 @@ choose_interface( InputOptions inputOPts )
 
 	//Check if the files match VASP
 	auto e = fileSet.end();
-	if ( (fileSet.find("POSCAR") != e) and (fileSet.find("KPOINTS") != e) and
-		 (fileSet.find("POTCAR") != e) and (fileSet.find("INCAR")   != e) )
+	if ( (fileSet.find("POSCAR") != e) or (fileSet.find("vasprun.xml") != e) or
+		 (fileSet.find("POTCAR") != e) or (fileSet.find("INCAR")   != e) )
 		result = std::make_shared< elephon::IOMethods::VASPInterface >(inputOPts);
 
 	if ( result == nullptr )
-		throw std::runtime_error("Unable to match files in "+d+" to an electronic structure code.");
+	{
+		std::cout << "Unable to match files in " << d <<" to an electronic structure code. Exiting ..." << std::endl;
+		std::exit(0);
+	}
 	return result;
 };
 
