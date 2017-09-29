@@ -70,8 +70,7 @@ ReadVASPKpoints::read_kpoints(
 			for (int i = 0 ; i < 3 ; ++i)
 				gridShift_[i] = 0.5*double((dim_[i]+1) % 2); // even grids get a shift of 0.5
 
-		bool readAdditionalLine = std::getline( file, line);
-		if ( readAdditionalLine )
+		if ( std::getline( file, line) )
 		{
 			gridShift_[0] += std::stoi(line,&sz);
 			remainder = line.substr(sz);
