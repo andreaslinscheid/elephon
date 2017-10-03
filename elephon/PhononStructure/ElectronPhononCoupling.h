@@ -35,7 +35,7 @@ class ElectronPhononCoupling
 {
 public:
 
-	void generate_gkkp(
+	void generate_gkkp_and_phonon(
 			std::vector<double> kList,
 			std::vector<double> kpList,
 			std::vector<int> bandList,
@@ -55,7 +55,9 @@ public:
 
 	void get_local_matrix_range(int ik, int ikp,
 			std::vector< std::complex<float> >::iterator & rangeBegin,
-			std::vector< std::complex<float> >::iterator & rangeEnd );
+			std::vector< std::complex<float> >::iterator & rangeEnd,
+			std::vector< float >::iterator & phononFreqBegin,
+			std::vector< float >::iterator & phononFreqEnd);
 
 private:
 
@@ -70,6 +72,8 @@ private:
 	int nM_ = 0;
 
 	std::vector<std::complex<float>> data_;
+
+	std::vector<float> phononFrequencies_;
 
 	int tensor_layout(int ik, int ikp, int ib, int ibp, int imu) const;
 };

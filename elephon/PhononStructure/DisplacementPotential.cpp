@@ -33,17 +33,17 @@ void
 DisplacementPotential::build(  LatticeStructure::UnitCell unitCell,
 		LatticeStructure::UnitCell const & superCell,
 		std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
-		LatticeStructure::RegularSymmetricGrid unitcellGrid,
-		LatticeStructure::RegularSymmetricGrid const & supercellGrid,
+		LatticeStructure::RegularBareGrid unitcellGrid,
+		LatticeStructure::RegularBareGrid const & supercellGrid,
 		std::vector<double> const & potentialUC,
 		std::vector< std::vector<double> > const & potentialDispl )
 {
 	unitCell.compute_supercell_dim(superCell,superCellDim_);
 	numModes_ = unitCell.get_atoms_list().size()*3;
-	int nRSC = supercellGrid.get_np_red();
+	int nRSC = supercellGrid.get_num_points();
 	int nR = nRSC/this->get_num_R();
 	nptsRealSpace_ = nR;
-	assert( unitcellGrid.get_np_red() == nR );
+	assert( unitcellGrid.get_num_points() == nR );
 	assert( potentialDispl.size() == irredDispl.size() );
 
 	std::vector< std::pair<int,std::vector<int> > > rSuperCellToPrimitve;
@@ -74,7 +74,7 @@ DisplacementPotential::build(  LatticeStructure::UnitCell unitCell,
 				throw std::logic_error("Could not establish connection between grids of the primitive- and the supercell");
 		}
 		int cnsq = unitcellGrid.get_xyz_to_reducible(xyz);
-		assert( (cnsq >= 0) and ( cnsq < unitcellGrid.get_np_red() ) );
+		assert( (cnsq >= 0) and ( cnsq < unitcellGrid.get_num_points() ) );
 		rSuperCellToPrimitve[irSC] = std::move(std::make_pair(cnsq, std::move(R) ) );
 	}
 
@@ -274,11 +274,11 @@ DisplacementPotential::build(  LatticeStructure::UnitCell unitCell,
 void
 DisplacementPotential::compute_rot_map(
 		std::vector<double> const & shift,
-		LatticeStructure::RegularSymmetricGrid const & supercellGrid,
+		LatticeStructure::RegularBareGrid const & supercellGrid,
 		LatticeStructure::Symmetry const & siteSymmetry,
 		std::vector< std::vector<int> > & rotMap) const
 {
-	Algorithms::compute_grid_rotation_map(shift, supercellGrid.view_bare_grid(), siteSymmetry, rotMap);
+	Algorithms::compute_grid_rotation_map(shift, supercellGrid, siteSymmetry, rotMap);
 }
 
 void
@@ -362,7 +362,7 @@ DisplacementPotential::RVectorLayout(int iRz, int iRy, int iRx ) const
 	return (iRz*superCellDim_[1]+iRy)*superCellDim_[0]+iRx;
 }
 
-LatticeStructure::RegularSymmetricGrid const &
+LatticeStructure::RegularBareGrid const &
 DisplacementPotential::get_real_space_grid() const
 {
 	return unitCellGrid_;
@@ -380,21 +380,21 @@ DisplacementPotential::write_dvscf(
 			+ (xi == 0 ? "x" : (xi == 1 ? "y" : "z") ) + "\n";
 	//This method write the potential in the supercell
 	auto sc = unitCell_.build_supercell( superCellDim_[0], superCellDim_[1], superCellDim_[2] );
-	elephon::LatticeStructure::RegularSymmetricGrid scGrid;
+	elephon::LatticeStructure::RegularBareGrid scGrid;
 	auto dim = unitCellGrid_.get_grid_dim();
 	scGrid.initialize(
 			std::vector<int>({dim[0]*superCellDim_[0],dim[1]*superCellDim_[1],dim[2]*superCellDim_[2]}),
+			false,
 			unitCellGrid_.get_grid_prec(),
 			unitCellGrid_.get_grid_shift(),
-			sc.get_symmetry(),
 			sc.get_lattice() );
 
 	std::vector< std::pair<int,std::vector<int> > > rSuperCellToPrimitve;
 	this->build_supercell_to_primite( unitCellGrid_, scGrid, rSuperCellToPrimitve);
 
-	std::vector<double> dataSC( scGrid.get_np_red() );
-	assert( rSuperCellToPrimitve.size() == scGrid.get_np_red() );
-	for ( int irSC = 0 ; irSC < scGrid.get_np_red(); ++irSC )
+	std::vector<double> dataSC( scGrid.get_num_points() );
+	assert( rSuperCellToPrimitve.size() == scGrid.get_num_points() );
+	for ( int irSC = 0 ; irSC < scGrid.get_num_points(); ++irSC )
 	{
 		auto ir = rSuperCellToPrimitve[irSC].first;
 		auto & R = rSuperCellToPrimitve[irSC].second;
@@ -420,7 +420,7 @@ DisplacementPotential::write_dvscf_q(
 	std::vector<std::complex<float>> qDataPlus;
 	this->compute_dvscf_q(qVect,dynamicalMatrices,masses,qDataPlus);
 
-	int nr = unitCellGrid_.get_np_red();
+	int nr = unitCellGrid_.get_num_points();
 	assert(qDataPlus.size() == nq*numModes_*nr);
 
 	auto mod_filename = [] (std::string filename, int iq, int mu) {
@@ -450,11 +450,11 @@ DisplacementPotential::write_dvscf_q(
 
 void
 DisplacementPotential::build_supercell_to_primite(
-		LatticeStructure::RegularSymmetricGrid const & primitiveCellGrid,
-		LatticeStructure::RegularSymmetricGrid const & supercellGrid,
+		LatticeStructure::RegularBareGrid const & primitiveCellGrid,
+		LatticeStructure::RegularBareGrid const & supercellGrid,
 		std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const
 {
-	int nRSC = supercellGrid.get_np_red();
+	int nRSC = supercellGrid.get_num_points();
 
 	//Create a table which maps a point in real space in the supercell
 	// into a point in the primitive cell plus a lattice vector
@@ -483,7 +483,7 @@ DisplacementPotential::build_supercell_to_primite(
 				throw std::logic_error("Could not establish connection between grids of the primitive- and the supercell");
 		}
 		int cnsq = primitiveCellGrid.get_xyz_to_reducible(xyz);
-		assert( (cnsq >= 0) and ( cnsq < primitiveCellGrid.get_np_red() ) );
+		assert( (cnsq >= 0) and ( cnsq < primitiveCellGrid.get_num_points() ) );
 		rSuperCellToPrimitve[irSC] = std::move(std::make_pair(cnsq, std::move(R) ) );
 	}
 }

@@ -41,11 +41,23 @@ public:
 	 */
 	void compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> dataLoader );
 
+	void write_a2F_file(std::string const & filename) const;
 private:
 
-	std::vector<double> freqGrid_;
-
 	std::vector<double> a2F_;
+
+	double freqMin_ = 0;
+
+	double freqMax_ = 0;
+
+	int freqNPts_ = 0;
+
+	void map_freq_grid_slot(
+			std::vector<float>::const_iterator begData,
+			std::vector<float>::const_iterator begFreq,
+			std::vector<float>::const_iterator endFreq);
+
+	void set_freq_grid(std::vector<double> const & freqRange, int npts);
 };
 
 } /* namespace PhononStructure */

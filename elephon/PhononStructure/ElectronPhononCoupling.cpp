@@ -22,6 +22,7 @@
 #include "Algorithms/FFTInterface.h"
 #include <set>
 #include <map>
+#include <chrono>
 
 namespace elephon
 {
@@ -29,7 +30,7 @@ namespace PhononStructure
 {
 
 void
-ElectronPhononCoupling::generate_gkkp(
+ElectronPhononCoupling::generate_gkkp_and_phonon(
 		std::vector<double> kList,
 		std::vector<double> kpList,
 		std::vector<int> bandList,
@@ -67,8 +68,12 @@ ElectronPhononCoupling::generate_gkkp(
 	nB_ = bandList.size();
 	nBp_ = bandpList.size();
 
+	std::cout << "\tComputing ele-phon coupling :" <<std::endl;
+
+	phononFrequencies_.reserve(nK_*nKp_*nM_);
 	data_.resize( nK_*nKp_*nM_*nB_*nBp_ );
 	Algorithms::FFTInterface fft;
+	auto start_clock = std::chrono::system_clock::now();
 	for ( int ik = 0 ; ik < nK_; ++ik)
 	{
 		fft.fft_sparse_data(
@@ -76,7 +81,7 @@ ElectronPhononCoupling::generate_gkkp(
 				wfcts.get_max_fft_dims(),
 				wfcsk[ik],
 				nB_,
-				-1,
+				1,
 				bufferWfct1,
 				potentialFFTGrid,
 				false,
@@ -89,11 +94,12 @@ ElectronPhononCoupling::generate_gkkp(
 									kList[ik*3+2]-kpList[ik*3+2]};
 			ph.compute_at_q( q, modes, dynmat );
 			dvscf.compute_dvscf_q( q, dynmat, ph.get_masses(), dvscfData);
+			phononFrequencies_.insert(std::end(phononFrequencies_), modes.begin(), modes.end() );
 
 			fft.fft_sparse_data(
-					fftMapsKp[ik],
+					fftMapsKp[ikp],
 					wfcts.get_max_fft_dims(),
-					wfcskp[ik],
+					wfcskp[ikp],
 					nBp_,
 					-1,
 					bufferWfct2,
@@ -120,17 +126,30 @@ ElectronPhononCoupling::generate_gkkp(
 					}
 				}
 		}
+		auto thisTime_clock = std::chrono::system_clock::now();
+	    std::chrono::duration<double> elapsed_seconds = thisTime_clock-start_clock;
+	    std::chrono::duration<double> projectedRuntime_seconds = double(nK_) / double(ik+1) * elapsed_seconds;
+	    std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
+
+		std::cout << "\r\tPercentage done : " << std::floor(100.0 *double(ik+1) / double(nK_) + 0.5)
+				<< "; estimated time to finish: " << remainingRuntine.count() << "s"
+				<<  "                 ";
+		std::cout.flush();
 	}
+	std::cout << std::endl;
 }
 
 void
 ElectronPhononCoupling::get_local_matrix_range(int ik, int ikp,
 		std::vector< std::complex<float> >::iterator & rangeBegin,
-		std::vector< std::complex<float> >::iterator & rangeEnd )
+		std::vector< std::complex<float> >::iterator & rangeEnd,
+		std::vector< float >::iterator & phononFreqBegin,
+		std::vector< float >::iterator & phononFreqEnd )
 {
 	rangeBegin = data_.begin()+this->tensor_layout(ik,ikp,0,0,0);
-	rangeEnd = data_.begin()+nB_*nBp_*nM_;
-	assert( (data_.begin()+this->tensor_layout(ik,ikp+1,0,0,0)) == rangeEnd );
+	rangeEnd = rangeBegin+nB_*nBp_*nM_;
+	phononFreqBegin = phononFrequencies_.begin() + nM_*(ikp + nKp_*ik);
+	phononFreqEnd = phononFrequencies_.begin() + nM_*(ikp + nKp_*ik) + nM_;
 }
 
 int

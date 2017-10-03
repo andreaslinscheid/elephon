@@ -119,16 +119,16 @@ FixtureForceConstant::build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2( )
 
 		displPot[idispl] = std::move(thisDisplPot);
 	}
-	elephon::LatticeStructure::RegularSymmetricGrid rsGridSC;
-	rsGridSC.initialize( dims );
+	elephon::LatticeStructure::RegularBareGrid rsGridSC;
+	rsGridSC.initialize( dims, false, 1e-6, {0.0, 0.0, 0.0}, supercell.get_lattice() );
 
 	//Read the normal periodic potential
 	loader->read_electronic_potential(
 			rootDir.string(),
 			dims,
 			thisDisplPot);
-	elephon::LatticeStructure::RegularSymmetricGrid rsGridUC;
-	rsGridUC.initialize( dims );
+	elephon::LatticeStructure::RegularBareGrid rsGridUC;
+	rsGridUC.initialize( dims, false, 1e-6, {0.0, 0.0, 0.0}, unitCell.get_lattice());
 
 	elephon::PhononStructure::DisplacementPotential dvscf;
 	dvscf.build( unitCell, supercell, irreducibleDispl, rsGridUC, rsGridSC,

@@ -50,6 +50,37 @@ Input::Input( int argc, char* argv[] )
 		throw std::runtime_error(" scell: incorrect supercell request ; a dimension cannot be < 1 ");
 	//TODO Here could be some consistency checks
 
+	if ( opts_.get_phrange().empty() )
+	{
+		// determine the phonon range automatically
+	}
+	else if (opts_.get_phrange().size() == 1)
+	{
+		if (opts_.get_phrange()[0] <= 0 )
+		{
+			std::cout << "Problem on input: phrange must be positive number" << std::endl;
+			std::exit(0);
+		}
+	}
+	else if (opts_.get_phrange().size() == 2)
+	{
+		if (opts_.get_phrange()[1] - opts_.get_phrange()[0] <= 0 )
+		{
+			std::cout << "Problem on input: phrange specify a non-empty, positive range" << std::endl;
+			std::exit(0);
+		}
+	}
+	else
+	{
+		std::cout << "Problem on input: phrange not correctly formated" << std::endl;
+		std::exit(0);
+	}
+
+	if ( opts_.get_phnpts() < 1 )
+	{
+		std::cout << "Problem on input: phnpts must be >= 1" << std::endl;
+		std::exit(0);
+	}
 }
 
 InputOptions const & Input::get_opts() const

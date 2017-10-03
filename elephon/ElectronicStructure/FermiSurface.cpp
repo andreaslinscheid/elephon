@@ -32,6 +32,7 @@
 #include <cmath>
 #include <assert.h>
 #include <set>
+#include <limits>
 
 namespace elephon
 {
@@ -119,8 +120,11 @@ void FermiSurface::triangulate_surface(
 		vtkSmartPointer<vtkDecimatePro> decimator =
 				vtkSmartPointer<vtkDecimatePro>::New();
 		decimator->SetInputData( marched[ib] );
+		decimator->PreserveTopologyOff();
+		decimator->BoundaryVertexDeletionOn();
 		decimator->SetTargetReduction(reductionRatio);
-		decimator->SetPreserveTopology(1);
+		decimator->SetMaximumError( std::numeric_limits<double>::max() );
+		decimator->SplittingOn();
 		decimator->Update();
 
 		decimator->GetOutput()->BuildCells();

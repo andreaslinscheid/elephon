@@ -46,6 +46,14 @@ class InputOptions : public InputBase<InputOptions>
 			std::string);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			eld,
+			"Where do read the electron states and band structure from.\n"
+			"If its a relative path, is relative to 'elphd'",
+			"electrons",
+			"electrons",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			scell,
 			"Supercell multiplyer in each direction x,y and z. Default is the trivial supercell.",
 			"( 1 , 1 , 1 )",
@@ -187,6 +195,35 @@ class InputOptions : public InputBase<InputOptions>
 			"true",
 			true,
 			bool);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			f_a2F,
+			"filename of the a2F file.\n"
+			"If set, the code will write the Eliashberg function to this location. Default is relative to the 'elphd' option.\n"
+			"I.e. the default is '<elphd>/a2F.dat'\n"
+			"If empty, the file will not be written.",
+			"a2F.dat",
+			"a2F.dat",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			phrange,
+			"Energy range in THz that the phonons and the a2F will be computed in.\n"
+			"Input mode 1 is a single number 'Omega', meaning a range [0,Omega]\n"
+			"Input mode 2 are two numbers 'Omega1, Omega2', meaning a range [Omega1,Omega2]\n"
+			"Input mode 3 is empty, meaning automatic, i.e. the code will attempt to create a range that covers the full spectrum\n",
+			"( empty <automatic> )",
+			{ },
+			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			phnpts,
+			"Number of sampling points for the phonon DOS and the a2F.\n"
+			"Note: For the a2F integration, higher numbers require the Fermi surface sampling to be increased or the data\n"
+			"can become noisy.\n",
+			"100",
+			100,
+			int);
 };
 
 } /* namespace IOMethods */

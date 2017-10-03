@@ -38,8 +38,8 @@ public:
 	void build(  LatticeStructure::UnitCell unitCell,
 			LatticeStructure::UnitCell const & superCell,
 			std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
-			LatticeStructure::RegularSymmetricGrid unitcellGrid,
-			LatticeStructure::RegularSymmetricGrid const & supercellGrid,
+			LatticeStructure::RegularBareGrid unitcellGrid,
+			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector<double> const & potentialUC,
 			std::vector< std::vector<double> > const & potentialDispl );
 
@@ -51,7 +51,7 @@ public:
 
 	int RVectorLayout(int iRz, int iRy, int iRx ) const;
 
-	LatticeStructure::RegularSymmetricGrid const & get_real_space_grid() const;
+	LatticeStructure::RegularBareGrid const & get_real_space_grid() const;
 
 	int get_num_R() const;
 
@@ -70,7 +70,7 @@ private:
 
 	int nptsRealSpace_ = 0;
 
-	LatticeStructure::RegularSymmetricGrid unitCellGrid_;
+	LatticeStructure::RegularBareGrid unitCellGrid_;
 
 	LatticeStructure::UnitCell unitCell_;
 
@@ -86,15 +86,15 @@ private:
 
 	void compute_rot_map(
 			std::vector<double> const & shift,
-			LatticeStructure::RegularSymmetricGrid const & supercellGrid,
+			LatticeStructure::RegularBareGrid const & supercellGrid,
 			LatticeStructure::Symmetry const & siteSymmetry,
 			std::vector< std::vector<int> > & rotMap) const;
 
 	int mem_layout(int ir, int mu, int iR ) const;
 
 	void build_supercell_to_primite(
-			LatticeStructure::RegularSymmetricGrid const & primitiveCellGrid,
-			LatticeStructure::RegularSymmetricGrid const & supercellGrid,
+			LatticeStructure::RegularBareGrid const & primitiveCellGrid,
+			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const;
 };
 

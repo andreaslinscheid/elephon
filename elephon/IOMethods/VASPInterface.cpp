@@ -192,6 +192,9 @@ VASPInterface::read_lattice_structure(
 		LatticeStructure::LatticeModule & lattice)
 {
 	boost::filesystem::path rootdir(root_directory);
+	if ( not boost::filesystem::exists(rootdir) )
+		throw std::runtime_error(std::string("Directory ")+root_directory + " does not exist."
+				" Failed to read lattice structure.");
 	if ( boost::filesystem::exists(rootdir / "POSCAR" ) )
 	{
 		if ( posReader_.get_atoms_list().empty() )
@@ -209,7 +212,8 @@ VASPInterface::read_lattice_structure(
 		lattice.initialize( xmlReader_.get_lattice_matrix() );
 	}
 	else
-		throw std::runtime_error("No file to parse structure from");
+		throw std::runtime_error(std::string("No file to parse structure from.\n") +
+				" Need either a POSCAR or a vasprun.xml file in directory "+root_directory);
 }
 
 void
