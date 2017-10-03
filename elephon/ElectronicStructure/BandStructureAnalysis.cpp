@@ -168,7 +168,7 @@ void compute_mass_tensor_at_extrema_fft(
 	auto const & g  =  bands.get_grid().get_grid_dim();
 	auto indicesInWindow = bands.get_bands_crossing_energy_window(energyWindow);
 	std::vector<double> bndData, massTensFullGrid;
-	bands.generate_reducible_grid_bands(indicesInWindow, bndData);
+	bands.generate_reducible_data(indicesInWindow, bndData);
 
 	auto A = bands.get_grid().get_lattice().get_latticeMatrix();
 	for ( auto &a : A)

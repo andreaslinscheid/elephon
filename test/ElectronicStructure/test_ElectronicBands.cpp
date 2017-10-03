@@ -108,8 +108,8 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 	for ( int ibnd = 0 ; ibnd < bands_sym.get_nBnd();  ++ibnd )
 		bndRequests[ibnd] = ibnd;
 	std::vector<double> dataSym, dataNoSym;
-	bands_sym.generate_reducible_grid_bands( bndRequests ,dataSym );
-	bands_nosym.generate_reducible_grid_bands( bndRequests ,dataNoSym );
+	bands_sym.generate_reducible_data( bndRequests ,dataSym );
+	bands_nosym.generate_reducible_data( bndRequests ,dataNoSym );
 
 	double diff = 0;
 	for ( int i = 0 ; i < bands_sym.get_grid().get_np_red();  ++i )
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE( Bands_reducible_reconstruction)
 	assert(nB == 2);
 
 	std::vector<double> bandDataReconstr;
-	bands.generate_reducible_grid_bands(std::vector<int>{0, 1}, bandDataReconstr);
+	bands.generate_reducible_data(std::vector<int>{0, 1}, bandDataReconstr);
 	BOOST_REQUIRE(bandDataReconstr.size() == nB*griddims[2]*griddims[1]*griddims[0]);
 	double diff = 0.0;
 	for ( int iz = 0 ; iz < griddims[2]; ++iz )

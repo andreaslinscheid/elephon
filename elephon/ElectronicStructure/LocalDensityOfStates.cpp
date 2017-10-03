@@ -73,7 +73,7 @@ LocalDensityOfStates::compute_ldos(
 	{
 		double e = isoEnergies_[ie];
 		auto reqBandId = bands.get_bands_crossing_energy_lvls({e});
-		bands.generate_interpolated_reducible_grid_bands(
+		bands.generate_interpolated_reducible_data(
 				reqBandId,
 				interpolGrid,
 				interpolData);

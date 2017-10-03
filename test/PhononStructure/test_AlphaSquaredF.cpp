@@ -40,7 +40,7 @@ load_wfct_Al_fcc_primitive_vasp_sc2x2x2()
 			"eld="+ (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive").string()+"\n"
 			"f_a2F="+ (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "output" / "a2F.dat").string()+"\n"
 			"phrange = 10\n"
-			"numFS = 1000"
+			"numFS = 10"
 			"";
 	test::fixtures::DataLoader dl;
 	return dl.create_vasp_loader( content );

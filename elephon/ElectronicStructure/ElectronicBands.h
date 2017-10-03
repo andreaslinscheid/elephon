@@ -20,6 +20,7 @@
 #ifndef ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_
 #define ELEPHON_ELECTRONICSTRUCTURE_ELECTRONICBANDS_H_
 
+#include "LatticeStructure/DataRegularGrid.h"
 #include "LatticeStructure/RegularSymmetricGrid.h"
 #include <vector>
 
@@ -28,9 +29,11 @@ namespace elephon
 namespace ElectronicStructure
 {
 
-class ElectronicBands
+class ElectronicBands : public LatticeStructure::DataRegularGrid<double>
 {
 public:
+
+	using LatticeStructure::DataRegularGrid<double>::initialize;
 
 	/**
 	 * Set the data in the the band structure.
@@ -52,44 +55,12 @@ public:
 			LatticeStructure::RegularSymmetricGrid grid);
 
 	/**
-	 * Set the data in the the band structure.
+	 * Retrieve the number of spin channels.
 	 *
-	 * The data is assumed to match the shape of either the reducible or the irreducible grid.
-	 * Which one is picked depends on the size of \p bandData ; if it matches either one it will be chosen.
-	 *
-	 * @param numBands	Number of bands
-	 * @param fermiEnergy	energy reference of the \p bandData
-	 * @param bandData	N, which is the number of k points, times number of bands data values
-	 * 					with 'bands' as the fast running dimension such as [(b=0,k=0),(b=1,k=0),...(b=num bands,k=N-1)]
-	 * @param grid		K point grid
+	 * @return integer with number of spin channels.
 	 */
-	void initialize(
-			int numBands,
-			double fermiEnergy,
-			std::vector<double> bandData,
-			LatticeStructure::RegularSymmetricGrid grid);
-
-	std::vector<int> get_bands_crossing_energy_lvls(
-			std::vector<double> const & energies ) const;
-
-	std::vector<int> get_bands_crossing_energy_window(
-			std::vector<double> const & energies ) const;
-
-	int get_nBnd() const;
-
 	int get_nspin() const;
 
-	void generate_reducible_grid_bands(
-			std::vector<int> const & bIndices,
-			std::vector<double> & bands) const;
-
-	void generate_interpolated_reducible_grid_bands(
-			std::vector<int> const & bIndices,
-			LatticeStructure::RegularBareGrid const & interpolationGrid,
-			std::vector<double> & interpolatedReducibleData) const;
-
-
-	LatticeStructure::RegularSymmetricGrid const & get_grid() const;
 
 	/**
 	 * Retrieve a band data value at a point in the grid.
@@ -100,22 +71,6 @@ public:
 	 * @return	Band energy value in eV relative to the Fermi level at E=0.
 	 */
 	double operator() (int ikIrred, int ib, int ispin = 0) const;
-
-	/**
-	 * Replace the content of this object with FFT interpolated data.
-	 *
-	 * If the grids are determined to be the same, no action is taken.
-	 *
-	 * @param newDims	1) A list of 3 positive numbers representing the new grid dimension. If a dimension is '0'
-	 * 						the number will be replaced by the internal grid number (i.e. remains unchanged).
-	 * 					2) A single positive number in which case the internal grid will be scaled in each direction.
-	 * @param gridShift	A list of 3 floating values in the range [0,1[ representing a shift within a single cube of the
-	 * 					grid. Thus, to know the shift in absolute numbers, multiply by the inverse grid dimension e.g.
-	 * 					for a grid 5 5 5 with shift 0.5 0.0 0.0 the absolute shift will be (1.0/5.0)*0.5 in x direction.
-	 */
-	void fft_interpolate(
-			std::vector<int> const & newDims,
-			std::vector<double> const & gridShift);
 
 	/**
 	 * Generate a new object with FFT interpolated data of selected bands.
@@ -134,27 +89,6 @@ public:
 			int startBnD, int endBnd,
 			std::vector<int> const & newDims,
 			std::vector<double> const & gridShift) const;
-
-	/**
-	 * Compute the minimal and maximal value of the band data.
-	 *
-	 * @return	pair of first minimal and second maximal value in eV
-	 */
-	std::pair<double, double> get_min_max() const;
-
-	template<typename T>
-	void compute_derivatives_sqr_polynom(
-			std::vector<int> const & bandIndices,
-			std::vector<int> const & reducibleKPTIndices,
-			std::vector<T> * gradientFieldPtr,
-			std::vector<T> * hessianFieldPtr ) const;
-private:
-
-	int nBnd_;
-
-	std::vector<double> dataIrred_;
-
-	LatticeStructure::RegularSymmetricGrid grid_;
 };
 
 } /* namespace ElectronicStructure */

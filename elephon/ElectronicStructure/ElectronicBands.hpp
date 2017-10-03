@@ -25,28 +25,6 @@ namespace elephon
 namespace ElectronicStructure
 {
 
-template<typename T>
-void
-ElectronicBands::compute_derivatives_sqr_polynom(
-		std::vector<int> const & bandIndices,
-		std::vector<int> const & reducibleKPTIndices,
-		std::vector<T> * gradientFieldPtr,
-		std::vector<T> * hessianFieldPtr ) const
-{
-	// this lambda take the job of mapping a regular reducible k grid index and a "local" band index
-	// into the irreducible zone and the full band-context band index.
-	auto translate_bands = [&] (int ikr, int ib) {
-		return (*this)( grid_.get_maps_red_to_irreducible()[ikr], bandIndices[ib]);
-	};
-
-	Algorithms::localDerivatives::compute_derivatives_sqr_polynom<T>(
-			bandIndices.size(),
-			reducibleKPTIndices,
-			gradientFieldPtr,
-			hessianFieldPtr,
-			grid_.view_bare_grid(),
-			translate_bands );
-}
 
 } /* namespace ElectronicStructure */
 } /* namespace elephon */

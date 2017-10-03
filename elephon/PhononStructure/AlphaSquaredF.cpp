@@ -149,7 +149,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeIn
 
 		auto bndsCrossing = bands.get_bands_crossing_energy_lvls({e});
 		std::vector<double> reducibleData;
-		bands.generate_interpolated_reducible_grid_bands(
+		bands.generate_interpolated_reducible_data(
 				bndsCrossing,
 				interpolationMesh,
 				reducibleData);

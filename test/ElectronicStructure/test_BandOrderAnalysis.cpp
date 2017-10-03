@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE( Al_fcc_vasp )
 
 	std::vector<double> regBndData;
 	std::vector<int> bndIndices{0,1,2,3,4};
-	bands.generate_reducible_grid_bands(bndIndices, regBndData);
+	bands.generate_reducible_data(bndIndices, regBndData);
 	for ( int j = 0 ; j < 30; ++j)
 	{
 		for ( int i = 0 ; i < 30; ++i)
