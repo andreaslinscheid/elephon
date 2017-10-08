@@ -20,7 +20,7 @@
 #ifndef ELEPHON_PHONONSTRUCTURE_ALPHASQUAREDF_H_
 #define ELEPHON_PHONONSTRUCTURE_ALPHASQUAREDF_H_
 
-#include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "IOMethods/ResourceHandler.h"
 #include <memory>
 
 namespace elephon
@@ -37,9 +37,9 @@ public:
 	 *
 	 * Computes and sets the a2F coupling function internally.
 	 *
-	 * @param dataLoader	The interface on how to obtain all the data need for this task.
+	 * @param resourceHandler	The interface on how to obtain all the data need for this task.
 	 */
-	void compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> dataLoader );
+	void compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resourceHandler );
 
 	void write_a2F_file(std::string const & filename) const;
 private:

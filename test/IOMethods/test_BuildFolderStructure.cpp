@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_primitive_folderstructure_VASP )
 {
 	using namespace boost::filesystem;
 
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir();
 	elephon::IOMethods::BuildFolderStructure builder;
 
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 {
 	using namespace boost::filesystem;
 	elephon::IOMethods::BuildFolderStructure builder;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir();
 	path rootDir = testd / "Al" / "vasp" / "conventional";
 	path targetDir = rootDir / "test_dir_struct";

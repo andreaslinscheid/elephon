@@ -47,8 +47,10 @@ class InputOptions : public InputBase<InputOptions>
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			eld,
-			"Where do read the electron states and band structure from.\n"
-			"If its a relative path, is relative to 'elphd'",
+			"Where do read the 'dense' electron states and band structure from.\n"
+			"If its a relative path, is relative to 'elphd'\n"
+			"If empty, the band data from root_dir will used at its place,\n"
+			"i.e. no separate 'dense' electronic calculation will be done",
 			"electrons",
 			"electrons",
 			std::string);
@@ -204,6 +206,16 @@ class InputOptions : public InputBase<InputOptions>
 			"If empty, the file will not be written.",
 			"a2F.dat",
 			"a2F.dat",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			f_phdos,
+			"filename of the phonon DOS file.\n"
+			"If set, the code will compute and write the phonon dos to this location. Default is relative to the 'elphd' option.\n"
+			"I.e. the default is '<elphd>/phDOS.dat'\n"
+			"If empty, the file will not be written.",
+			"phDOS.dat",
+			"phDOS.dat",
 			std::string);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(

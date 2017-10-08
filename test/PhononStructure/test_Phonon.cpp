@@ -21,23 +21,18 @@
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
-#include "fixtures/FixtureForceConstant.h"
 #include "fixtures/DataLoader.h"
 #include "fixtures/MockStartup.h"
 #include "PhononStructure/Phonon.h"
+#include "fixtures/scenarios.h"
 #include <fstream>
 
 BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 {
-	test::fixtures::FixtureForceConstant ffc;
-	auto fc = ffc.compute_fc_for_Al_gamma();
+	auto res = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
 
-	std::vector<double> masses = {26.9815385};
-
-	elephon::PhononStructure::Phonon ph;
-	ph.initialize( fc, masses );
-
-	BOOST_REQUIRE_EQUAL( ph.get_num_modes() , 3 );
+	auto ph = res->get_phonon_obj();
+	BOOST_REQUIRE_EQUAL( ph->get_num_modes() , 3 );
 
 	//compute 51 q points from 0,0,0 to 0.5,0,0
 	int nq = 51;
@@ -46,7 +41,7 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 		qVect[i*3] = 0.5*double(i)/double(nq-1);
 
 	//load reference data from phonopy
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
 	std::ifstream file( (testd / "phonopy_ref_phonons.dat").c_str() );
 	if ( ! file.good() )
@@ -67,12 +62,12 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 
 	std::vector<double> w;
 	std::vector< std::complex<double> > eigenmodes;
-	ph.compute_at_q( qVect, w, eigenmodes );
-	assert( w.size() == ph.get_num_modes()*nq );
+	ph->compute_at_q( qVect, w, eigenmodes );
+	assert( w.size() == ph->get_num_modes()*nq );
 	for ( int iq = 0; iq < nq; ++iq)
 	{
-		for ( int mu = 0; mu < ph.get_num_modes() ; ++mu)
-			BOOST_CHECK_SMALL(refData[iq*ph.get_num_modes()+mu]-w[iq*ph.get_num_modes()+mu],0.1);
+		for ( int mu = 0; mu < ph->get_num_modes() ; ++mu)
+			BOOST_CHECK_SMALL(refData[iq*ph->get_num_modes()+mu]-w[iq*ph->get_num_modes()+mu],0.1);
 		}
 
 	for ( int iq = 0; iq < nq; ++iq)
@@ -93,4 +88,44 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 		BOOST_CHECK_SMALL( std::abs(u1[0]*u3[0]+u1[1]*u3[1]+u1[2]*u3[2]) , 0.0002);
 		BOOST_CHECK_SMALL( std::abs(u2[0]*u3[0]+u2[1]*u3[1]+u2[2]*u3[2]) , 0.0002);
 	}
+}
+
+BOOST_AUTO_TEST_CASE( Al_phonon_derivative )
+{
+	auto res = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
+
+	auto ph = res->get_phonon_obj();
+
+	int nq = 1510;
+	std::vector<double> qVect( nq * 3, 0.0 );
+	for ( int i = 0 ; i < nq ; ++i)
+		qVect[i*3] = 0.5*double(i)/double(nq-1);
+
+	std::vector<double> omega, domegadq;
+	std::vector<std::complex<double>> em;
+	ph->compute_at_q(qVect, omega, em);
+	ph->evaluate_derivative(qVect, domegadq);
+
+	std::vector<double> v1{0.5/double(nq-1), 0.0, 0.0};
+	auto const & kgrid = res->get_electronic_bands_obj()->get_grid();
+	kgrid.get_lattice().reci_direct_to_cartesian_2pibya(v1);
+
+	double diff = 0.0;
+	for ( int iq = 1; iq < nq-1; ++iq)
+	{
+		for ( int mu = 0; mu < ph->get_num_modes() ; ++mu)
+		{
+			double norm = std::sqrt(std::pow(v1[0],2)+std::pow(v1[1],2)+std::pow(v1[2],2));
+			double directionDerv =
+					(v1[0]*domegadq[(iq*ph->get_num_modes()+mu)*3]
+					+ v1[1]*domegadq[(iq*ph->get_num_modes()+mu)*3+1]
+					+ v1[2]*domegadq[(iq*ph->get_num_modes()+mu)*3+2])/norm;
+			double simplyDeriv = (omega[(iq+1)*ph->get_num_modes()+mu] - omega[iq*ph->get_num_modes()+mu])
+					/ norm;
+
+			diff += std::abs(directionDerv - simplyDeriv) / (nq-2);
+		}
+	}
+
+	BOOST_CHECK_SMALL(diff, 1e-2);
 }

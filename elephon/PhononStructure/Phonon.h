@@ -20,7 +20,8 @@
 #ifndef ELEPHON_PHONONSTRUCTURE_PHONON_H_
 #define ELEPHON_PHONONSTRUCTURE_PHONON_H_
 
-#include "ForceConstantMatrix.h"
+#include "PhononStructure/ForceConstantMatrix.h"
+#include <memory>
 
 namespace elephon
 {
@@ -31,10 +32,18 @@ class Phonon
 {
 public:
 
-	void initialize( ForceConstantMatrix fc,
+	void initialize(std::shared_ptr<const ForceConstantMatrix> fc,
 			std::vector<double> masses);
 
 	void compute_at_q(std::vector<double> const & q,
+			std::vector<double> & w2,
+			std::vector< std::complex<double> > & eigenModes) const;
+
+	void evaluate_derivative(
+			std::vector<double> const & q,
+			std::vector<double> & dwdq) const;
+
+	void evaluate(std::vector<double> const & q,
 			std::vector<double> & w2,
 			std::vector< std::complex<double> > & eigenModes) const;
 
@@ -43,7 +52,7 @@ public:
 	std::vector<double> const & get_masses() const;
 private:
 
-	ForceConstantMatrix fc_;
+	std::shared_ptr<const ForceConstantMatrix> fc_;
 
 	std::vector<double> masses_;
 

@@ -21,39 +21,20 @@
 #define BOOST_TEST_MODULE PhononStructure
 #include <boost/test/unit_test.hpp>
 #include "PhononStructure/AlphaSquaredF.h"
-#include "ElectronicStructure/Wavefunctions.h"
+#include "IOMethods/ResourceHandler.h"
 #include "fixtures/MockStartup.h"
-#include "fixtures/FixtureForceConstant.h"
 #include "fixtures/DataLoader.h"
+#include "fixtures/scenarios.h"
 #include <vector>
-
-std::shared_ptr<elephon::IOMethods::VASPInterface>
-load_wfct_Al_fcc_primitive_vasp_sc2x2x2()
-{
-	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "phonon_run" ;
-	auto phononDir = rootDir / "phonon";
-	std::string content = std::string()+
-			"scell=2 2 2\n"
-			"root_dir="+rootDir.string()+"\n"
-			"elphd="+phononDir.string()+"\n"
-			"eld="+ (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive").string()+"\n"
-			"f_a2F="+ (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "output" / "a2F.dat").string()+"\n"
-			"phrange = 10\n"
-			"numFS = 10"
-			"";
-	test::fixtures::DataLoader dl;
-	return dl.create_vasp_loader( content );
-}
 
 BOOST_AUTO_TEST_CASE( a2F_write_file_vasp_fcc_primitive )
 {
-	auto dataLoader = load_wfct_Al_fcc_primitive_vasp_sc2x2x2();
+	auto resourceHandler = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
 
 	elephon::PhononStructure::AlphaSquaredF a2F;
-	a2F.compute_a2F(dataLoader);
+	a2F.compute_a2F(resourceHandler);
 
-	auto a2FFilename = boost::filesystem::path(dataLoader->get_optns().get_f_a2F());
+	auto a2FFilename = boost::filesystem::path(resourceHandler->get_optns().get_f_a2F());
 	boost::filesystem::remove(a2FFilename);
 	a2F.write_a2F_file( a2FFilename.string() );
 	//boost::filesystem::remove(a2FFilename);

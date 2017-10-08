@@ -28,7 +28,7 @@
 
 BOOST_AUTO_TEST_CASE( Read_symmetries )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	elephon::IOMethods::ReadVASPSymmetries symReader;
 	symReader.read_file( (testd / "OUTCAR").string() );

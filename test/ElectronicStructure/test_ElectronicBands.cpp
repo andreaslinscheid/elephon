@@ -37,7 +37,7 @@
 
 BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "FeSe" / "vasp" / "wfct";
 
 	//Read data to construct both the band grid from both the symmetric and the non-symmetric input data.
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
  */
 BOOST_AUTO_TEST_CASE( Bands_reducible_reconstruction)
 {
-	test::fixtures::DataLoader dl;
+	elephon::test::fixtures::DataLoader dl;
 	auto bands = dl.create_symmetric_cosine_model({50, 50, 50}, {0.0, 0.0, 0.0});
 	auto griddims = bands.get_grid().get_grid_dim();
 	auto gridshift = bands.get_grid().get_grid_shift();
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE( Bands_reducible_reconstruction)
 
 BOOST_AUTO_TEST_CASE( Bands_fft_interpolation )
 {
-	test::fixtures::DataLoader dl;
+	elephon::test::fixtures::DataLoader dl;
 	auto bands = dl.create_symmetric_cosine_model({50, 50, 50}, {0.0, 0.0, 0.0});
 	auto griddims = bands.get_grid().get_grid_dim();
 	auto gridshift = bands.get_grid().get_grid_shift();
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE( Bands_fft_interpolation )
 
 BOOST_AUTO_TEST_CASE( fft_interpol_MgB2_vasp )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 
 	std::string input = std::string()+
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE( fft_interpol_MgB2_vasp )
 
 BOOST_AUTO_TEST_CASE( fft_interpol_Al_vasp )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
 
 	std::string input = std::string()+

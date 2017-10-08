@@ -22,9 +22,10 @@
 
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/AtomDisplacement.h"
+#include "LatticeStructure/RegularSymmetricGrid.h"
 #include <vector>
 #include <complex>
-#include "LatticeStructure/RegularSymmetricGrid.h"
+#include <memory>
 
 namespace elephon
 {
@@ -35,9 +36,9 @@ class DisplacementPotential
 {
 public:
 
-	void build(  LatticeStructure::UnitCell unitCell,
-			LatticeStructure::UnitCell const & superCell,
-			std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
+	void build(std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
+			std::shared_ptr<const LatticeStructure::UnitCell> superCell,
+			std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement>> irredDispl,
 			LatticeStructure::RegularBareGrid unitcellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector<double> const & potentialUC,
@@ -72,7 +73,7 @@ private:
 
 	LatticeStructure::RegularBareGrid unitCellGrid_;
 
-	LatticeStructure::UnitCell unitCell_;
+	std::shared_ptr<const LatticeStructure::UnitCell> unitCell_;
 
 	///For each lattice vector, the linear displacement potential sorted
 	///according 1) the mode index and 2) to the realspaceGrid_ in z-slowest-running order.

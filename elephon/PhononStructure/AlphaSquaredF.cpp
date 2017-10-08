@@ -35,128 +35,37 @@ namespace PhononStructure
 {
 
 void
-AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> dataLoader )
+AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resourceHandler )
 {
-	std::string root_dir = dataLoader->get_optns().get_elphd();
-	boost::filesystem::path calcRoot( root_dir );
-	std::string electrons_dir = dataLoader->get_optns().get_eld();
+	auto wfcts = resourceHandler->get_wfct_obj();
+	auto bands = resourceHandler->get_electronic_bands_obj();
+	auto ph = resourceHandler->get_phonon_obj();
+	int nModes = ph->get_num_modes();
 
-	// load the wavefunctions
-	ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize( electrons_dir , dataLoader);
+	this->set_freq_grid( resourceHandler->get_optns().get_phrange(), resourceHandler->get_optns().get_phnpts());
 
-	// load the unit cell data
-	LatticeStructure::UnitCell unitCell;
-	dataLoader->read_unit_cell(electrons_dir, dataLoader->get_optns().get_gPrec(), unitCell);
+	auto dvscf = resourceHandler->get_displacement_potential_obj();
+	auto interpolationKMesh = resourceHandler->get_interpol_reci_mesh_obj();
 
-	// load the band structure
-	ElectronicStructure::ElectronicBands bands;
-	dataLoader->read_band_structure(electrons_dir, bands);
-
-	// rebuild the supercell.
-	auto scd = dataLoader->get_optns().get_scell();
-	auto supercell = unitCell.build_supercell(scd[0], scd[1], scd[2]);
-
-	// rebuild the irreducible displacements
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDispl;
-	unitCell.generate_displacements(
-			dataLoader->get_optns().get_magdispl(),
-			dataLoader->get_optns().get_symDispl(),
-			irreducibleDispl);
-
-	// read the forces and build the matrix of force constants
-	std::vector<std::vector<double>> forces(irreducibleDispl.size());
-	for ( int irrep = 0 ; irrep < irreducibleDispl.size(); ++irrep)
-	{
-		auto irrepD = calcRoot / (std::string("displ_")+std::to_string(irrep));
-		if ( ! boost::filesystem::exists(irrepD) )
-			throw std::runtime_error(std::string("Error: Directory ")+irrepD.string()+" not present."
-					" Must contain a converged VASP run");
-		std::vector<double> f;
-		dataLoader->read_forces(irrepD.string(), f);
-		forces[irrep]= std::move(f);
-	}
-	auto irrepPast = calcRoot / (std::string("displ_")+std::to_string(irreducibleDispl.size()));
-	if ( boost::filesystem::exists(irrepPast) )
-		throw std::runtime_error(std::string("Directory ")+irrepPast.string()+" is present but this run has only"
-				+std::to_string(int(irreducibleDispl.size())-1)+" irreducible displacements.\n"
-						"For safety reasons, the code is stopping here. Please clean up first.");
-	ForceConstantMatrix fc;
-	fc.build(unitCell, supercell, irreducibleDispl, forces );
-
-	// compute the phonon spectrum
-	Phonon ph;
-	std::vector<double> masses;
-	masses.reserve(unitCell.get_atoms_list().size());
-	for ( auto const & a : unitCell.get_atoms_list() )
-		masses.push_back(a.get_mass());
-	ph.initialize(std::move(fc), masses);
-	int nModes = ph.get_num_modes();
-
-	this->set_freq_grid( dataLoader->get_optns().get_phrange(), dataLoader->get_optns().get_phnpts());
-
-	// compute the displacement potential
-	int nIrdDispl = int(irreducibleDispl.size());
-	std::vector<std::vector<double>> displPot( nIrdDispl );
-	std::vector<double> thisDisplPot;
-	std::vector<int> dim;
-	// Here, we read the potential from the vasp output
-	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
-	{
-		dataLoader->read_electronic_potential(
-				( calcRoot / ("displ_"+std::to_string(idispl)) ).string(),
-				dim,
-				thisDisplPot);
-
-		displPot[idispl] = std::move(thisDisplPot);
-	}
-	LatticeStructure::RegularBareGrid rsGridSC;
-	rsGridSC.initialize( dim, false, dataLoader->get_optns().get_gPrec(), {0.0, 0.0, 0.0}, supercell.get_lattice());
-
-	//Read the normal periodic potential
-	dataLoader->read_electronic_potential(
-			dataLoader->get_optns().get_root_dir(),
-			dim,
-			thisDisplPot);
-	elephon::LatticeStructure::RegularBareGrid rsGridUC;
-	rsGridUC.initialize( dim, false, dataLoader->get_optns().get_gPrec(), {0.0, 0.0, 0.0}, unitCell.get_lattice());
-	DisplacementPotential dvscf;
-	dvscf.build(
-			unitCell,
-			supercell,
-			irreducibleDispl,
-			std::move(rsGridUC),
-			std::move(rsGridSC),
-			std::move(thisDisplPot),
-			std::move(displPot));
-
-	LatticeStructure::RegularBareGrid interpolationMesh;
-	interpolationMesh.initialize(
-			bands.get_grid().interpret_fft_dim_input(dataLoader->get_optns().get_fftd()),
-			true,
-			bands.get_grid().get_grid_prec(),
-			dataLoader->get_optns().get_ffts(),
-			bands.get_grid().get_lattice());
-
-	Algorithms::TrilinearInterpolation trilin(interpolationMesh);
+	Algorithms::TrilinearInterpolation trilin(*interpolationKMesh);
 
 	// obtain a Fermi surface (set of constant energy surfaces) as a list of k point and weights
-	int nSamples = dataLoader->get_optns().get_numFS();
-	auto equalEnergySurfaces = dataLoader->get_optns().get_ea2f();
+	int nSamples = resourceHandler->get_optns().get_numFS();
+	auto equalEnergySurfaces = resourceHandler->get_optns().get_ea2f();
 	for ( auto e : equalEnergySurfaces)
 	{
 		std::cout << "Calculating a2F(w) at energy " << e << "eV"<< std::endl;
 
-		auto bndsCrossing = bands.get_bands_crossing_energy_lvls({e});
+		auto bndsCrossing = bands->get_bands_crossing_energy_lvls({e});
 		std::vector<double> reducibleData;
-		bands.generate_interpolated_reducible_data(
+		bands->generate_interpolated_reducible_data(
 				bndsCrossing,
-				interpolationMesh,
+				*interpolationKMesh,
 				reducibleData);
 
 		ElectronicStructure::FermiSurface fs;
 		fs.triangulate_surface(
-				interpolationMesh,
+				*interpolationKMesh,
 				bndsCrossing.size(),
 				reducibleData,
 				nSamples,
@@ -167,7 +76,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeIn
 		for ( int ib1 = 0 ; ib1 < bndsCrossing.size(); ++ib1 )
 		{
 			std::vector<double> kf1, w1;
-			fs.obtain_irreducible_Fermi_vectors_for_band(ib1, bands.get_grid().get_symmetry(), kf1, w1);
+			fs.obtain_irreducible_Fermi_vectors_for_band(ib1, bands->get_grid().get_symmetry(), kf1, w1);
 
 			// compute the Fermi velocities at vectors kf1 and build the surface integral weight
 			std::vector<double> FermiVelocitiesKf1;
@@ -186,7 +95,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeIn
 					requiredGridIndices,
 					&gradDataAtRequestedIndices,
 					nullptr,
-					interpolationMesh,
+					*interpolationKMesh,
 					interpolated_band_data_loader);
 			assert(gradDataAtRequestedIndices.size() == 3*requiredGridIndices.size());
 			trilin.interpolate(3, gradDataAtRequestedIndices, FermiVelocitiesKf1);
@@ -197,7 +106,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeIn
 										+std::pow(FermiVelocitiesKf1[ikf*3+2],2));
 				if ( modGradE < 1e-6) //cutoff
 					modGradE = 1e-6;
-				w1[ikf] = w1[ikf]/modGradE*interpolationMesh.get_lattice().get_volume()/std::pow(2*M_PI,3);
+				w1[ikf] = w1[ikf]/modGradE*interpolationKMesh->get_lattice().get_volume()/std::pow(2*M_PI,3);
 			}
 
 			for ( int ib2 = 0 ; ib2 < bndsCrossing.size(); ++ib2 )
@@ -220,7 +129,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeIn
 						requiredGridIndices,
 						&gradDataAtRequestedIndices,
 						nullptr,
-						interpolationMesh,
+						*interpolationKMesh,
 						interpolated_band_data_loader_kp);
 				assert(gradDataAtRequestedIndices.size() == 3*requiredGridIndices.size());
 				trilin.interpolate(3, gradDataAtRequestedIndices, FermiVelocitiesKf2);
@@ -231,7 +140,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ElectronicStructureCodeIn
 											+std::pow(FermiVelocitiesKf2[ikf*3+2],2));
 					if ( modGradE < 1e-6) //cutoff
 						modGradE = 1e-6;
-					w2[ikf] = w2[ikf]/modGradE*interpolationMesh.get_lattice().get_volume()/std::pow(2*M_PI,3);
+					w2[ikf] = w2[ikf]/modGradE*interpolationKMesh->get_lattice().get_volume()/std::pow(2*M_PI,3);
 				}
 
 				// compute the electron phonon matrix elements between these k points

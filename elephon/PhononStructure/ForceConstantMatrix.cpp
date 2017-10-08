@@ -33,9 +33,9 @@ namespace PhononStructure
 {
 
 void
-ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
-		LatticeStructure::UnitCell const & superCell,
-		std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
+ForceConstantMatrix::build(std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
+		std::shared_ptr<const LatticeStructure::UnitCell> superCell,
+		std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement> > irredDispl,
 		std::vector<std::vector<double>> forces)
 {
 	//Forces F(i,xi) acting on atom i in direction xi are given by
@@ -51,10 +51,10 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 	//		using the pseudo inverse which amounts to the least squares.
 	//	4. Use the symmetry of the Matrix of force constants to expand the solutions to the symmetry equivalent atomic positions
 	//
-	unitCell.compute_supercell_dim(superCell, supercellDim_ );
-	numModes_ = unitCell.get_atoms_list().size()*3;
+	unitCell->compute_supercell_dim(superCell, supercellDim_ );
+	numModes_ = unitCell->get_atoms_list().size()*3;
 
-	assert( forces.size() == irredDispl.size() );
+	assert( forces.size() == irredDispl->size() );
 
 	//Regenerate the list of irreducible atoms. This is needed to map the input forces
 	// which come for non-equivalent displacements at irreducible atoms into the reducible set.
@@ -62,35 +62,35 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 	std::vector<int> redToIrredAtoms, symRedToIrredAtoms;
 	std::vector< std::vector<int> > irredToRedAtoms, symIrredToRedAtoms;
 	LatticeStructure::SymmetryReduction<LatticeStructure::Atom>(
-			unitCell.get_symmetry(),
-			unitCell.get_atoms_list(),  irredAtoms,
+			unitCell->get_symmetry(),
+			unitCell->get_atoms_list(),  irredAtoms,
 			redToIrredAtoms, symRedToIrredAtoms,
 			irredToRedAtoms, symIrredToRedAtoms);
 
 	//define a consistent atom numbering in the primitive cell.
 	//We choose the unitCell.get_atoms_list() order
 	std::map< LatticeStructure::Atom, int > primitiveCellLookup;
-	for ( int ia = 0 ; ia < unitCell.get_atoms_list().size(); ++ia )
-		primitiveCellLookup.insert( std::move( std::make_pair( unitCell.get_atoms_list()[ia], ia ) ) );
+	for ( int ia = 0 ; ia < unitCell->get_atoms_list().size(); ++ia )
+		primitiveCellLookup.insert( std::move( std::make_pair( unitCell->get_atoms_list()[ia], ia ) ) );
 
-	int naSC = superCell.get_atoms_list().size();
+	int naSC = superCell->get_atoms_list().size();
 
 	Algorithms::LinearAlgebraInterface linAlg;
 
 	//For each such atom, compute the local matrix of force constants
 	std::vector<double> irreducibleMatrixOfForceConstants(
-			irredAtoms.size()*superCell.get_atoms_list().size()*9);
+			irredAtoms.size()*superCell->get_atoms_list().size()*9);
 	int iForceField = 0;
 	for ( int ia = 0 ; ia < irredAtoms.size(); ++ia )
 	{
 		//regenerate displacements to make the connection with the input forces
-		LatticeStructure::Symmetry const & sSym = unitCell.get_site_symmetry(ia);
+		LatticeStructure::Symmetry const & sSym = unitCell->get_site_symmetry(ia);
 
 		std::vector<LatticeStructure::AtomDisplacement> irredNotUsed,reducible;
-		bool symmetricDispl = not irredDispl[iForceField].is_plus_minus_displ_equivalent();
+		bool symmetricDispl = not (*irredDispl)[iForceField].is_plus_minus_displ_equivalent();
 		std::vector<int> redToIrredDispl, symRedToIrredDispl;
 		std::vector< std::vector<int> > irredToRedDispl, symIrredToRedDispl;
-		unitCell.get_site_displacements( irredAtoms[ia],
+		unitCell->get_site_displacements( irredAtoms[ia],
 				symmetricDispl, sSym,
 				1, // not used here
 				irredNotUsed,reducible,
@@ -105,9 +105,9 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 		std::vector<double> U( 3 * nRedDispl );
 		for ( int idir = 0 ; idir < irredToRedDispl.size();  ++idir)
 		{
-			auto d = irredDispl[iForceField+idir].get_direction();
+			auto d = (*irredDispl)[iForceField+idir].get_direction();
 			for ( auto &xi : d )
-				xi *= irredDispl[iForceField].get_magnitude();
+				xi *= (*irredDispl)[iForceField].get_magnitude();
 			for ( int istar = 0 ; istar < symIrredToRedDispl[idir].size(); ++istar)
 			{
 				auto drot = d;
@@ -126,7 +126,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 			p[i] /= double(supercellDim_[i]);
 
 		std::vector< std::vector<int> > rotMapsSiteSymmetry;
-		this->transform_map( p, superCell.get_atoms_list(), sSym, rotMapsSiteSymmetry);
+		this->transform_map( p, superCell->get_atoms_list(), sSym, rotMapsSiteSymmetry);
 
 		std::vector<double> matrixForceConstants(3*3);
 		std::vector<double> F( 3*nRedDispl );
@@ -166,7 +166,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 	{
 		//Locate the place where to store the data in the full array
 		//find the position of this atom in units of the primitive cell
-		auto atom = superCell.get_atoms_list()[iaS];
+		auto atom = superCell->get_atoms_list()[iaS];
 		std::vector<double> posAtomUnitsPrimitve = atom.get_position();
 		std::vector<int> R(3);
 		std::vector<double> tau(3);
@@ -176,7 +176,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 			posAtomUnitsPrimitve[i] *= supercellDim_[i];
 			//We add a tiny bit to the vector so that 1.9999999 will not (incorrectly) map
 			//to R = 1 and then 0.9999999 will (correctly) map to the lattice site at 0.
-			R[i] = std::floor(posAtomUnitsPrimitve[i]+0.5+2*unitCell.get_symmetry().get_symmetry_prec());
+			R[i] = std::floor(posAtomUnitsPrimitve[i]+0.5+2*unitCell->get_symmetry().get_symmetry_prec());
 			tau[i] = posAtomUnitsPrimitve[i]-R[i];
 		}
 		atom.set_position(tau);
@@ -191,10 +191,10 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 	//where S is a symmetry operation connecting alpha(1,2) with beta(1,2) and g is the point group part.
 
 	std::map< LatticeStructure::Atom, int > superCellLookup;
-	for ( int ia = 0 ; ia < superCell.get_atoms_list().size(); ++ia )
-		superCellLookup.insert(std::move( std::make_pair( superCell.get_atoms_list()[ia], ia ) ) );
+	for ( int ia = 0 ; ia < superCell->get_atoms_list().size(); ++ia )
+		superCellLookup.insert(std::move( std::make_pair( superCell->get_atoms_list()[ia], ia ) ) );
 
-	data_.resize( this->get_num_R()*std::pow(3*unitCell.get_atoms_list().size(),2) );
+	data_.resize( this->get_num_R()*std::pow(3*unitCell->get_atoms_list().size(),2) );
 	std::vector<double> matForceSlice( 9*naSC );
 	for ( int irA = 0; irA < irredToRedAtoms.size(); ++irA )
 	{
@@ -211,8 +211,8 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 			//		the one of the supercell
 			for ( int iaSC = 0 ; iaSC < naSC ; ++iaSC )
 			{
-				auto a = superCell.get_atoms_list()[iaSC];
-				a.transform(unitCell.get_symmetry().get_sym_op(isym));
+				auto a = superCell->get_atoms_list()[iaSC];
+				a.transform(unitCell->get_symmetry().get_sym_op(isym));
 				auto it = superCellLookup.find(a);
 				if ( it == superCellLookup.end() )
 					throw std::logic_error("Unable to locate rotates atom!");
@@ -223,7 +223,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 			}
 
 			//transform the set of 3x3 matrices for the set of atoms
-			unitCell.get_symmetry().rotate_matrix_cartesian( isym,
+			unitCell->get_symmetry().rotate_matrix_cartesian( isym,
 					matForceSlice.begin(),
 					matForceSlice.end());
 
@@ -243,13 +243,13 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 		}
 	}
 
-	int nAUC = unitCell.get_atoms_list().size();
+	int nAUC = unitCell->get_atoms_list().size();
 	tau_.clear();
 	tau_.resize( nAUC*naSC );
 	for ( int ia = 0; ia < nAUC; ++ia )
 	{
-		auto atomsSC = superCell.get_atoms_list();
-		auto shift = unitCell.get_atoms_list()[ia].get_position();
+		auto atomsSC = superCell->get_atoms_list();
+		auto shift = unitCell->get_atoms_list()[ia].get_position();
 		for ( int i = 0 ; i < 3 ; ++i )
 			shift[i] /= double(supercellDim_[i]);
 		for ( auto &a : atomsSC)
@@ -285,6 +285,7 @@ ForceConstantMatrix::build(  LatticeStructure::UnitCell unitCell,
 					tau_[ia*naSC+ib][iR*3+xi] = vects[iR][xi]*supercellDim_[xi];
 		}
 	}
+	uc_ = unitCell;
 }
 
 double
@@ -344,6 +345,7 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 	int nAUC = nM/3;
 	int nR = this->get_num_R();
 
+
 	std::vector< std::complex<double> > phases(nR*nAUC*nAUC);
 	for ( int iq = 0 ; iq < nq ; ++iq)
 	{
@@ -354,10 +356,11 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 					int multi = tau_[(ia*nAUC+ib)*nR+ir].size()/3;
 					phases[(ia*nAUC+ib)*nR+ir] = 0;
 					for ( int im = 0 ; im < multi; ++im )
-						phases[(ia*nAUC+ib)*nR+ir] += std::exp( std::complex<double>(0,
-							-2*M_PI*(qVect[iq*3+0]*tau_[(ia*nAUC+ib)*nR+ir][im*3+0]
-							        +qVect[iq*3+1]*tau_[(ia*nAUC+ib)*nR+ir][im*3+1]
-									+qVect[iq*3+2]*tau_[(ia*nAUC+ib)*nR+ir][im*3+2])) ) / double(multi);
+						phases[(ia*nAUC+ib)*nR+ir] +=	std::exp( std::complex<double>(0,
+										-2*M_PI*(qVect[iq*3+0]*tau_[(ia*nAUC+ib)*nR+ir][im*3+0]
+											    +qVect[iq*3+1]*tau_[(ia*nAUC+ib)*nR+ir][im*3+1]
+												+qVect[iq*3+2]*tau_[(ia*nAUC+ib)*nR+ir][im*3+2])) )
+										/ double(multi);
 				}
 
 		//only compute upper half + diagonal
@@ -374,6 +377,52 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 		for ( int mu1 = 0 ; mu1 < nM; ++mu1 )
 			for ( int mu2 = mu1+1 ; mu2 < nM; ++mu2 )
 				data[iq*nM*nM + mu2*nM+mu1] = std::conj(data[iq*nM*nM + mu1*nM+mu2]);
+	}
+}
+
+void
+ForceConstantMatrix::fourier_transform_derivative(std::vector<double> const & qVect,
+		std::vector<std::complex<double>> & data) const
+{
+	assert( qVect.size()%3 == 0 );
+	auto tauCart = tau_;
+	for ( auto & multiTauSet : tauCart )
+	{
+		uc_->get_lattice().direct_to_cartesian_angstroem( multiTauSet );
+	}
+
+	int nq = int(qVect.size())/3;
+
+	data.assign( nq*numModes_*numModes_*3 , 0.0 );
+
+	int nAUC = numModes_/3;
+	int nR = this->get_num_R();
+	for ( int iq = 0 ; iq < nq ; ++iq)
+	{
+		for ( int i = 0 ; i < 3 ; ++i )
+			for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
+				for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
+				{
+					int ia = mu1/3;
+					int ib = mu2/3;
+					for ( int ir = 0 ; ir < nR; ++ir )
+					{
+						int multi = tau_[(ia*nAUC+ib)*nR+ir].size()/3;
+						for ( int im = 0 ; im < multi; ++im )
+						{
+							std::complex<double> phase = std::exp( std::complex<double>(0,
+													-2*M_PI*(qVect[iq*3+0]*tau_[(ia*nAUC+ib)*nR+ir][im*3+0]
+															+qVect[iq*3+1]*tau_[(ia*nAUC+ib)*nR+ir][im*3+1]
+															+qVect[iq*3+2]*tau_[(ia*nAUC+ib)*nR+ir][im*3+2])) )
+													/ double(multi);
+
+								data[((iq*3+i)*numModes_ + mu1)*numModes_+mu2] +=
+										std::complex<double>(0,-tauCart[(ia*nAUC+ib)*nR+ir][im*3+i])*
+										phase*
+										data_[this->mem_layout(ir,mu1,mu2)];
+						}
+					}
+				}
 	}
 }
 

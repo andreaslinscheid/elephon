@@ -23,54 +23,26 @@
 #include "PhononStructure/ElectronPhononCoupling.h"
 #include "ElectronicStructure/Wavefunctions.h"
 #include "fixtures/MockStartup.h"
-#include "fixtures/FixtureForceConstant.h"
 #include "fixtures/DataLoader.h"
+#include "fixtures/scenarios.h"
 #include <vector>
-
-
-elephon::ElectronicStructure::Wavefunctions
-load_wfct_Al_fcc_primitive_vasp_sc2x2x2()
-{
-	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
-	auto phononDir = rootDir / "phonon";
-	std::string content = std::string()+
-			"scell=2 2 2\n"
-			"root_dir="+rootDir.string()+"\n"
-			"elphd="+phononDir.string()+"\n"
-			"";
-	test::fixtures::DataLoader dl;
-	auto loader = dl.create_vasp_loader( content );
-
-	elephon::ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize(rootDir.string(), loader);
-	return wfcts;
-}
 
 BOOST_AUTO_TEST_CASE( Gkkp_generate_regular_k_grid_q_zero )
 {
-	test::fixtures::FixtureForceConstant ffc;
-	auto fc = ffc.compute_fc_for_Al_gamma();
-
-	std::vector<double> masses = {26.9815385};
-
-	elephon::PhononStructure::Phonon ph;
-	ph.initialize( fc, masses );
-
+	auto resHandl = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
 	std::vector<double> kpts = { 0.0, 0.0, 0.0 };
 	auto kppts = kpts;
 
 	std::vector<int> bandsList = { 1, 2 };
 	auto bandspList = bandsList;
 
-	test::fixtures::FixtureForceConstant ff;
-	elephon::PhononStructure::DisplacementPotential dvscf
-		= ff.build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2();
-
-	auto wfcts = load_wfct_Al_fcc_primitive_vasp_sc2x2x2();
-
 	elephon::PhononStructure::ElectronPhononCoupling gkkp;
-	gkkp.generate_gkkp_and_phonon( kpts, kppts, bandsList, bandspList, ph, dvscf, wfcts );
+	gkkp.generate_gkkp_and_phonon(
+			kpts, kppts,
+			bandsList, bandspList,
+			resHandl->get_phonon_obj(),
+			resHandl->get_displacement_potential_obj(),
+			resHandl->get_wfct_obj() );
 
 
 }

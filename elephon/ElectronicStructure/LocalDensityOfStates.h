@@ -25,6 +25,7 @@
 #include "IOMethods/ElectronicStructureCodeInterface.h"
 #include <vector>
 #include <string>
+#include <memory>
 
 namespace elephon
 {
@@ -38,7 +39,7 @@ public:
 	void compute_ldos(
 			std::vector<double> energies,
 			Wavefunctions const& wfcts,
-			LatticeStructure::UnitCell unitcell,
+			std::shared_ptr<const LatticeStructure::UnitCell> unitcell,
 			int nkpointsPerSurface,
 			std::vector<int> realSpaceRes,
 			ElectronicBands const & bands,
@@ -66,7 +67,7 @@ private:
 
 	std::vector<double> isoEnergies_;
 
-	LatticeStructure::UnitCell uc_;
+	std::shared_ptr<const LatticeStructure::UnitCell> uc_;
 
 	std::vector<double> ldos_;
 };

@@ -66,6 +66,12 @@ ElectronicBands::get_nspin() const
 	return 1;
 }
 
+int
+ElectronicBands::get_nBnd() const
+{
+	return this->get_nData_gpt()/this->get_nspin();
+}
+
 double
 ElectronicBands::operator() (int ikIrred, int ib, int ispin) const
 {
@@ -80,7 +86,7 @@ ElectronicBands::fft_interpolate_part(
 		std::vector<double> const & gridShift) const
 {
 	assert( startBnD >= 0 );
-	assert( (endBnd > startBnD) && (endBnd <= this->get_nBnd()) );
+	assert( (endBnd > startBnD) && (endBnd <= this->get_nData_gpt()) );
 
 	LatticeStructure::RegularSymmetricGrid newGrid;
 	newGrid.initialize(

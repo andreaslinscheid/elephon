@@ -25,6 +25,8 @@
 #include "IOMethods/InputOptions.h"
 #include <string>
 
+namespace elephon
+{
 namespace test
 {
 namespace fixtures
@@ -44,5 +46,6 @@ public:
 
 } /* namespace fixtures */
 } /* namespace test */
+} /* namespace elephon */
 
 #endif /* TEST_FIXTURES_MOCKSTARTUP_H_ */

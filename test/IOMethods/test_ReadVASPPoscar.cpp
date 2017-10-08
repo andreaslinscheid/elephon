@@ -28,7 +28,7 @@
 
 BOOST_AUTO_TEST_CASE( Read_postcar )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	elephon::IOMethods::ReadVASPPoscar filerreader;
 	std::vector<std::pair<std::string, double>> atomOrder(1, std::make_pair(std::string("Al"), 26.981));
 	filerreader.read_file( (ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "POSCAR").string(), atomOrder );
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE( Read_postcar )
 
 BOOST_AUTO_TEST_CASE( Read_Al_fcc_primitive_vasp )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	elephon::IOMethods::ReadVASPPoscar filerreader;
 	std::vector<std::pair<std::string, double>> atomOrder(1, std::make_pair(std::string("Al"), 26.981));
 	filerreader.read_file( (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "POSCAR").string(),

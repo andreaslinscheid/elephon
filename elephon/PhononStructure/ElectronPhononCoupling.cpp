@@ -35,9 +35,9 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 		std::vector<double> kpList,
 		std::vector<int> bandList,
 		std::vector<int> bandpList,
-		Phonon const & ph,
-		DisplacementPotential const & dvscf,
-		ElectronicStructure::Wavefunctions const & wfcts)
+		std::shared_ptr<const Phonon> ph,
+		std::shared_ptr<const DisplacementPotential> dvscf,
+		std::shared_ptr<const ElectronicStructure::Wavefunctions> wfcts)
 {
 	assert(kList.size()%3 == 0);
 	assert(kpList.size()%3 == 0);
@@ -51,20 +51,20 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	//Wave functions are on a regular grid and in G (reciprocal) space
 	std::vector< std::vector<std::complex<float> > > wfcsk, wfcskp;
 	std::vector< std::vector<int> > fftMapsK, fftMapsKp;
-	wfcts.generate_wfcts_at_arbitray_kp( kList, bandList, wfcsk, fftMapsK);
-	wfcts.generate_wfcts_at_arbitray_kp( kpList, bandpList, wfcskp, fftMapsKp );
+	wfcts->generate_wfcts_at_arbitray_kp( kList, bandList, wfcsk, fftMapsK);
+	wfcts->generate_wfcts_at_arbitray_kp( kpList, bandpList, wfcskp, fftMapsKp );
 
 	// conjugate the left wfct of the scalar product
 	for ( auto & wfk : wfcsk )
 		for ( auto & cg : wfk )
 			cg = std::conj(cg);
 
-	std::vector<int> potentialFFTGrid = dvscf.get_real_space_grid().get_grid_dim();
+	std::vector<int> potentialFFTGrid = dvscf->get_real_space_grid().get_grid_dim();
 
 	std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
 
 	int nr = potentialFFTGrid[0]*potentialFFTGrid[1]*potentialFFTGrid[2];
-	nM_ = ph.get_num_modes();
+	nM_ = ph->get_num_modes();
 	nB_ = bandList.size();
 	nBp_ = bandpList.size();
 
@@ -78,7 +78,7 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	{
 		fft.fft_sparse_data(
 				fftMapsK[ik],
-				wfcts.get_max_fft_dims(),
+				wfcts->get_max_fft_dims(),
 				wfcsk[ik],
 				nB_,
 				1,
@@ -92,13 +92,13 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 			std::vector<double> q{	kList[ik*3+0]-kpList[ik*3+0],
 									kList[ik*3+1]-kpList[ik*3+1],
 									kList[ik*3+2]-kpList[ik*3+2]};
-			ph.compute_at_q( q, modes, dynmat );
-			dvscf.compute_dvscf_q( q, dynmat, ph.get_masses(), dvscfData);
+			ph->compute_at_q( q, modes, dynmat );
+			dvscf->compute_dvscf_q( q, dynmat, ph->get_masses(), dvscfData);
 			phononFrequencies_.insert(std::end(phononFrequencies_), modes.begin(), modes.end() );
 
 			fft.fft_sparse_data(
 					fftMapsKp[ikp],
-					wfcts.get_max_fft_dims(),
+					wfcts->get_max_fft_dims(),
 					wfcskp[ikp],
 					nBp_,
 					-1,

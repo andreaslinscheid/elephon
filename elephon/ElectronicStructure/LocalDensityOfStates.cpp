@@ -35,14 +35,14 @@ void
 LocalDensityOfStates::compute_ldos(
 		std::vector<double> energies,
 		Wavefunctions const& wfcts,
-		LatticeStructure::UnitCell unitcell,
+		std::shared_ptr<const LatticeStructure::UnitCell> unitcell,
 		int nkpointsPerSurface,
 		std::vector<int> realSpaceRes,
 		ElectronicBands const & bands,
 		LatticeStructure::RegularBareGrid const & interpolGrid,
 		bool symmetrize)
 {
-	uc_ = std::move(unitcell);
+	uc_ = unitcell;
 	isoEnergies_ = std::move(energies);
 	rsDims_ = std::move(realSpaceRes);
 	Algorithms::TrilinearInterpolation triLin( wfcts.get_k_grid().view_bare_grid() );
@@ -59,15 +59,6 @@ LocalDensityOfStates::compute_ldos(
 	ldos_.assign( isoEnergies_.size()*nrs , 0.0 );
 	std::vector<double> interpolData;
 	Algorithms::FFTInterface fftInt;
-//
-//	LatticeStructure::RegularSymmetricGrid interpolKGrid;
-//	interpolKGrid.initialize(
-//			interpolGrid.get_grid_dim(),
-//			interpolGrid.get_grid_prec(),
-//			interpolGrid.get_grid_shift(),
-//			bands.get_grid().get_symmetry(),
-//			bands.get_grid().get_lattice());
-
 
 	for ( int ie = 0 ; ie < isoEnergies_.size(); ++ie )
 	{
@@ -144,7 +135,7 @@ LocalDensityOfStates::compute_ldos(
 										+std::pow(FermiVelocities[ikf*3+2],2));
 				if ( modGradE < 1e-6) //cutoff
 					modGradE = 1e-6;
-				double contrib = kfw[ikf]/modGradE*uc_.get_lattice().get_volume()/std::pow(2*M_PI,3);
+				double contrib = kfw[ikf]/modGradE*uc_->get_lattice().get_volume()/std::pow(2*M_PI,3);
 				for ( int ir = 0 ; ir < nrs; ++ir )
 				{
 					ldos_[ie*nrs+ir] += contrib*(std::pow(std::real(wfctsRealSpace[ir]), 2)
@@ -159,8 +150,8 @@ LocalDensityOfStates::compute_ldos(
 	{
 		// create a rotation map of grid indices
 		LatticeStructure::RegularBareGrid rsGrid;
-		auto const & S = uc_.get_symmetry();
-		rsGrid.initialize( rsDims_, false, interpolGrid.get_grid_prec(), {0.0, 0.0, 0.0}, uc_.get_lattice());
+		auto const & S = uc_->get_symmetry();
+		rsGrid.initialize( rsDims_, false, interpolGrid.get_grid_prec(), {0.0, 0.0, 0.0}, uc_->get_lattice());
 
 		int nsym = S.get_num_symmetries();
 		std::vector<std::vector<int>> rotMap;
@@ -202,8 +193,10 @@ LocalDensityOfStates::compute_ldos(
 			lattice,
 			atoms,
 			sym);
-	LatticeStructure::UnitCell uc;
-	uc.initialize(atoms, lattice, sym);
+	LatticeStructure::UnitCell unitcell;
+	unitcell.initialize(atoms, lattice, sym);
+
+	auto uc = std::make_shared<LatticeStructure::UnitCell>(std::move(unitcell));
 
 	auto gridShift = loader->get_optns().get_ffts();
 	LatticeStructure::RegularBareGrid interpolGrid;

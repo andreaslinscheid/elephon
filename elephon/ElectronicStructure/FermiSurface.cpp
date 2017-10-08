@@ -146,6 +146,8 @@ void FermiSurface::triangulate_surface(
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(1),p1);
 			decimator->GetOutput()->GetPoint(pointIdsCell->GetId(2),p2);
 
+			// in this additional step, we transport points to the actual isosurface according to a linear interpolation
+
 			//transform to Cartesian coordinates
 			grid_.get_lattice().reci_direct_to_cartesian_2pibya(p0,3);
 			grid_.get_lattice().reci_direct_to_cartesian_2pibya(p1,3);

@@ -1,4 +1,4 @@
-/*	This file ElectronicStructureCodeInterface.cpp is part of elephon.
+/*	This file PhononGrid.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,33 +13,38 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: May 17, 2017
+ *  Created on: Oct 2, 2017
  *      Author: A. Linscheid
  */
 
-#include "IOMethods/ElectronicStructureCodeInterface.h"
-#include <boost/filesystem.hpp>
+#ifndef ELEPHON_PHONONSTRUCTURE_PHONONGRID_H_
+#define ELEPHON_PHONONSTRUCTURE_PHONONGRID_H_
+
+#include "PhononStructure/Phonon.h"
+#include "LatticeStructure/DataRegularGrid.h"
+#include "LatticeStructure/RegularSymmetricGrid.h"
+#include <vector>
+#include <string>
 
 namespace elephon
 {
-namespace IOMethods
+namespace PhononStructure
 {
 
-ElectronicStructureCodeInterface::ElectronicStructureCodeInterface(
-		IOMethods::InputOptions inputOPts ) : inputOPts_(inputOPts)
+class PhononGrid : public LatticeStructure::DataRegularGrid<double>
 {
-}
+public:
 
-IOMethods::InputOptions const &
-ElectronicStructureCodeInterface::get_optns() const
-{
-	return inputOPts_;
-}
+	int num_modes() const;
 
-ElectronicStructureCodeInterface::~ElectronicStructureCodeInterface()
-{
-	// TODO this class could take care of keeping track of file
-}
+	void write_phonon_dos_file(std::string const & filename,
+			std::vector<double> const & frequencies,
+			std::shared_ptr<const Phonon> ph = nullptr) const;
 
-} /* namespace IOMethods */
+private:
+};
+
+} /* namespace PhononStructure */
 } /* namespace elephon */
+
+#endif /* ELEPHON_PHONONSTRUCTURE_PHONONGRID_H_ */

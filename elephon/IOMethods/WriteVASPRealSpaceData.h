@@ -36,7 +36,7 @@ public:
 	void write_file(std::string const & filename,
 			std::string  comment,
 			std::vector<int> const & dataDims,
-			LatticeStructure::UnitCell const & unitCell,
+			std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
 			std::vector<double> const & data,
 			bool spin_resolved = false,
 			bool xmajor = true) const;

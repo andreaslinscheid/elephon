@@ -22,6 +22,7 @@
 
 #include "LatticeStructure/RegularSymmetricGrid.h"
 #include <vector>
+#include <memory>
 
 namespace elephon
 {
@@ -32,6 +33,13 @@ template<typename T>
 class DataRegularGrid
 {
 public:
+
+	template<class F>
+	void initialize(
+			T referenceEnergy,
+			F const & functor,
+			LatticeStructure::RegularSymmetricGrid grid);
+
 	/**
 	 * Set the data in the the data structure.
 	 *
@@ -50,24 +58,58 @@ public:
 			std::vector<T> bandData,
 			LatticeStructure::RegularSymmetricGrid grid);
 
+	/**
+	 * return a list of bands that cross either one of submitted energy levels.
+	 *
+	 * @param energies	List of energy levels. Must not be empty.
+	 * @return			vector of bands that cross one of these energy levels.
+	 */
 	std::vector<int> get_bands_crossing_energy_lvls(
 			std::vector<double> const & energies ) const;
 
+	/**
+	 * return a list of bands that cross the range of the energy window.
+	 *
+	 * @param energies	A list of two values determining a non-empty range in energy.
+	 * @return			vector of bands that cross into the energy window.
+	 */
 	std::vector<int> get_bands_crossing_energy_window(
 			std::vector<double> const & energies ) const;
 
-	int get_nBnd() const;
+	/**
+	 * return the number of data points per grind point.
+	 *
+	 * @return the number of points per grid point.
+	 */
+	int get_nData_gpt() const;
 
+	/**
+	 * compute data for bIndices in the reducible grid.
+	 *
+	 * @param bIndices	The band indices for which the data will be mapped onto the reducible grid.
+	 * @param bands		Data for each band in the list for the reducible grid with band-major order.
+	 */
 	void generate_reducible_data(
 			std::vector<int> const & bIndices,
 			std::vector<T> & bands) const;
 
+	/**
+	 * compute data for bIndices and interpolate in to the reducible grid.
+	 *
+	 * @param bIndices					The band indices for which the data will be mapped onto the reducible grid.
+	 * @param interpolationGrid			The reducible grid onto which the data will be interpolated.
+	 * @param interpolatedReducibleData	Data for each band in the list for the reducible grid with band-major order.
+	 */
 	void generate_interpolated_reducible_data(
 			std::vector<int> const & bIndices,
 			LatticeStructure::RegularBareGrid const & interpolationGrid,
 			std::vector<T> & interpolatedReducibleData) const;
 
-
+	/**
+	 * Constant access to the internal copy of the regular grid.
+	 *
+	 * @return	constant reference to the regular grid.
+	 */
 	LatticeStructure::RegularSymmetricGrid const & get_grid() const;
 
 	/**
@@ -93,6 +135,19 @@ public:
 	 */
 	std::pair<T, T> get_min_max() const;
 
+	/**
+	 * Compute local derivatives of the data in the grid.
+	 *
+	 * @param bandIndices			Computed at each grid index for these band indices.
+	 * @param reducibleKPTIndices	Computed for each band index at these grid indices.
+	 * @param gradientFieldPtr		If the pointer is not Null, the local gradient will be placed in the vector pointed to
+	 * 								by this pointer. Reallocated as needed. Data will be in the layout dx,dy,dz for, first
+	 * 								each band index and then for each grid index.
+	 * @param hessianFieldPtr		If the pointer is not Null, the local hessian will be placed in the vector pointed to
+	 * 								by this pointer. Reallocated as needed. Data will be in the layout
+	 * 								dx*dx, dx*dy, dx*dz, dy*dy, dy*dz, dz*dz for, first
+	 * 								each band index and then for each grid index. We imply the symmetry between dx*dy and dy*dx
+	 */
 	template<typename TD>
 	void compute_derivatives_sqr_polynom(
 			std::vector<int> const & bandIndices,
@@ -100,16 +155,51 @@ public:
 			std::vector<TD> * gradientFieldPtr,
 			std::vector<TD> * hessianFieldPtr ) const;
 
+	/**
+	 * Access the internal data
+	 *
+	 * @param i		irreducible grid point index
+	 * @param ib	band index
+	 * @return		the value at this grid point / band index pair
+	 */
 	T read(int i, int ib) const;
 
+	/**
+	 * Access the internal data
+	 *
+	 * @param i		irreducible grid point index
+	 * @param ib	band index
+	 * @return		mutable reference to the value at this grid point / band index pair
+	 */
 	T & write(int i, int ib);
+
+
+	void compute_DOS(
+			std::vector<double> const & energies,
+			std::vector<T> & dos) const;
+
+	void compute_DOS_tetra(
+			std::vector<double> const & energies,
+			std::vector<T> & dos) const;
+
+	template<class F>
+	void compute_DOS_wan(
+			F const & functor,
+			std::vector<double> const & energies,
+			std::vector<T> & dos) const;
 private:
 
-	int nBnd_ = 0;
+	int nDGP_ = 0;
 
 	std::vector<T> dataIrred_;
 
 	LatticeStructure::RegularSymmetricGrid grid_;
+
+	template<class F>
+	void compute_DOS_general(
+			F const & functor,
+			std::vector<double> const & energies,
+			std::vector<T> & dos) const;
 };
 
 } /* namespace LatticeStructure */

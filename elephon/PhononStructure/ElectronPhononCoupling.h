@@ -25,6 +25,7 @@
 #include "ElectronicStructure/Wavefunctions.h"
 #include <vector>
 #include <complex>
+#include <memory>
 
 namespace elephon
 {
@@ -40,9 +41,9 @@ public:
 			std::vector<double> kpList,
 			std::vector<int> bandList,
 			std::vector<int> bandpList,
-			Phonon const & ph,
-			DisplacementPotential const & dvscf,
-			ElectronicStructure::Wavefunctions const & wfcts );
+			std::shared_ptr<const Phonon> ph,
+			std::shared_ptr<const DisplacementPotential> dvscf,
+			std::shared_ptr<const ElectronicStructure::Wavefunctions> wfcts );
 
 	void write_gkkp_file(
 			std::string const & filename,

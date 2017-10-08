@@ -26,6 +26,7 @@
 #include <vector>
 #include <complex>
 #include <map>
+#include <memory>
 
 namespace elephon
 {
@@ -36,14 +37,17 @@ class ForceConstantMatrix
 {
 public:
 
-	void build(   LatticeStructure::UnitCell unitCell,
-			LatticeStructure::UnitCell const & superCell,
-			std::vector<LatticeStructure::AtomDisplacement> const & irredDispl,
+	void build( std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
+			std::shared_ptr<const LatticeStructure::UnitCell> superCell,
+			std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement> > irredDispl,
 			std::vector<std::vector<double>> forces);
 
 	double operator() (int Rz, int Ry, int Rx,int mu2, int mu1) const;
 
 	void fourier_transform_q(std::vector<double> const & qVect,
+			std::vector<std::complex<double>> & data) const;
+
+	void fourier_transform_derivative(std::vector<double> const & qVect,
 			std::vector<std::complex<double>> & data) const;
 
 	int get_num_modes() const;
@@ -60,6 +64,8 @@ private:
 	std::vector<int> supercellDim_;
 
 	std::vector<double> data_;
+
+	std::shared_ptr<const LatticeStructure::UnitCell> uc_;
 
 	///For all atoms 'a' in the unit cell, tau_ contains for all atoms 'b' in the unit cell
 	// and the set of R vectors [(tau_a-tau_b)*numR+ir] a set with vectors of atom positions

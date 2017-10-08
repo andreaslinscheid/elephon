@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 	using namespace boost::filesystem;
 
 	elephon::IOMethods::ReadVASPWaveFunction wfctreader;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	wfctreader.prepare_wavecar( (testd / "WAVECAR").string() );
 

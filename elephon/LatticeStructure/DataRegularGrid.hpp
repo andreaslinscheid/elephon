@@ -18,15 +18,47 @@
  */
 
 #include "LatticeStructure/DataRegularGrid.h"
+#include "ElectronicStructure/FermiSurface.h"
 #include "Algorithms/LocalDerivatives.h"
 #include "Algorithms/FFTInterface.h"
+#include "Algorithms/TrilinearInterpolation.h"
 #include <set>
 #include <stdexcept>
+#include <limits>
 
 namespace elephon
 {
 namespace LatticeStructure
 {
+
+template<typename T>
+template<class F>
+void
+DataRegularGrid<T>::initialize(
+		T referenceEnergy,
+		F const & functor,
+		LatticeStructure::RegularSymmetricGrid grid)
+{
+	std::vector<T> dataEnergies;
+	int numBands;
+	for ( int ikir = 0 ; ikir < grid.get_np_irred(); ++ikir)
+	{
+		int ikr = grid.get_maps_irreducible_to_reducible()[ikir][ grid.get_symmetry().get_identity_index() ];
+		std::vector<double> gridVector = grid.get_vector_direct(ikr);
+		std::vector<T> thisBands;
+		std::vector<std::complex<T>> eigenvectors;
+		functor.evaluate(gridVector, thisBands, eigenvectors);
+		if ( dataEnergies.empty() )
+		{
+			numBands = thisBands.size();
+			dataEnergies.resize(numBands*grid.get_np_irred());
+		}
+		for ( int ib = 0 ; ib < numBands ; ++ib)
+			dataEnergies[ikir*numBands + ib] = 	thisBands[ib];
+	}
+
+	this->initialize(numBands, referenceEnergy, std::move(dataEnergies), std::move(grid));
+}
 
 template<typename T>
 void
@@ -38,25 +70,25 @@ DataRegularGrid<T>::initialize(
 {
 	grid_ = std::move(grid);
 	assert( grid_.is_reci() );
-	nBnd_ = numBands;
+	nDGP_ = numBands;
 
-	if ( bandData.size() == grid_.get_np_irred()*nBnd_ )
+	if ( bandData.size() == grid_.get_np_irred()*nDGP_ )
 	{
 		// accepted as irreducible data
 		dataIrred_ = std::move(bandData);
 		for ( auto &e : dataIrred_ )
 			e -= zeroEnergy;
 	}
-	else if ( bandData.size() == grid_.get_np_red()*nBnd_ )
+	else if ( bandData.size() == grid_.get_np_red()*nDGP_ )
 	{
 		// accepted as reducible data - convert to irreducible
-		dataIrred_.resize( grid_.get_np_irred()*nBnd_ );
+		dataIrred_.resize( grid_.get_np_irred()*nDGP_ );
 		for ( int irr = 0 ; irr < grid_.get_np_irred(); ++irr )
 		{
 			int isymId = grid_.get_symmetry().get_identity_index();
 			int ireducible = grid_.get_maps_irreducible_to_reducible()[irr][isymId];
-			for ( int ibnd = 0 ; ibnd < nBnd_; ++ibnd )
-				dataIrred_[ irr*nBnd_ + ibnd ] = bandData[ ireducible*nBnd_ + ibnd ] - zeroEnergy;
+			for ( int ibnd = 0 ; ibnd < nDGP_; ++ibnd )
+				dataIrred_[ irr*nDGP_ + ibnd ] = bandData[ ireducible*nDGP_ + ibnd ] - zeroEnergy;
 		}
 	}
 	else
@@ -71,11 +103,11 @@ DataRegularGrid<T>::get_bands_crossing_energy_lvls(
 	assert( energies.size() > 0 );
 	std::set<int> bandset;
 	for ( auto e : energies )
-		for ( int ib = 0 ; ib < nBnd_; ++ib )
+		for ( int ib = 0 ; ib < nDGP_; ++ib )
 		{
 			double refEne = double(dataIrred_[ib]) - e;
 			for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik )
-				if ( refEne*(dataIrred_[ik*nBnd_ + ib] - e) < 0 )
+				if ( refEne*(dataIrred_[ik*nDGP_ + ib] - e) < 0 )
 				{
 					bandset.insert(ib);
 					break;
@@ -91,9 +123,9 @@ DataRegularGrid<T>::get_bands_crossing_energy_window(
 {
 	assert( energies.size() == 2 );
 	std::vector<int> bandset;
-	for ( int ib = 0 ; ib < nBnd_; ++ib )
+	for ( int ib = 0 ; ib < nDGP_; ++ib )
 		for ( int ik = 0 ; ik < grid_.get_np_irred(); ++ik )
-			if ( (dataIrred_[ik*nBnd_ + ib] >= energies[0]) and (dataIrred_[ik*nBnd_ + ib] <= energies[1]) )
+			if ( (dataIrred_[ik*nDGP_ + ib] >= energies[0]) and (dataIrred_[ik*nDGP_ + ib] <= energies[1]) )
 			{
 				bandset.push_back(ib);
 				break;
@@ -103,9 +135,9 @@ DataRegularGrid<T>::get_bands_crossing_energy_window(
 
 template<typename T>
 int
-DataRegularGrid<T>::get_nBnd() const
+DataRegularGrid<T>::get_nData_gpt() const
 {
-	return nBnd_;
+	return nDGP_;
 }
 
 template<typename T>
@@ -125,8 +157,8 @@ DataRegularGrid<T>::generate_reducible_data(
 		for ( int i = 0 ; i < nBRequest; ++i )
 		{
 			int ibnd = bIndices[i];
-			assert( ibnd < nBnd_);
-			bands[ired*nBRequest+i] = dataIrred_[ irredIndices[ired]*nBnd_ + ibnd ];
+			assert( ibnd < nDGP_);
+			bands[ired*nBRequest+i] = dataIrred_[ irredIndices[ired]*nDGP_ + ibnd ];
 		}
 }
 
@@ -166,7 +198,7 @@ DataRegularGrid<T>::fft_interpolate(
 		return;
 
 	std::vector<double> oldData;
-	int nB = this->get_nBnd();
+	int nB = this->get_nData_gpt();
 	std::vector<int> bandList(nB);
 	for ( int ib = 0 ; ib < nB; ++ib )
 		   bandList[ib] = ib;
@@ -244,18 +276,150 @@ template<typename T>
 T
 DataRegularGrid<T>::read(int i, int ib) const
 {
-	assert( (ib >= 0) && (ib < nBnd_));
-	assert( (i*nBnd_+ib >= 0) && (i*nBnd_+ib < dataIrred_.size()));
-	return dataIrred_[i*nBnd_+ib];
+	assert( (ib >= 0) && (ib < nDGP_));
+	assert( (i*nDGP_+ib >= 0) && (i*nDGP_+ib < dataIrred_.size()));
+	return dataIrred_[i*nDGP_+ib];
 }
 
 template<typename T>
 T &
 DataRegularGrid<T>::write(int i, int ib)
 {
-	assert( (ib >= 0) && (ib < nBnd_));
-	assert( (i*nBnd_+ib >= 0) && (i*nBnd_+ib < dataIrred_.size()));
-	return dataIrred_[i*nBnd_+ib];
+	assert( (ib >= 0) && (ib < nDGP_));
+	assert( (i*nDGP_+ib >= 0) && (i*nDGP_+ib < dataIrred_.size()));
+	return dataIrred_[i*nDGP_+ib];
+}
+
+template<typename T>
+void
+DataRegularGrid<T>::compute_DOS(
+		std::vector<double> const & energies,
+		std::vector<T> & dos) const
+{
+	// create a lambda that loads the right gradient for a requested grid point
+	auto load_derivative_data = [&] (
+			std::vector<int> const & bandIndices,
+			std::vector<int> const & reqGridIndices,
+			std::vector<T> & gradient)
+		{
+		this->compute_derivatives_sqr_polynom<T>(
+				bandIndices,
+				reqGridIndices,
+				&gradient,
+				nullptr);
+		};
+
+	this->compute_DOS_general(load_derivative_data, energies, dos);
+}
+
+template<typename T>
+void
+DataRegularGrid<T>::compute_DOS_tetra(
+		std::vector<double> const & energies,
+		std::vector<T> & dos) const
+{
+
+}
+
+template<typename T>
+template<class F>
+void
+DataRegularGrid<T>::compute_DOS_wan(
+		F const & functor,
+		std::vector<double> const & energies,
+		std::vector<T> & dos) const
+{
+	if ( energies.size() == 0 )
+		return;
+
+	// generate and store the derivative data for the entire grid
+	std::vector<T> derivativeData;
+	std::vector<double> allGridVectors(grid_.get_np_red()*3);
+	for ( int igr = 0 ; igr < grid_.get_np_red() ; ++igr )
+	{
+		auto gp = grid_.get_vector_direct(igr);
+		for (int i = 0 ; i < 3 ; ++i)
+			allGridVectors[igr*3+i] = gp[i];
+	}
+	functor.evaluate_derivative(allGridVectors, derivativeData);
+
+	int numBands = this->get_nData_gpt();
+
+	// create a lambda that loads the right gradient for a requested grid point
+	auto load_derivative_data = [&derivativeData, &numBands] (
+			std::vector<int> const & bandIndices,
+			std::vector<int> const & reqGridIndices,
+			std::vector<T> & gradient)
+		{
+			gradient.resize(bandIndices.size()*reqGridIndices.size()*3);
+			for (int ib = 0 ; ib < bandIndices.size() ; ++ib )
+			{
+				int ibr = bandIndices[ib];
+				for (int ig = 0 ; ig < reqGridIndices.size() ; ++ig )
+				{
+					int igr = reqGridIndices[ig];
+					for (int i = 0 ; i < 3; ++i)
+					{
+						assert( derivativeData.size() > ((igr*numBands+ibr)*3+i));
+						gradient[(ig*bandIndices.size()+ib)*3 + i] = derivativeData[(igr*numBands+ibr)*3+i];
+					}
+				}
+			}
+		};
+
+	// call the general routine to compute the dos
+	this->compute_DOS_general(load_derivative_data, energies, dos);
+}
+
+template<typename T>
+template<class F>
+void
+DataRegularGrid<T>::compute_DOS_general(
+		F const & functor,
+		std::vector<double> const & energies,
+		std::vector<T> & dos) const
+{
+	if ( energies.size() == 0 )
+		return;
+
+	dos.assign(energies.size(), T(0));
+	Algorithms::TrilinearInterpolation trilin(grid_.view_bare_grid());
+
+	std::vector<T> bndData;
+	std::vector<int> reqGridIndices;
+	std::vector<T> gradient;
+	for ( int iw = 0 ; iw < energies.size() ; ++iw )
+	{
+		auto e = energies[iw];
+		auto bnd = this->get_bands_crossing_energy_lvls( {e} );
+		this->generate_reducible_data(bnd, bndData);
+
+		ElectronicStructure::FermiSurface fs;
+		fs.triangulate_surface(
+				grid_.view_bare_grid(),
+				bnd.size(),
+				bndData,
+				std::numeric_limits<int>::max(),
+				e);
+
+		for ( int ib = 0 ; ib < bnd.size(); ++ib)
+		{
+			auto kf = fs.get_Fermi_vectors_for_band(ib);
+			auto kw = fs.get_Fermi_weights_for_band(ib);
+			trilin.data_query(std::move(kf), reqGridIndices);
+			functor({bnd[ib]}, reqGridIndices, gradient);
+
+			for ( int ikf = 0 ;ikf < kw.size(); ++ikf)
+			{
+				T modGradE = std::sqrt(std::pow(gradient[ikf*3+0],2)
+										+std::pow(gradient[ikf*3+1],2)
+										+std::pow(gradient[ikf*3+2],2));
+				if ( modGradE < 1e-1 )
+					modGradE = 1e-1;
+				dos[iw] += kw[ikf] / modGradE * grid_.get_lattice().get_volume() / std::pow(2.0*M_PI,3);
+			}
+		}
+	}
 }
 
 } /* namespace LatticeStructure */

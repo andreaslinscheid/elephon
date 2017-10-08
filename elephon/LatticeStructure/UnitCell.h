@@ -24,6 +24,7 @@
 #include "LatticeStructure/AtomDisplacement.h"
 #include "LatticeStructure/Symmetry.h"
 #include "LatticeStructure/Atom.h"
+#include <memory>
 
 namespace elephon
 {
@@ -71,7 +72,7 @@ public:
 
 	void generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const;
 
-	void compute_supercell_dim(UnitCell const & supercell, std::vector<int> & supercellDim ) const;
+	void compute_supercell_dim(std::shared_ptr<const UnitCell> supercell, std::vector<int> & supercellDim ) const;
 private:
 
 	LatticeStructure::LatticeModule lattice_;

@@ -21,6 +21,7 @@
 #define ELEPHON_ALGORITHMS_TRILINEARINTERPOLATION_HPP_
 
 #include "Algorithms/TrilinearInterpolation.h"
+#include "Algorithms/helperfunctions.hpp"
 #include <complex>
 #include <assert.h>
 #include <iostream>
@@ -29,21 +30,6 @@ namespace elephon
 {
 namespace Algorithms
 {
-
-namespace detail
-{
-template<typename T>
-struct cmplxTypeTrait
-{
-	typedef T realT;
-};
-
-template<typename T>
-struct cmplxTypeTrait<std::complex<T> >
-{
-	typedef T realT;
-};
-} /*namespace detail*/
 
 template<typename T>
 void TrilinearInterpolation::interpolate(
@@ -92,7 +78,7 @@ void TrilinearInterpolation::interpolate(
 			for ( int ib= 0 ; ib < nB; ++ib)
 			{
 				pointsData[ikirred*nB+ib] =
-					this->interpolate_single_cube_realtive(
+					helperfunctions::interpolate_single_cube_realtive(
 						x , y, z,
 						g1it[ib], g2it[ib], g3it[ib], g4it[ib],
 						g5it[ib], g6it[ib], g7it[ib], g8it[ib] );
@@ -127,35 +113,11 @@ TrilinearInterpolation::interpolate_within_single_cube(
 		assert( (y >= 0.0) && (y < 1.0) );
 		assert( (z >= 0.0) && (z < 1.0) );
 		for ( int id = 0 ; id < nD ; ++id )
-			interpolData[id] = this->interpolate_single_cube_realtive(
+			interpolData[id] = helperfunctions::interpolate_single_cube_realtive(
 					x,y,z,
 					cornerData[0][id], cornerData[1][id], cornerData[2][id], cornerData[3][id],
 					cornerData[4][id], cornerData[5][id], cornerData[6][id], cornerData[7][id] );
 	}
-}
-
-template<typename T>
-T
-TrilinearInterpolation::interpolate_single_cube_realtive(
-		double x, double y, double z,
-		T f000, T f100, T f110, T f010,
-		T f001, T f101, T f111, T f011) const
-{
-	typedef typename detail::cmplxTypeTrait<T>::realT realT;
-
-	//Linear interpolation logic
-	auto bilinear_interpol = [] (
-			double x, double y,
-			T f00, T f10, T f11, T f01)
-	{
-		T a = f00 * realT(1. - x) + f10 * realT(x);
-		T b = f01 * realT(1. - x) + f11 * realT(x);
-		return a * realT(1. - y) + b * realT(y);
-	};
-
-	auto e = bilinear_interpol(x, y, f000, f100, f110, f010);
-	auto f = bilinear_interpol(x, y, f001, f101, f111, f011);
-	return e * realT( 1. - z) + f * realT(z);
 }
 
 } /* namespace Algorithms */

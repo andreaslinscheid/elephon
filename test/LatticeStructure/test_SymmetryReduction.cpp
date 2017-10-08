@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( irreducible_zones )
 
 	//load the symmetry
 	elephon::IOMethods::ReadVASPSymmetries symReader;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	symReader.read_file( (testd / "OUTCAR").string() );
 	elephon::LatticeStructure::LatticeModule lattice;

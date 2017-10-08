@@ -29,7 +29,7 @@
 
 BOOST_AUTO_TEST_CASE( test_MgB2 )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 
 	elephon::IOMethods::InputOptions opts;
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE( test_MgB2 )
 
 BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	elephon::IOMethods::ReadVASPSymmetries symReader;
 	symReader.read_file( (testd / "OUTCAR").string() );
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 
 BOOST_AUTO_TEST_CASE( Symemtry_reduction )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	elephon::IOMethods::ReadVASPSymmetries symReader;
 	symReader.read_file( (testd / "OUTCAR").string() );
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE( Symemtry_reduction )
 
 BOOST_AUTO_TEST_CASE( MgB2_vasp )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 
 	std::string input = std::string()+

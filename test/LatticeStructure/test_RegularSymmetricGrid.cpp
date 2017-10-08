@@ -28,7 +28,7 @@
 
 BOOST_AUTO_TEST_CASE( Al_fcc_UnitCell )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
 
 	elephon::IOMethods::InputOptions noop;
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE( Al_fcc_UnitCell )
 
 BOOST_AUTO_TEST_CASE( FeSe_UnitCell )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "FeSe"/"vasp"/"wfct"/"symmetric";
 
 	elephon::IOMethods::InputOptions noop;
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE( FeSe_UnitCell )
 
 BOOST_AUTO_TEST_CASE( MgB2_k_points )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 
 	std::string input = std::string()+

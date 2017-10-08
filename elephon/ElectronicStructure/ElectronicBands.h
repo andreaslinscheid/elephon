@@ -61,6 +61,12 @@ public:
 	 */
 	int get_nspin() const;
 
+	/**
+	 * Retrieve the number of bands.
+	 *
+	 * @return integer with number of bands.
+	 */
+	int get_nBnd() const;
 
 	/**
 	 * Retrieve a band data value at a point in the grid.

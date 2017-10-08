@@ -23,56 +23,41 @@
 #include <boost/test/unit_test.hpp>
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
-#include "fixtures/FixtureForceConstant.h"
 #include "PhononStructure/DisplacementPotential.h"
 #include "PhononStructure/Phonon.h"
+#include "fixtures/scenarios.h"
 
 
 BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 {
-	test::fixtures::FixtureForceConstant ff;
-	elephon::PhononStructure::DisplacementPotential dvscf
-		= ff.build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2();
+	auto resourceHandler = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
+	auto dvscf = resourceHandler->get_displacement_potential_obj();
 
-	BOOST_REQUIRE( dvscf.get_num_modes() == 3 );
+	BOOST_REQUIRE( dvscf->get_num_modes() == 3 );
 
-	BOOST_REQUIRE( dvscf.get_num_R() == 2*2*2 );
-
-	//TODO invent further checks that this is correct ...
-}
-
-BOOST_AUTO_TEST_CASE( plot_dvscf_q_Al_fcc_primitive )
-{
-	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
-
-	test::fixtures::FixtureForceConstant ff;
-	elephon::PhononStructure::DisplacementPotential dvscf
-		= ff.build_displ_pot_Al_fcc_primitive_vasp_sc2x2x2();
+	BOOST_REQUIRE( dvscf->get_num_R() == 2*2*2 );
 
 	//Write the real space variant
-	dvscf.write_dvscf(0,0,(rootDir / "dvscf.dat").string());
+	auto rootDir = boost::filesystem::path( resourceHandler->get_optns().get_root_dir() );
+	boost::filesystem::path dvscfFile = rootDir / "dvscf.dat";
+	dvscf->write_dvscf(0,0,dvscfFile.string());
 
 	//Write the q displacement variant
 	std::vector<double> qVect{ 0.0,0.0,0.0 , 0.25,0.0,0.0, 0.5,0.0,0.0 };
 	std::vector<int> modes{0,1};
-	test::fixtures::FixtureForceConstant ffc;
-	auto fc = ffc.compute_fc_for_Al_gamma();
-	std::vector<double> masses = {26.9815385};
-
-	elephon::PhononStructure::Phonon ph;
-	ph.initialize( fc, masses );
 	std::vector<double> w;
 	std::vector< std::complex<double> > dynMat;
-	ph.compute_at_q( qVect, w, dynMat );
+	auto ph = resourceHandler->get_phonon_obj();
+	ph->compute_at_q( qVect, w, dynMat );
 
-	dvscf.write_dvscf_q(qVect,modes,dynMat,masses,(rootDir / "dvscf_q.dat").string());
+	boost::filesystem::path dvscfqFile = rootDir / "dvscf_q.dat";
+	dvscf->write_dvscf_q(qVect, modes, dynMat, ph->get_masses(), dvscfqFile.string());
 
 	//At this point we can perform tests on the files and its content.
 
 	//Outcomment the following for manual inspection of the files generated
-	BOOST_REQUIRE( boost::filesystem::is_regular_file(rootDir / "dvscf.dat") );
-	boost::filesystem::remove( rootDir / "dvscf.dat" );
+	BOOST_REQUIRE( boost::filesystem::is_regular_file( dvscfFile ) );
+	boost::filesystem::remove( dvscfFile );
 
 	for ( auto mu : modes )
 	{

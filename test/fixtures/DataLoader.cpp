@@ -26,10 +26,22 @@
 #include "LatticeStructure/LatticeModule.h"
 #include "LatticeStructure/Atom.h"
 
+namespace elephon
+{
 namespace test
 {
 namespace fixtures
 {
+
+
+std::shared_ptr<elephon::IOMethods::ResourceHandler>
+DataLoader::create_resource_handler(
+			std::string const & contentInputFile ) const
+{
+	auto loader = this->create_vasp_loader(contentInputFile);
+	auto res = elephon::IOMethods::ResourceHandler(loader);
+	return std::make_shared<elephon::IOMethods::ResourceHandler>(std::move(res));
+}
 
 std::shared_ptr<elephon::IOMethods::VASPInterface>
 DataLoader::create_vasp_loader(	std::string const & contentInputFile,
@@ -37,7 +49,7 @@ DataLoader::create_vasp_loader(	std::string const & contentInputFile,
 {
 	this->process_fileName(fileName);
 	elephon::IOMethods::InputOptions options;
-	test::fixtures::MockStartup ms;
+	MockStartup ms;
 	ms.simulate_elephon_input( fileName, contentInputFile, options );
 
 	return std::make_shared< elephon::IOMethods::VASPInterface >(options);
@@ -120,3 +132,4 @@ DataLoader::process_fileName(std::string & fileName ) const
 
 } /* namespace fixtures */
 } /* namespace test */
+} /* namespace elephon */

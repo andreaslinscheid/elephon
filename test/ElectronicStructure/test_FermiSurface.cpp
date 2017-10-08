@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 {
 	std::cout << "Compute the DOS of a LiFeAs with 10 bands " << std::endl;
 	//load data from the LiFeAs electronic structure
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir();
 	std::ifstream input( (testd / "LiFeAs_energies.dat").c_str(), std::ios::in | std::ios::binary );
 

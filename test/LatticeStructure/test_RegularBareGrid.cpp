@@ -30,7 +30,7 @@
 
 BOOST_AUTO_TEST_CASE( G2S2_vasp_bare_kpoint_grid )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto path = ms.get_data_for_testing_dir() / "Ge2S2" ;
 
 	std::vector<std::pair<std::string, double> > atoms;

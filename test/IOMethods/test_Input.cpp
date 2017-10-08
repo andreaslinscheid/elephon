@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE( Default_Args )
 {
 	using namespace boost::filesystem;
 
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "phony" ;
 
 	elephon::IOMethods::InputOptions options;

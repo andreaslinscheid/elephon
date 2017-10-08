@@ -22,7 +22,7 @@
 
 #include <vector>
 #include <cstdlib>
-#include "../LatticeStructure/RegularBareGrid.h"
+#include "LatticeStructure/RegularBareGrid.h"
 
 namespace elephon
 {
@@ -69,12 +69,6 @@ private:
 	void get_cell_vectors( std::vector<double> const& k,
 			std::vector<double> & lowerCorner,
 			std::vector<double> & upperCorner ) const;
-
-	template<typename T>
-	inline T interpolate_single_cube_realtive(
-			double x, double y, double z,
-			T f000, T f100, T f110, T f010,
-			T f001, T f101, T f111, T f011) const;
 
 	template<typename T>
 	void interpolate(

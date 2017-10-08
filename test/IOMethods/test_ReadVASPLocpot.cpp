@@ -29,7 +29,7 @@
 BOOST_AUTO_TEST_CASE( Read_potcar )
 {
 	elephon::IOMethods::ReadVASPLocpot filerreader;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "supercell";
 	std::vector<double> potential;
 	std::vector<int> dims;

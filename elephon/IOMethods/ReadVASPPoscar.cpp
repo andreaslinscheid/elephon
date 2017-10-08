@@ -122,10 +122,14 @@ void ReadVASPPoscar::read_file( std::string filename,
 
 	//Here we create a list where for each atom, we tell the type
 	std::vector<std::string> typeForAtom(totalNumAtoms);
+	std::vector<double> massForAtom(totalNumAtoms);
 	int counter = 0;
 	for ( int i = 0 ; i < nAtomTypes; ++i)
 		for ( int j = 0 ; j < numAtomPerType[i]; ++j)
+		{
+			massForAtom[counter] = atoms[i].second;
 			typeForAtom[counter++] = atoms[i].first;
+		}
 	assert(counter==totalNumAtoms);
 
 	//Check for the selective dynamics switch, or the direct/cartesian switch
@@ -187,7 +191,7 @@ void ReadVASPPoscar::read_file( std::string filename,
 				frozen[xi] = fortran_bool_parser(word);
 			}
 		}
-		LatticeStructure::Atom a(atoms[i].second, typeForAtom[i], tauI, frozen);
+		LatticeStructure::Atom a(massForAtom[i], typeForAtom[i], tauI, frozen);
 		atoms_.push_back( std::move(a) );
 	}
 }

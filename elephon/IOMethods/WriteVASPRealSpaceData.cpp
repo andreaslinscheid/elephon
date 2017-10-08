@@ -35,7 +35,7 @@ void
 WriteVASPRealSpaceData::write_file(std::string const & filename,
 		std::string comment,
 		std::vector<int> const & dataDims,
-		LatticeStructure::UnitCell const & unitCell,
+		std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
 		std::vector<double> const & data,
 		bool spin_resolved,
 		bool xmajor) const
@@ -62,15 +62,15 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 		return s.str();
 	};
 
-	file << std::fixed << std::setprecision(16) << "   " << unitCell.get_lattice().get_alat() << '\n';
-	file << floatAccLine( unitCell.get_lattice().get_lattice_vector(0) , 6 ) << '\n';
-	file << floatAccLine( unitCell.get_lattice().get_lattice_vector(1) , 6 ) << '\n';
-	file << floatAccLine( unitCell.get_lattice().get_lattice_vector(2) , 6 ) << '\n';
+	file << std::fixed << std::setprecision(16) << "   " << unitCell->get_lattice().get_alat() << '\n';
+	file << floatAccLine( unitCell->get_lattice().get_lattice_vector(0) , 6 ) << '\n';
+	file << floatAccLine( unitCell->get_lattice().get_lattice_vector(1) , 6 ) << '\n';
+	file << floatAccLine( unitCell->get_lattice().get_lattice_vector(2) , 6 ) << '\n';
 
 	//List with atom types
 	std::string line;
 	std::map<std::string,int> ntypes;
-	for ( auto a : unitCell.get_atoms_list() )
+	for ( auto a : unitCell->get_atoms_list() )
 		ntypes[a.get_kind()]++;
 	for ( auto at : ntypes )
 		line += at.first + " ";
@@ -79,7 +79,7 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 
 	// Number of atoms per type
 	line.clear();
-	for ( auto a : unitCell.get_atoms_list() )
+	for ( auto a : unitCell->get_atoms_list() )
 		if ( ntypes[a.get_kind()] > 0 ) // make sure equal kinds only get listed once
 		{
 			line += std::to_string(ntypes[a.get_kind()]) + " ";
@@ -91,7 +91,7 @@ WriteVASPRealSpaceData::write_file(std::string const & filename,
 	file << "Direct\n";
 
 	//Positions of atoms
-	for ( auto a : unitCell.get_atoms_list() )
+	for ( auto a : unitCell->get_atoms_list() )
 	{
 		auto pos = a.get_position();
 		//map to the cell [0,1[

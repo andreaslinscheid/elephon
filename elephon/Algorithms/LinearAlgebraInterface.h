@@ -105,6 +105,11 @@ public:
 	        int m, int n, int k, std::complex<float> alpha, std::complex<float> const * A, int lda,
 			std::complex<float> const * B, int ldb, std::complex<float> beta,std::complex<float> * C,int ldc) const;
 
+	int call_gemm(
+			char transA, char transB,
+	        int m, int n, int k, std::complex<double> alpha, std::complex<double> const * A, int lda,
+			std::complex<double> const * B, int ldb, std::complex<double> beta,std::complex<double> * C,int ldc) const;
+
 	int call_getri( int matrix_order, int n, double * a, int lda,
 			const int * ipiv, double * work, int lwork);
 

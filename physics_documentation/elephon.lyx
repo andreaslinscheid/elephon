@@ -835,7 +835,68 @@ so that we have to diagonalize
 \end_inset
 
  we obtain from this procedure, the dynamical matrix, completes the formalism.
- We note that we can combine
+ 
+\end_layout
+
+\begin_layout Subsection
+Phonon velocities
+\end_layout
+
+\begin_layout Standard
+Let us compute
+\begin_inset Formula 
+\begin{equation}
+\nabla_{\boldsymbol{q}}\varOmega_{\boldsymbol{q}\nu}=\frac{\nabla_{\boldsymbol{q}}(\varOmega_{\boldsymbol{q}\nu}^{2})}{2\varOmega_{\boldsymbol{q}\nu}}=\frac{1}{2\varOmega_{\boldsymbol{q}\nu}}\nabla_{\boldsymbol{q}}[\sum_{\mu_{1}\mu_{2}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}\frac{\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}C_{\boldsymbol{q}\mu_{2}\nu}]
+\end{equation}
+
+\end_inset
+
+where in the last step we have used Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:DynamicalMatrixForceConstantConnection"
+
+\end_inset
+
+ as
+\begin_inset Formula 
+\begin{equation}
+\sum_{\mu_{1}\mu_{2}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}\frac{\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}C_{\boldsymbol{q}\mu_{2}\nu}=\varOmega_{\boldsymbol{q}\nu}^{2}
+\end{equation}
+
+\end_inset
+
+using
+\begin_inset Formula 
+\begin{eqnarray}
+\nabla_{\boldsymbol{q}}\sum_{\mu_{1}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}C_{\boldsymbol{q}\mu_{1}\mu} & = & \nabla_{\boldsymbol{q}}\delta_{\nu\mu}\\
+\sum_{\mu_{1}}(\nabla_{\boldsymbol{q}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger})C_{\boldsymbol{q}\mu_{1}\mu} & = & -\sum_{\mu_{1}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}(\nabla_{\boldsymbol{q}}C_{\boldsymbol{q}\mu_{1}\mu})
+\end{eqnarray}
+
+\end_inset
+
+such that
+\begin_inset Formula 
+\begin{eqnarray}
+\nabla_{\boldsymbol{q}}\varOmega_{\boldsymbol{q}\nu} & = & \frac{1}{2\varOmega_{\boldsymbol{q}\nu}}\{\sum_{\mu_{1}\mu_{2}}(\nabla_{\boldsymbol{q}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger})\frac{\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}C_{\boldsymbol{q}\mu_{2}\nu}+\nonumber \\
+ &  & +\sum_{\mu_{1}\mu_{2}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}\frac{\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}(\nabla_{\boldsymbol{q}}C_{\boldsymbol{q}\mu_{2}\nu})+\nonumber \\
+ &  & +\sum_{\mu_{1}\mu_{2}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}[\nabla_{\boldsymbol{q}}\frac{\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}]C_{\boldsymbol{q}\mu_{2}\nu}\}\\
+ & = & \frac{1}{2\varOmega_{\boldsymbol{q}\nu}}\{\sum_{\mu_{1}}\varOmega_{\boldsymbol{q}\mu_{1}}^{2}[(\nabla_{\boldsymbol{q}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger})C_{\boldsymbol{q}\mu_{1}\nu}+C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}(\nabla_{\boldsymbol{q}}C_{\boldsymbol{q}\mu_{1}\nu})]\nonumber \\
+ &  & +\sum_{\mu_{1}\mu_{2}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}[\nabla_{\boldsymbol{q}}\frac{\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}]C_{\boldsymbol{q}\mu_{2}\nu}\}\\
+ & = & \frac{1}{2\varOmega_{\boldsymbol{q}\nu}}\sum_{\mu_{1}\mu_{2}}C_{\boldsymbol{q}\nu\mu_{1}}^{\dagger}\frac{\nabla_{\boldsymbol{q}}\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})}{\sqrt{m_{\mu_{1}}m_{\mu_{2}}}}C_{\boldsymbol{q}\mu_{2}\nu}
+\end{eqnarray}
+
+\end_inset
+
+which is the well known Hellman Fynman theorem.
+\end_layout
+
+\begin_layout Standard
+We note that we can combine
 \begin_inset Formula 
 \begin{eqnarray}
 \hat{b}_{\boldsymbol{q}\nu}+\hat{b}_{-\boldsymbol{q}\nu}^{\dagger} & = & \frac{N_{\boldsymbol{q}}\partial_{\tau_{1}}+\varOmega_{\boldsymbol{q}\nu}u_{\nu\boldsymbol{q}}}{\sqrt{2\varOmega_{\boldsymbol{q}\nu}N_{\boldsymbol{q}}}}+\nonumber \\

@@ -22,9 +22,13 @@
 
 #include "IOMethods/VASPInterface.h"
 #include "ElectronicStructure/ElectronicBands.h"
+#include "IOMethods/ResourceHandler.h"
 #include <string>
 #include <memory>
+#include <boost/filesystem.hpp>
 
+namespace elephon
+{
 namespace test
 {
 namespace fixtures
@@ -33,6 +37,10 @@ namespace fixtures
 class DataLoader
 {
 public:
+
+	std::shared_ptr<elephon::IOMethods::ResourceHandler>
+		create_resource_handler(
+				std::string const & contentInputFile ) const;
 
 	std::shared_ptr<elephon::IOMethods::VASPInterface>
 		create_vasp_loader(	std::string const & contentInputFile,
@@ -53,5 +61,6 @@ private:
 
 } /* namespace fixtures */
 } /* namespace test */
+} /* namespace elephon */
 
 #endif /* TEST_FIXTURES_DATALOADER_H_ */

@@ -22,6 +22,8 @@
 #include <fstream>
 #include <stdexcept>
 
+namespace elephon
+{
 namespace test
 {
 namespace fixtures
@@ -66,3 +68,4 @@ MockStartup::simulate_elephon_input(
 
 } /* namespace fixtures */
 } /* namespace test */
+} /* namespace elephon */

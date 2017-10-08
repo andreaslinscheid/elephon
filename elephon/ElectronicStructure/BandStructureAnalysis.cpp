@@ -135,6 +135,8 @@ void compute_mass_tensor_at_extrema_poly(
 			&hessian );
 	assert( hessian.size() == 6*bandSet.size()*kIndicesExtrema.size() );
 
+	Algorithms::LinearAlgebraInterface linalg;
+
 	std::set<int> kptSet(kIndicesExtrema.begin(), kIndicesExtrema.end());
 	massTensor.resize( extrema.size() );
 	for ( int ie = 0 ; ie < extrema.size(); ++ie)
@@ -146,15 +148,18 @@ void compute_mass_tensor_at_extrema_poly(
 		assert(ibm < bandSet.size());
 		assert(ikm < kptSet.size());
 
-		// note: the factor 2 is from d^2 (x^2)/dx^2 = 2
 		massTensor[ie].resize(9);
 		int offset = (ikm*bandSet.size()+ibm)*6;
-		massTensor[ie][0*3+0] = hessian[offset+0];
-		massTensor[ie][1*3+0] = massTensor[ie][0*3+1] = hessian[offset+1];
-		massTensor[ie][2*3+0] = massTensor[ie][0*3+2] = hessian[offset+2];
-		massTensor[ie][1*3+1] = hessian[offset+3];
-		massTensor[ie][2*3+1] = massTensor[ie][1*3+2] = hessian[offset+4];
-		massTensor[ie][2*3+2] = hessian[offset+5];
+		assert(hessian.size() > (offset+5));
+		std::vector<double> h(9);
+		h[0*3+0] = static_cast<double>(hessian[offset+0]);
+		h[1*3+0] = h[0*3+1] = static_cast<double>(hessian[offset+1]);
+		h[2*3+0] = h[0*3+2] = static_cast<double>(hessian[offset+2]);
+		h[1*3+1] = static_cast<double>(hessian[offset+3]);
+		h[2*3+1] = h[1*3+2] = static_cast<double>(hessian[offset+4]);
+		h[2*3+2] = static_cast<double>(hessian[offset+5]);
+
+		linalg.inverse(std::move(h),massTensor[ie]);
 	}
 }
 

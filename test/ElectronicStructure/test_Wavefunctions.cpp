@@ -41,7 +41,7 @@
 
 elephon::ElectronicStructure::Wavefunctions get_MgB2_vasp_wfct()
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
@@ -64,12 +64,12 @@ void write_MgB2_vasp_chg(
 		std::vector<int> const & chargeDim,
 		std::vector<double> const & chgData)
 {
-	test::fixtures::DataLoader dl;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::DataLoader dl;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
-	auto uc = dl.load_unit_cell(input);
+	auto uc = std::make_shared<elephon::LatticeStructure::UnitCell>(dl.load_unit_cell(input));
 	elephon::IOMethods::WriteVASPRealSpaceData writer;
 	writer.write_file(
 			(testd / "chgGam.dat").string(),
@@ -85,12 +85,12 @@ void write_Al_vasp_chg(
 		std::vector<int> const & chargeDim,
 		std::vector<double> const & chgData)
 {
-	test::fixtures::DataLoader dl;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::DataLoader dl;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
-	auto uc = dl.load_unit_cell(input);
+	auto uc = std::make_shared<elephon::LatticeStructure::UnitCell>(dl.load_unit_cell(input));
 	elephon::IOMethods::WriteVASPRealSpaceData writer;
 	writer.write_file(
 			(testd / "output"/ "LOCPOT").string(),
@@ -135,7 +135,7 @@ double comp_symm_distortion(
 elephon::ElectronicStructure::Wavefunctions
 load_Al_fcc_vasp_wfcts()
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
 
 	std::vector<double> kvec = {0.0, 0.0, 0.0};
@@ -144,7 +144,7 @@ load_Al_fcc_vasp_wfcts()
 	//First, load the cubes of wave functions for linear interpolation
 
 	std::string content = std::string("root_dir=")+rootDir.string()+"\n";
-	test::fixtures::DataLoader dl;
+	elephon::test::fixtures::DataLoader dl;
 	auto loader = dl.create_vasp_loader( content );
 
 	elephon::ElectronicStructure::Wavefunctions wfcts;
@@ -252,7 +252,7 @@ BOOST_AUTO_TEST_CASE( wavefunctions_partial_load )
 
 BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "FeSe" / "vasp" / "wfct";
 
 	elephon::IOMethods::InputOptions opts;
@@ -461,7 +461,7 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 {
 	//We start by reading parameters of other files in this directory for lattice matrices and kpoints
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
 
 	boost::filesystem::remove( (phonyDir / "WAVECAR") );
@@ -602,7 +602,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 {
 	//We start by reading parameters of other files in this directory for lattice matrices and kpoints
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	boost::filesystem::path phonyDir = ms.get_data_for_testing_dir() / "phony" / "vasp_sym";
 
 	boost::filesystem::remove( (phonyDir / "WAVECAR") );

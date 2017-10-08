@@ -46,14 +46,17 @@ compute_derivatives_sqr_polynom(
 	elephon::Algorithms::LinearAlgebraInterface linalg;
 
 	// construct the cubic model pseudo inverse matrix for least square fit
-	int nKn = 27;
+	int nKn = 19;
 	std::vector<double> k(3);
-	std::vector<double> A((1+3+6)*nKn, 1);
+	int nCoeff = 19;
+	std::vector<double> A(nCoeff*nKn, 1);
 	int n = 0;
 	for ( int ipz = -1; ipz <= 1; ++ipz)
 		for ( int ipy = -1; ipy <= 1; ++ipy)
 			for ( int ipx = -1; ipx <= 1; ++ipx)
 			{
+				if ( abs(ipx)+abs(ipy)+abs(ipz) == 3 )
+					continue;
 				k[0] = ipx/double(d[0]);
 				k[1] = ipy/double(d[1]);
 				k[2] = ipz/double(d[2]);
@@ -63,23 +66,37 @@ compute_derivatives_sqr_polynom(
 				double x = k[0];
 				double y = k[1];
 				double z = k[2];
-				A[(1+3+6)*n + 0] = 1; // constant
-				A[(1+3+6)*n + 1] = x;
-				A[(1+3+6)*n + 2] = y;
-				A[(1+3+6)*n + 3] = z;
-				A[(1+3+6)*n + 4] = x*x;
-				A[(1+3+6)*n + 5] = x*y;
-				A[(1+3+6)*n + 6] = x*z;
-				A[(1+3+6)*n + 7] = y*y;
-				A[(1+3+6)*n + 8] = y*z;
-				A[(1+3+6)*n + 9] = z*z;
+				int c = 0;
+				// constant excluded
+				A[nCoeff*n + c++] = x;
+				A[nCoeff*n + c++] = y;
+				A[nCoeff*n + c++] = z;
+				A[nCoeff*n + c++] = x*x;
+				A[nCoeff*n + c++] = 2*x*y;
+				A[nCoeff*n + c++] = 2*x*z;
+				A[nCoeff*n + c++] = y*y;
+				A[nCoeff*n + c++] = 2*y*z;
+				A[nCoeff*n + c++] = z*z;
+
+				A[nCoeff*n + c++] = x*x*x;
+				A[nCoeff*n + c++] = 3*x*x*y;
+				A[nCoeff*n + c++] = 3*x*x*z;
+				A[nCoeff*n + c++] = 3*x*y*y;
+				A[nCoeff*n + c++] = 6*x*y*z;
+				A[nCoeff*n + c++] = 3*x*z*z;
+
+				A[nCoeff*n + c++] = y*y*y;
+				A[nCoeff*n + c++] = 3*y*y*z;
+				A[nCoeff*n + c++] = 3*y*z*z;
+
+				A[nCoeff*n + c++] = z*z*z;
 				n++;
 			}
 	std::vector<double> AInv;
-	linalg.pseudo_inverse(std::move(A), nKn, 10, AInv );
+	linalg.pseudo_inverse(std::move(A), nKn, nCoeff, AInv );
 
 	std::vector<double> bval(nKn);
-	std::vector<double> fit(10);
+	std::vector<double> fit(nCoeff);
 
 	if ( gradientFieldPtr  != nullptr)
 		gradientFieldPtr->resize(nBnd*reducibleKPTIndices.size()*3);
@@ -97,6 +114,8 @@ compute_derivatives_sqr_polynom(
 				for ( int ipy = -1; ipy <= 1; ++ipy)
 					for ( int ipx = -1; ipx <= 1; ++ipx)
 					{
+						if ( abs(ipx)+abs(ipy)+abs(ipz) == 3 )
+							continue;
 						xyzMod[0] = xyz[0] + ipx;
 						xyzMod[1] = xyz[1] + ipy;
 						xyzMod[2] = xyz[2] + ipz;
@@ -107,12 +126,12 @@ compute_derivatives_sqr_polynom(
 							xyzMod[i] = xyzMod[i] >= d[i] ? xyzMod[i] - d[i] : xyzMod[i];
 						}
 						int ikrn = grid.get_xyz_to_reducible(xyzMod);
-						bval[n] = reducibleData(ikrn, ib);
+						bval[n] = reducibleData(ikrn, ib)-reducibleData(ikr, ib);
 						n++;
 					}
 
 			std::fill(fit.begin(), fit.end(), 0.0);
-			for ( int ip = 0 ; ip < 10; ++ip)
+			for ( int ip = 0 ; ip < nCoeff; ++ip)
 				for ( int ikn = 0 ; ikn < nKn; ++ikn)
 					fit[ip] += AInv[ip*nKn+ikn]*bval[ikn];
 
@@ -120,19 +139,19 @@ compute_derivatives_sqr_polynom(
 			if ( gradientFieldPtr  != nullptr)
 			{
 				auto it = gradientFieldPtr->begin() + offset*3;
-				std::copy(&fit[1+0], &fit[1+0]+3, it);
+				std::copy(&fit[0], &fit[0]+3, it);
 			}
 
 			// note: the factor 2 is from d^2 (x^2)/dx^2 = 2
 			if ( hessianFieldPtr  != nullptr)
 			{
 				auto it = hessianFieldPtr->begin() + offset*6;
-				*(it+0) = 2*fit[4+0]; // x x
-				*(it+1) =   fit[4+1]; // x y
-				*(it+2) =   fit[4+2]; // x z
-				*(it+3) = 2*fit[4+3]; // y y
-				*(it+4) =   fit[4+4]; // y z
-				*(it+5) = 2*fit[4+5]; // z z
+				*(it+0) = 2*fit[3+0]; // x x
+				*(it+1) =   fit[3+1]; // x y
+				*(it+2) =   fit[3+2]; // x z
+				*(it+3) = 2*fit[3+3]; // y y
+				*(it+4) =   fit[3+4]; // y z
+				*(it+5) = 2*fit[3+5]; // z z
 			}
 		}
 }

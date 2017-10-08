@@ -441,7 +441,7 @@ UnitCell::generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) c
 
 void
 UnitCell::compute_supercell_dim(
-		UnitCell const & superCell,
+		std::shared_ptr<const UnitCell> superCell,
 		std::vector<int> & supercellDim ) const
 {
 	//Locate the unit cell in the supercell
@@ -453,20 +453,20 @@ UnitCell::compute_supercell_dim(
 	auto a2 = lattice_.get_lattice_vector(1);
 	auto a3 = lattice_.get_lattice_vector(2);
 
-	double scaleX  = superCell.get_lattice().get_alat()/lattice_.get_alat()
-			*dot_p(a1,superCell.get_lattice().get_lattice_vector(0))/dot_p(a1,a1);
-	double scaleY  = superCell.get_lattice().get_alat()/lattice_.get_alat()
-			*dot_p(a2,superCell.get_lattice().get_lattice_vector(1))/dot_p(a2,a2);
-	double scaleZ  = superCell.get_lattice().get_alat()/lattice_.get_alat()
-			*dot_p(a3,superCell.get_lattice().get_lattice_vector(2))/dot_p(a3,a3);
+	double scaleX  = superCell->get_lattice().get_alat()/lattice_.get_alat()
+			*dot_p(a1,superCell->get_lattice().get_lattice_vector(0))/dot_p(a1,a1);
+	double scaleY  = superCell->get_lattice().get_alat()/lattice_.get_alat()
+			*dot_p(a2,superCell->get_lattice().get_lattice_vector(1))/dot_p(a2,a2);
+	double scaleZ  = superCell->get_lattice().get_alat()/lattice_.get_alat()
+			*dot_p(a3,superCell->get_lattice().get_lattice_vector(2))/dot_p(a3,a3);
 
 	supercellDim = std::vector<int> {
 								int(std::floor( scaleX + 0.5 )),
 								int(std::floor( scaleY + 0.5 )),
 								int(std::floor( scaleZ + 0.5 )) };
-	assert( (std::abs(scaleX - supercellDim[0]) < superCell.get_symmetry().get_symmetry_prec()) &&
-			(std::abs(scaleY - supercellDim[1]) < superCell.get_symmetry().get_symmetry_prec()) &&
-			(std::abs(scaleZ - supercellDim[2]) < superCell.get_symmetry().get_symmetry_prec()) );
+	assert( (std::abs(scaleX - supercellDim[0]) < superCell->get_symmetry().get_symmetry_prec()) &&
+			(std::abs(scaleY - supercellDim[1]) < superCell->get_symmetry().get_symmetry_prec()) &&
+			(std::abs(scaleZ - supercellDim[2]) < superCell->get_symmetry().get_symmetry_prec()) );
 }
 
 } /* namespace LatticeStructure */

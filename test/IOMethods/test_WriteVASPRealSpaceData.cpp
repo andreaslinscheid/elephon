@@ -31,13 +31,13 @@
 
 BOOST_AUTO_TEST_CASE( MgB2_realspace_data_format )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testf = ms.get_data_for_testing_dir() / "vasp_realspace_data.dat";
 
 	auto loadD = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 	std::string content = std::string("root_dir=")+loadD.string()+"\n";
-	test::fixtures::DataLoader dl;
-	auto unitCell = dl.load_unit_cell( content );
+	elephon::test::fixtures::DataLoader dl;
+	auto unitCell = std::make_shared<elephon::LatticeStructure::UnitCell>(dl.load_unit_cell( content ));
 
 	elephon::IOMethods::WriteVASPRealSpaceData wd;
 	std::vector<int> dims{20,20,24};
@@ -51,13 +51,13 @@ BOOST_AUTO_TEST_CASE( MgB2_realspace_data_format )
 
 BOOST_AUTO_TEST_CASE( write_VASP_realspace_output )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testf = ms.get_data_for_testing_dir() / "vasp_realspace_data.dat";
 
 	auto loadD = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
 	std::string content = std::string("root_dir=")+loadD.string()+"\n";
-	test::fixtures::DataLoader dl;
-	auto unitCell = dl.load_unit_cell( content );
+	elephon::test::fixtures::DataLoader dl;
+	auto unitCell = std::make_shared<elephon::LatticeStructure::UnitCell>(dl.load_unit_cell( content ));
 
 	elephon::IOMethods::WriteVASPRealSpaceData wd;
 	std::vector<int> dims{6,6,6};

@@ -29,7 +29,7 @@
 elephon::LatticeStructure::UnitCell
 load_unit_cell_Al_vasp_conventional()
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional";
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
@@ -47,7 +47,7 @@ load_unit_cell_Al_vasp_conventional()
 
 BOOST_AUTO_TEST_CASE( Generate_Al_fcc_primitive_displacements )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n";
@@ -102,11 +102,11 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 BOOST_AUTO_TEST_CASE( Load_Al_vasp_fcc_primitve )
 {
 	using namespace elephon;
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "phonon_run";
 
 	std::string content = std::string("root_dir=")+rootDir.string()+"\n";
-	test::fixtures::DataLoader dl;
+	elephon::test::fixtures::DataLoader dl;
 	auto loader = dl.create_vasp_loader( content );
 
 	LatticeStructure::UnitCell uc;

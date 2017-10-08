@@ -33,7 +33,8 @@
 
 BOOST_AUTO_TEST_CASE( build_Al_primitive )
 {
-	test::fixtures::MockStartup ms;
+	// TODO use the resource management from elephon and don't load this all explicitely ...
+	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive"/ "phonon_run" ;
 	auto phononDir = rootDir / "phonon";
 
@@ -67,26 +68,28 @@ BOOST_AUTO_TEST_CASE( build_Al_primitive )
 			"elphd="+phononDir.string()+"\n"
 			"";
 
-	test::fixtures::DataLoader dl;
+	elephon::test::fixtures::DataLoader dl;
 	loader = dl.create_vasp_loader( content );
 
 	loader->read_cell_paramters( rootDir.string(),
 			1e-6,kgrid, lattice, atomsUC, symmetry);
 
-	elephon::LatticeStructure::UnitCell unitCell;
-	unitCell.initialize(atomsUC,lattice, symmetry);
+	elephon::LatticeStructure::UnitCell uc;
+	uc.initialize(atomsUC,lattice, symmetry);
+	auto unitCell = std::make_shared<elephon::LatticeStructure::UnitCell>(std::move(uc));
 
 	//here we build the supercell that was used to generate the test data.
-	auto supercell = unitCell.build_supercell( 2, 2, 2 );
+	auto supercell = std::make_shared<elephon::LatticeStructure::UnitCell>(unitCell->build_supercell( 2, 2, 2 ));
 
 	//Here, we regenerate the displacement
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDispl;
-	unitCell.generate_displacements(0.01,
+	std::vector<elephon::LatticeStructure::AtomDisplacement> irrDispl;
+	unitCell->generate_displacements(0.01,
 			true,
-			irreducibleDispl);
+			irrDispl);
+	auto irreducibleDispl = std::make_shared<std::vector<elephon::LatticeStructure::AtomDisplacement>>(std::move(irrDispl));
 
 	//Here, we read the forces from the vasp output
-	int nIrdDispl = int(irreducibleDispl.size());
+	int nIrdDispl = int(irreducibleDispl->size());
 	std::vector<std::vector<double>> forces( nIrdDispl );
 	std::vector<double> thisForces;
 	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
@@ -197,7 +200,7 @@ void load_data(
 			"elphd="+rootDir.string()+"\n"
 			"";
 
-	test::fixtures::DataLoader dl;
+	elephon::test::fixtures::DataLoader dl;
 	loader = dl.create_vasp_loader( content );
 
 	loader->read_cell_paramters( rootDir.string(),
@@ -215,23 +218,24 @@ void run_test(boost::filesystem::path rootDir ,
 		elephon::LatticeStructure::RegularSymmetricGrid  const& kgrid,
 		elephon::LatticeStructure::LatticeModule  const& lattice)
 {
-	elephon::LatticeStructure::UnitCell unitCell;
-	unitCell.initialize(atomsUC,lattice, symmetry);
+	auto unitCell = std::make_shared<elephon::LatticeStructure::UnitCell>();
+	unitCell->initialize(atomsUC,lattice, symmetry);
 
 	//here we build the supercell that was used to generate the test data.
-	auto supercell = unitCell.build_supercell( 1, 1, 1 );
+	auto supercell = std::make_shared<elephon::LatticeStructure::UnitCell>(unitCell->build_supercell( 1, 1, 1 ));
 
 	elephon::LatticeStructure::UnitCell reducedSymmetryUC;
-	reducedSymmetryUC.initialize( unitCell.get_atoms_list(), unitCell.get_lattice(), supercell.get_symmetry());
+	reducedSymmetryUC.initialize( unitCell->get_atoms_list(), unitCell->get_lattice(), supercell->get_symmetry());
 
 	//Here, we regenerate the displacement
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDispl;
-	reducedSymmetryUC.generate_displacements(0.01,
+	std::vector<elephon::LatticeStructure::AtomDisplacement> irrDispl;
+	unitCell->generate_displacements(0.01,
 			true,
-			irreducibleDispl);
+			irrDispl);
+	auto irreducibleDispl = std::make_shared<std::vector<elephon::LatticeStructure::AtomDisplacement>>(std::move(irrDispl));
 
 	//Here, we read the forces from the vasp output
-	int nIrdDispl = int(irreducibleDispl.size());
+	int nIrdDispl = int(irreducibleDispl->size());
 	std::vector<std::vector<double>> forces( nIrdDispl );
 	std::vector<double> thisForces;
 	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
@@ -327,7 +331,7 @@ void run_test(boost::filesystem::path rootDir ,
 
 BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_no_symmetry )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "build_mat_fc_no_sym" ;
 	auto phononDir = rootDir / "phonon" ;
 
@@ -346,7 +350,7 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_no_symmetry )
 
 BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_partial_symmetry )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "build_mat_fc_partial_sym" ;
 	auto phononDir = rootDir / "phonon" ;
 
@@ -374,7 +378,7 @@ BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_partial_symmetry )
 
 BOOST_AUTO_TEST_CASE( Assemble_ForceConstantMatrix_full_symmetry )
 {
-	test::fixtures::MockStartup ms;
+	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "conventional" / "phonon_test" ;
 	auto phononDir = rootDir / "phonon" ;
 

@@ -18,10 +18,13 @@
  */
 
 #include "LatticeStructure/RegularBareGrid.h"
+#include "Algorithms/helperfunctions.hpp"
 #include <assert.h>
 #include <cmath>
 #include <algorithm>
 #include <set>
+#include <stdexcept>
+#include <iostream>
 
 namespace elephon
 {

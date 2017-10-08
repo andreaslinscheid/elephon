@@ -84,6 +84,20 @@ LinearAlgebraInterface::call_gemm(
 }
 
 int
+LinearAlgebraInterface::call_gemm(
+		char transA, char transB,
+        int m, int n, int k, std::complex<double> alpha, std::complex<double> const * A, int lda,
+		std::complex<double> const * B, int ldb, std::complex<double> beta,std::complex<double> * C,int ldc) const
+{
+	cblas_zgemm(CblasRowMajor, ctoen(transA), ctoen(transB),
+			m, n, k,
+			reinterpret_cast<void*>(&alpha), reinterpret_cast<const void*>(A), lda,
+			reinterpret_cast<const void*>(B), ldb,
+			reinterpret_cast<void*>(&beta), reinterpret_cast<void*>(C), ldc);
+	return 0;
+}
+
+int
 LinearAlgebraInterface::call_getri(
 		int matrix_order, int n, double * a, int lda,
 		const int * ipiv, double * work, int lwork)
