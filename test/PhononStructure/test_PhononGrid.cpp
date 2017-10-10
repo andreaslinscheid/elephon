@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 
 	elephon::LatticeStructure::RegularSymmetricGrid qGrid;
 	qGrid.initialize(
-			{16, 16, 16},
+			{20, 20, 20},
 			resourceHandler->get_optns().get_gPrec(),
 			{0.0, 0.0, 0.0},
 			bands->get_grid().get_symmetry(),
@@ -51,9 +51,12 @@ BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 	for ( int iw = 0 ; iw < numFreq; ++iw)
 		frequencies[iw] = freqmin + (freqmax - freqmin) * double(iw + 0.5) / (numFreq);
 
+	elephon::LatticeStructure::TetrahedraGrid tetra;
+	tetra.initialize( std::make_shared<decltype(qGrid)>(qGrid) );
+
 	auto phDosFilename = boost::filesystem::path(resourceHandler->get_optns().get_f_phdos());
 	boost::filesystem::remove(phDosFilename);
-	phgrid.write_phonon_dos_file(phDosFilename.string(), frequencies, ph);
+	phgrid.write_phonon_dos_file(phDosFilename.string(), frequencies, std::make_shared<decltype(tetra)>(tetra));
 
 	std::ifstream file( phDosFilename.c_str() );
 	if ( ! file.good() )
@@ -75,8 +78,20 @@ BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 	for ( auto phD : phDos )
 		nM += phD*(freqmax - freqmin) / double(numFreq);
 
-	BOOST_CHECK_CLOSE( nM , phgrid.get_nData_gpt() , 100);
+	std::cout << "Integrated phonon DOS : "<< nM << " with a number of modes of " << ph->get_num_modes() << std::endl;
+	BOOST_CHECK_CLOSE( nM , phgrid.get_nData_gpt() , 10);
 	//boost::filesystem::remove(phDosFilename);
+
+	std::vector<double> phDos_wan;
+	phgrid.compute_DOS_wan(*ph, frequencies, phDos_wan);
+
+	std::vector<double> phDos_poly;
+	phgrid.compute_DOS(frequencies, phDos_poly);
+
+	BOOST_CHECK_EQUAL( phDos_poly.size() , phDos_wan.size());
+	BOOST_CHECK_EQUAL( phDos_poly.size() , phDos.size());
+	for (int iw = 0 ; iw < phDos.size() ; ++iw )
+		std::cout << frequencies[iw] << '\t' << phDos[iw] << '\t' << phDos_wan[iw] << '\t' << phDos_poly[iw] << '\n';
 }
 
 

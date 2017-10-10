@@ -94,6 +94,18 @@ RegularBareGrid::get_xyz_to_reducible(std::vector<int> const & xyzTouple) const
 	return (xyzTouple[2]*pointMesh_[1]+xyzTouple[1])*pointMesh_[0]+xyzTouple[0];
 }
 
+int
+RegularBareGrid::get_xyz_to_reducible_periodic(std::vector<int> xyzTouple) const
+{
+	assert( xyzTouple.size() == 3 );
+	for ( int i = 0 ; i < 3 ; ++i)
+	{
+		xyzTouple[i] = xyzTouple[i] < 0 ? xyzTouple[i]+pointMesh_[i] : xyzTouple[i];
+		xyzTouple[i] = xyzTouple[i] >= pointMesh_[i] ? xyzTouple[i]-pointMesh_[i] : xyzTouple[i];
+	}
+	return this->get_xyz_to_reducible(xyzTouple);
+}
+
 std::vector<int>
 RegularBareGrid::get_reducible_to_xyz(int i) const
 {
@@ -273,6 +285,27 @@ RegularBareGrid::interpret_fft_dim_input(std::vector<int> fftDim) const
 			fftDim[id] = fftDim[id] == 0 ? pointMesh_[id] : fftDim[id];
 	}
 	return fftDim;
+}
+
+void
+RegularBareGrid::get_grid_cubes(std::vector<GridCube> & cubes) const
+{
+	cubes.reserve( pointMesh_[0]*pointMesh_[1]*pointMesh_[2] );
+	for ( int iz = 0 ; iz < pointMesh_[2]; ++iz )
+		for ( int iy = 0 ; iy < pointMesh_[1]; ++iy )
+			for ( int ix = 0 ; ix < pointMesh_[0]; ++ix )
+				// consult compute_reducible_cube_indices_surrounding_nongrid_point for the order
+				cubes.push_back(
+					std::move(GridCube({
+				 	 	 	 	 	this->get_xyz_to_reducible_periodic({ix,   iy,   iz}),     // 1 = min, min, min
+									this->get_xyz_to_reducible_periodic({ix+1, iy,   iz}),     // 2 = max, min, min
+									this->get_xyz_to_reducible_periodic({ix+1, iy+1, iz}),     // 3 = max, max, min
+									this->get_xyz_to_reducible_periodic({ix,   iy+1, iz}),     // 4 = min, max, min
+									this->get_xyz_to_reducible_periodic({ix,   iy,   iz+1}),   // 5 = min, min, max
+									this->get_xyz_to_reducible_periodic({ix+1, iy,   iz+1}),   // 6 = max, min, max
+									this->get_xyz_to_reducible_periodic({ix+1, iy+1, iz+1}),   // 7 = max, max, max
+									this->get_xyz_to_reducible_periodic({ix,   iy+1, iz+1}),   // 8 = min, max, max
+								})));
 }
 
 namespace detail

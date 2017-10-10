@@ -23,6 +23,7 @@
 #include "PhononStructure/Phonon.h"
 #include "LatticeStructure/DataRegularGrid.h"
 #include "LatticeStructure/RegularSymmetricGrid.h"
+#include "LatticeStructure/TetrahedraGrid.h"
 #include <vector>
 #include <string>
 
@@ -39,6 +40,7 @@ public:
 
 	void write_phonon_dos_file(std::string const & filename,
 			std::vector<double> const & frequencies,
+			std::shared_ptr<const LatticeStructure::TetrahedraGrid> tetra = nullptr,
 			std::shared_ptr<const Phonon> ph = nullptr) const;
 
 private:

@@ -54,6 +54,8 @@ public:
 		create_symmetric_cosine_model(
 				std::vector<int> griddims,
 				std::vector<double> gridshift) const;
+
+	elephon::LatticeStructure::Symmetry create_partial_sym() const;
 private:
 
 	void process_fileName(std::string & fileName ) const;

@@ -100,6 +100,22 @@ DataLoader::create_symmetric_cosine_model(
 			}
 
 	elephon::ElectronicStructure::ElectronicBands bands;
+	elephon::LatticeStructure::Symmetry sym = this->create_partial_sym();
+	sym.set_reciprocal_space_sym();
+	elephon::LatticeStructure::RegularSymmetricGrid grid;
+	grid.initialize(
+			griddims,
+			1e-6,
+			gridshift,
+			sym,
+			elephon::LatticeStructure::LatticeModule());
+	bands.initialize(nB, 0.0, data, grid);
+	return bands;
+}
+
+elephon::LatticeStructure::Symmetry
+DataLoader::create_partial_sym() const
+{
 	elephon::LatticeStructure::Symmetry sym;
 	std::vector<int> symops{ 	1,  0,  0,  0,  1,  0,  0,  0,  1, // identity
 							   -1,  0,  0,  0, -1,  0,  0,  0, -1, // inversion
@@ -111,16 +127,7 @@ DataLoader::create_symmetric_cosine_model(
 							   -1,  0,  0,  0, -1,  0,  0,  0,  1,};// rotation 180 deg
 	std::vector<double> frac(symops.size()/3, 0.0);
 	sym.initialize(1e-6, symops, frac, elephon::LatticeStructure::LatticeModule(), true);
-	sym.set_reciprocal_space_sym();
-	elephon::LatticeStructure::RegularSymmetricGrid grid;
-	grid.initialize(
-			griddims,
-			1e-6,
-			gridshift,
-			sym,
-			elephon::LatticeStructure::LatticeModule());
-	bands.initialize(nB, 0.0, data, grid);
-	return bands;
+	return sym;
 }
 
 void

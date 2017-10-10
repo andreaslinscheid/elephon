@@ -315,10 +315,45 @@ DataRegularGrid<T>::compute_DOS(
 template<typename T>
 void
 DataRegularGrid<T>::compute_DOS_tetra(
+		std::shared_ptr<const TetrahedraGrid> tetraGrid,
 		std::vector<double> const & energies,
 		std::vector<T> & dos) const
 {
+	assert( tetraGrid );
+	dos.assign( energies.size(), 0.0 );
+	for ( auto const & t : tetraGrid->get_tetra_list() )
+	{
+		double tw = double(t.get_multiplicity()) / double(tetraGrid->get_n_reducible_tetra());
+		for ( int ib = 0 ; ib < this->get_nData_gpt() ; ++ib )
+		{
+			std::vector<double> ecorner(4);
+			for (int ie = 0 ; ie < 4 ; ++ie )
+				ecorner[ie] = this->read(t.get_corner_indices()[ie], ib);
+			std::sort(ecorner.begin(), ecorner.end());
 
+			for ( int iw = 0 ; iw < energies.size() ; ++iw)
+			{
+				auto e = energies[iw];
+				// formula is the energy derivative of 10.1103/PhysRevB.49.16223 Appendix A
+				double e1 = ecorner[0],
+						e2 = ecorner[1],
+						e3 = ecorner[2],
+						e4 = ecorner[3];
+				if ( (e <= e1) or ( e >= e4 ) )
+					continue;
+
+				if ( (e > e1) and (e < e2) )
+					dos[iw] += tw*(3.0*std::pow(e-e1,2))/(e2-e1)/(e3-e1)/(e4-e1);
+
+				if ( (e >= e2) and (e < e3) )
+					dos[iw] += tw / (e3-e1)/(e4-e1)
+								*(3*(e2-e1) + 3*2*(e-e2) - ((e3-e1)+(e4-e2))/(e3-e2)/(e4-e2)*3*std::pow(e-e2,2) );
+
+				if ( (e >= e3) and (e < e4) )
+					dos[iw] += tw*3*std::pow(e4-e,2)/(e4-e1)/(e4-e2)/(e4-e3);
+			}
+		}
+	}
 }
 
 template<typename T>

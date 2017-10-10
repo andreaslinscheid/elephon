@@ -59,6 +59,8 @@ public:
 
 	int get_xyz_to_reducible(std::vector<int> const & xyzTouple) const;
 
+	int get_xyz_to_reducible_periodic(std::vector<int> xyzTouple) const;
+
 	std::vector<int> get_reducible_to_xyz(int i) const;
 
 	std::vector<int> const & get_grid_dim() const;
@@ -89,6 +91,8 @@ public:
 	 * @return			A vector of dimension 3 with the interpreted grid dimension.
 	 */
 	std::vector<int> interpret_fft_dim_input(std::vector<int> fftDim) const;
+
+	void get_grid_cubes(std::vector<GridCube> & cubes) const;
 private:
 
 	int numPoints_ = 0;

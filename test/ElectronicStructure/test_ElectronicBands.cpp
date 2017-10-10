@@ -228,3 +228,36 @@ BOOST_AUTO_TEST_CASE( fft_interpol_Al_vasp )
 
 	BOOST_REQUIRE( bands.get_grid().get_grid_dim() == gridd );
 }
+
+BOOST_AUTO_TEST_CASE( fcc_Al_vasp_dos )
+{
+	elephon::test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
+
+	elephon::test::fixtures::DataLoader dl;
+	auto resourceHandler = dl.create_resource_handler(std::string()+
+			"root_dir = "+testd.string()+"\n");
+
+	auto bands = resourceHandler->get_electronic_bands_obj();
+
+	auto mm = bands->get_min_max();
+	int numFreq = 1000;
+	std::vector<double> ene(numFreq);
+	for ( int iw = 0 ; iw < numFreq; ++iw)
+		ene[iw] = mm.first + (mm.second - mm.first) * double(iw + 0.5) / (numFreq);
+
+	elephon::LatticeStructure::TetrahedraGrid tetra;
+	tetra.initialize( std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>(bands->get_grid()) );
+
+	std::vector<double> dos;
+	bands->compute_DOS_tetra(std::make_shared<decltype(tetra)>(tetra), ene, dos);
+
+	double nB = 0;
+	for ( auto d : dos )
+	{
+		nB += d*(mm.second - mm.first) / double(numFreq);
+	}
+
+	std::cout << "Integrated DOS : "<< nB << " with a number of bands " << bands->get_nBnd() << std::endl;
+	BOOST_CHECK_CLOSE( nB, bands->get_nData_gpt() , 1);
+}

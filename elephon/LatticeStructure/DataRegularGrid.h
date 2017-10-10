@@ -21,6 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_DATAREGULARGRID_H_
 
 #include "LatticeStructure/RegularSymmetricGrid.h"
+#include "LatticeStructure/TetrahedraGrid.h"
 #include <vector>
 #include <memory>
 
@@ -179,6 +180,7 @@ public:
 			std::vector<T> & dos) const;
 
 	void compute_DOS_tetra(
+			std::shared_ptr<const TetrahedraGrid> tetraGrid,
 			std::vector<double> const & energies,
 			std::vector<T> & dos) const;
 

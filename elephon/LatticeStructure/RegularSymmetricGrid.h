@@ -47,6 +47,7 @@ public:
 	using RegularBareGrid::get_lattice;
 	using RegularBareGrid::get_list_reducible_lattice_point_indices;
 	using RegularBareGrid::interpret_fft_dim_input;
+	using RegularBareGrid::get_grid_cubes;
 
 	RegularBareGrid view_bare_grid() const;
 
