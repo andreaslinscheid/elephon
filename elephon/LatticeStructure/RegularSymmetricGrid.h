@@ -41,6 +41,7 @@ public:
 	using RegularBareGrid::get_grid_prec;
 	using RegularBareGrid::get_xyz_to_reducible;
 	using RegularBareGrid::get_reducible_to_xyz;
+	using RegularBareGrid::get_xyz_to_reducible_periodic;
 	using RegularBareGrid::get_grid_dim;
 	using RegularBareGrid::get_grid_shift;
 	using RegularBareGrid::compute_grid_cubes_surrounding_nongrid_points;
@@ -83,6 +84,10 @@ public:
 
 	LatticeStructure::Symmetry const & get_symmetry() const;
 
+	// TODO: this is a bit of a hack. I use this friend declaration so that ExtendedSymmetricGrid can replace the
+	// 		underlying RegularBareGrid::GridPoint with its own version that lives in the zone that includes the borders.
+	//		it would be desirable to disentangle the grids in the code in a cleaner way.
+	friend class ExtendedSymmetricGrid;
 private:
 
 	int nIrredPts_ = 0;

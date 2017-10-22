@@ -21,6 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_TETRAHEDRAGRID_H_
 
 #include "LatticeStructure/RegularSymmetricGrid.h"
+#include "LatticeStructure/ExtendedSymmetricGrid.h"
 #include <vector>
 #include <memory>
 
@@ -29,7 +30,7 @@ namespace elephon
 namespace LatticeStructure
 {
 // forward declare
-namespace detail{ class Tetrahedra; };
+namespace detail{ class Tetrahedra;};
 
 class TetrahedraGrid
 {
@@ -48,17 +49,32 @@ public:
 
 	std::vector<Tetrahedra> const get_tetra_list() const;
 
+	std::vector<Tetrahedra> const get_reducible_tetra_list() const;
+
+	std::shared_ptr<const RegularSymmetricGrid> get_grid() const;
+
+	int get_reducible_to_irreducible(int ired) const;
+
+	std::vector<int> const & get_irreducible_to_reducible(int iirred) const;
+
 private:
 
 	std::shared_ptr<const RegularSymmetricGrid> grid_;
 
 	std::vector<Tetrahedra> tetras_;
 
+	std::vector<Tetrahedra> reducibleTetras_;
+
+	std::vector<std::int32_t> reducibleToIrreducible_;
+
+	std::vector<std::vector<std::int32_t>> irreducibleToReducible_;
+
 	void split_cube_insert_tetra(
 			RegularSymmetricGrid::GridCube const & cube,
-			std::shared_ptr<const RegularSymmetricGrid> extendedGrid,
+			std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid,
 			bool diagonal1,
-			std::map<Tetrahedra,int> & tetraSet);
+			std::vector<Tetrahedra> & reducibleTetra,
+			std::map<Tetrahedra,std::vector<std::int32_t>> & tetraSet);
 };
 
 namespace detail
@@ -70,7 +86,7 @@ public:
 			std::vector<int> cornerIndicesData,
 			std::vector<int> cornerIndicesExtended,
 			std::vector<int> cornerIndicesExtendedReducible,
-			std::shared_ptr<const RegularSymmetricGrid> extendedGrid);
+			std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid);
 
 	int get_multiplicity() const;
 
@@ -81,6 +97,9 @@ public:
 	void compute_corner_vectors(
 			std::vector<double> & p0,
 			std::vector<double> & v123 ) const;
+
+	void compute_corner_points(
+			std::vector<double> & p0123 ) const;
 
 	friend bool operator< (Tetrahedra const & t1, Tetrahedra const & t2);
 
@@ -94,9 +113,10 @@ private:
 
 	std::vector<int> cornerIndicesExtendedReducible_;
 
-	std::shared_ptr<const RegularSymmetricGrid> extendedGrid_;
+	std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid_;
 };
-}
+
+} /* namespace detail */
 
 } /* namespace LatticeStructure */
 } /* namespace elephon */

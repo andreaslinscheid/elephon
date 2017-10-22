@@ -18,6 +18,7 @@
  */
 
 #include "LatticeStructure/TetrahedraGrid.h"
+#include <algorithm>
 
 namespace elephon
 {
@@ -30,14 +31,14 @@ TetrahedraGrid::initialize(std::shared_ptr<const RegularSymmetricGrid> grid)
 	grid_ = grid;
 	tetras_.clear();
 
-	LatticeStructure::RegularSymmetricGrid extendedGrid;
+	LatticeStructure::ExtendedSymmetricGrid extendedGrid;
 	extendedGrid.initialize(
 			{grid_->get_grid_dim()[0]+1, grid_->get_grid_dim()[1]+1, grid_->get_grid_dim()[2]+1},
 			grid_->get_grid_prec(),
 			grid_->get_grid_shift(),
 			grid_->get_symmetry(),
 			grid_->get_lattice());
-	auto extendedGrid_ptr = std::make_shared<RegularSymmetricGrid>(std::move(extendedGrid));
+	auto extendedGrid_ptr = std::make_shared<ExtendedSymmetricGrid>(std::move(extendedGrid));
 
 	std::vector< RegularSymmetricGrid::GridCube > cubes;
 	grid_->get_grid_cubes(cubes);
@@ -63,32 +64,39 @@ TetrahedraGrid::initialize(std::shared_ptr<const RegularSymmetricGrid> grid)
 	bool mainDiagon_0_6 = norm2_indices(c0.cornerIndices_[0], d_0_6)
 						 < norm2_indices(c0.cornerIndices_[1], d_1_7);
 
-	std::map<Tetrahedra,int> tetraGrid;
+	std::map<Tetrahedra,std::vector<std::int32_t>> tetraGrid;
+	reducibleTetras_.clear();
+	reducibleTetras_.reserve( this->get_n_reducible_tetra() );
 	for ( auto const & c : cubes )
 	{
-		this->split_cube_insert_tetra(c, extendedGrid_ptr, mainDiagon_0_6, tetraGrid);
+		this->split_cube_insert_tetra(c, extendedGrid_ptr, mainDiagon_0_6, reducibleTetras_, tetraGrid);
 	}
 
 	tetras_.reserve( tetraGrid.size() );
+	irreducibleToReducible_.reserve( tetraGrid.size() );
+	reducibleToIrreducible_.assign( reducibleTetras_.size() , -1);
 	for ( auto & p : tetraGrid )
 	{
+		for ( auto i : p.second)
+		{
+			assert( reducibleToIrreducible_[i] < 0 );
+			reducibleToIrreducible_[i] = tetras_.size();
+		}
 		tetras_.push_back(p.first);
-		tetras_.rbegin()->set_multiplicity(p.second);
+		tetras_.rbegin()->set_multiplicity(p.second.size());
+		irreducibleToReducible_.push_back(std::move(p.second));
 	}
-}
 
-void
-TetrahedraGrid::compute_isosurface_integral_weights() const
-{
-
+	assert( *std::min_element(reducibleToIrreducible_.begin(), reducibleToIrreducible_.end()) == 0 );
 }
 
 void
 TetrahedraGrid::split_cube_insert_tetra(
 		RegularSymmetricGrid::GridCube const & cube,
-		std::shared_ptr<const RegularSymmetricGrid> extendedGrid,
+		std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid,
 		bool diagonal1,
-		std::map<Tetrahedra,int> & tetraSet)
+		std::vector<Tetrahedra> & reducibleTetra,
+		std::map<Tetrahedra,std::vector<std::int32_t>> & tetraSet)
 {
 	auto xyz = grid_->get_reducible_to_xyz( cube.cornerIndices_[0] );
 	std::vector<int> extendendCubeMap{
@@ -127,6 +135,7 @@ TetrahedraGrid::split_cube_insert_tetra(
 
 	for ( auto & t : tetraCornerReducibleIndexList)
 	{
+		int reducibleIndex = reducibleTetra.size();
 		// here we convert indices within the cube to irregular grid indices in the extended
 		// grid for tetrahedra identification.
 		auto extendedIndices = t;
@@ -136,13 +145,28 @@ TetrahedraGrid::split_cube_insert_tetra(
 		for ( auto & index : extendedIndicesReducible)
 			index = extendendCubeMap[index];
 
+		auto reducibleDataIndices = t;
+		for ( auto & index : reducibleDataIndices)
+			index = cube.cornerIndices_[index];
+
 		// here we convert indices within the cube to irregular grid indices for data lookup.
 		for ( auto & index : t)
 			index = grid_->get_maps_red_to_irreducible()[ cube.cornerIndices_[index] ];
 
-		Tetrahedra tetra(std::move(t), std::move(extendedIndices), std::move(extendedIndicesReducible), extendedGrid);
-		auto ret = tetraSet.insert( std::move(std::make_pair(tetra, 0)) );
-		++(ret.first->second);
+		Tetrahedra reducibleTetrahedron(
+				std::move(reducibleDataIndices),
+				extendedIndicesReducible,
+				extendedIndicesReducible,
+				extendedGrid);
+		reducibleTetra.push_back(std::move(reducibleTetrahedron));
+
+		Tetrahedra tetra(
+				std::move(t),
+				std::move(extendedIndices),
+				std::move(extendedIndicesReducible),
+				extendedGrid);
+		auto ret = tetraSet.insert( std::move(std::make_pair(tetra, std::vector<std::int32_t>())) );
+		ret.first->second.push_back( reducibleIndex );
 	}
 }
 
@@ -164,6 +188,32 @@ TetrahedraGrid::get_tetra_list() const
 	return tetras_;
 }
 
+std::vector<TetrahedraGrid::Tetrahedra> const
+TetrahedraGrid::get_reducible_tetra_list() const
+{
+	return reducibleTetras_;
+}
+
+std::shared_ptr<const RegularSymmetricGrid>
+TetrahedraGrid::get_grid() const
+{
+	return grid_;
+}
+
+int
+TetrahedraGrid::get_reducible_to_irreducible(int ired) const
+{
+	assert((ired>=0)&&(ired<reducibleToIrreducible_.size()));
+	return reducibleToIrreducible_[ired];
+}
+
+std::vector<int> const &
+TetrahedraGrid::get_irreducible_to_reducible(int iirred) const
+{
+	assert((iirred>=0)&&(iirred<irreducibleToReducible_.size()));
+	return irreducibleToReducible_[iirred];
+}
+
 
 namespace detail
 {
@@ -171,7 +221,7 @@ Tetrahedra::Tetrahedra(
 		std::vector<int> cornerIndicesData,
 		std::vector<int> cornerIndicesExtended,
 		std::vector<int> cornerIndicesExtendedReducible,
-		std::shared_ptr<const RegularSymmetricGrid> extendedGrid)
+		std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid)
 {
 	assert(cornerIndicesData.size() == 4);
 	assert(cornerIndicesExtended.size() == 4);
@@ -182,16 +232,16 @@ Tetrahedra::Tetrahedra(
 		sorter.insert(std::make_pair(cornerIndicesExtended[i],i));
 	cornerIndicesExtended_.clear();
 	cornerIndicesExtendedReducible_.clear();
+	cornerIndicesData_.clear();
 	cornerIndicesExtended_.reserve(4);
 	cornerIndicesExtendedReducible_.reserve(4);
+	cornerIndicesData_.reserve(4);
 	for ( auto s : sorter)
 	{
 		cornerIndicesExtended_.push_back( s.first );
 		cornerIndicesExtendedReducible_.push_back(cornerIndicesExtendedReducible[s.second]);
+		cornerIndicesData_.push_back(cornerIndicesData[s.second]);
 	}
-
-	std::sort(cornerIndicesData.begin(), cornerIndicesData.end());
-	cornerIndicesData_ = std::move(cornerIndicesData);
 
 	extendedGrid_ = extendedGrid;
 }
@@ -220,29 +270,27 @@ Tetrahedra::compute_corner_vectors(
 		std::vector<double> & p0,
 		std::vector<double> & v123 ) const
 {
-	assert(cornerIndicesExtendedReducible_.size() == 4);
-	std::vector<double> p;
-	p.reserve(3*4);
-	auto red = cornerIndicesExtendedReducible_[0];
-	std::vector<int> xyz = extendedGrid_->get_reducible_to_xyz(red);
-	p0 = std::vector<double>(xyz.begin(), xyz.end());
-	// note that the vector will be output in the normal grid, so we need to subtract 1 from the grid dim
-	for ( int xi = 0 ; xi < 3 ; ++xi)
-		p0[xi] /= double(extendedGrid_->get_grid_dim()[xi]-1);
+	std::vector<double> p0123(3*4);
+	this->compute_corner_points(p0123);
 
-	v123.clear();
-	v123.reserve(9);
+	v123.resize(9);
+	// construct the vectors v1 = p1-p0; v2 = p2-p0 ...
 	for ( int iv = 1 ; iv < 4 ; ++iv)
+		for ( int xi = 0 ; xi < 3 ; ++xi)
+			v123[3*(iv-1)+xi] = p0123[3*iv+xi] - p0123[xi];
+}
+void
+Tetrahedra::compute_corner_points(
+		std::vector<double> & p0123 ) const
+{
+	assert(cornerIndicesExtendedReducible_.size() == 4);
+	p0123.resize(12);
+	for ( int iv = 0 ; iv < 4 ; ++iv)
 	{
 		auto red = cornerIndicesExtendedReducible_[iv];
-		std::vector<int> xyz = extendedGrid_->get_reducible_to_xyz(red);
-		auto p = std::vector<double>(xyz.begin(), xyz.end());
+		std::vector<double> p = extendedGrid_->get_vector_direct(red);
 		for ( int xi = 0 ; xi < 3 ; ++xi)
-			p[xi] /= double(extendedGrid_->get_grid_dim()[xi]-1);
-		v123.insert(v123.end(), p.begin(), p.end());
-		// construct the vectors v1 = p1-p0; v2 = p2-p0 ...
-		for ( int xi = 0 ; xi < 3 ; ++xi)
-			v123[3*(iv-1)+xi] -= p0[xi];
+			p0123[iv*3+xi] = p[xi];
 	}
 }
 

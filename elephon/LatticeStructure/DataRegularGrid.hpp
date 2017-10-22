@@ -320,6 +320,7 @@ DataRegularGrid<T>::compute_DOS_tetra(
 		std::vector<T> & dos) const
 {
 	assert( tetraGrid );
+	assert( tetraGrid->get_grid()->get_np_irred() == grid_.get_np_irred());
 	dos.assign( energies.size(), 0.0 );
 	for ( auto const & t : tetraGrid->get_tetra_list() )
 	{
@@ -342,14 +343,14 @@ DataRegularGrid<T>::compute_DOS_tetra(
 				if ( (e <= e1) or ( e >= e4 ) )
 					continue;
 
-				if ( (e > e1) and (e < e2) )
+				if ( (e > e1) and (e <= e2) )
 					dos[iw] += tw*(3.0*std::pow(e-e1,2))/(e2-e1)/(e3-e1)/(e4-e1);
 
-				if ( (e >= e2) and (e < e3) )
+				if ( (e > e2) and (e <= e3) )
 					dos[iw] += tw / (e3-e1)/(e4-e1)
 								*(3*(e2-e1) + 3*2*(e-e2) - ((e3-e1)+(e4-e2))/(e3-e2)/(e4-e2)*3*std::pow(e-e2,2) );
 
-				if ( (e >= e3) and (e < e4) )
+				if ( (e > e3) and (e < e4) )
 					dos[iw] += tw*3*std::pow(e4-e,2)/(e4-e1)/(e4-e2)/(e4-e3);
 			}
 		}

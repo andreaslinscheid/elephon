@@ -108,6 +108,21 @@ void gradient_interpolation_single_cube_relative(
 		f111*x*y;
 }
 
+template<typename T>
+T
+triangle_area(std::vector<T> const & p1,
+		std::vector<T> const & p2,
+		std::vector<T> const & p3)
+{
+	assert((p1.size() == 3) and (p2.size() == 3) and (p3.size() == 3));
+	return 0.5*std::sqrt(std::pow(-(p1[1]*p2[0]) + p1[0]*p2[1] + p1[1]*p3[0] - p2[1]*p3[0] -
+		       p1[0]*p3[1] + p2[0]*p3[1],2) +
+			std::pow(p1[2]*p2[0] - p1[0]*p2[2] - p1[2]*p3[0] + p2[2]*p3[0] +
+		       p1[0]*p3[2] - p2[0]*p3[2],2) +
+			   std::pow(-(p1[2]*p2[1]) + p1[1]*p2[2] + p1[2]*p3[1] - p2[2]*p3[1] -
+		       p1[1]*p3[2] + p2[1]*p3[2],2));
+}
+
 
 } /* namespace helperfunctions */
 } /* namespace Algorithms */
