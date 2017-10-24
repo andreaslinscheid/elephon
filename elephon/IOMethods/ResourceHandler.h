@@ -28,6 +28,7 @@
 #include "PhononStructure/DisplacementPotential.h"
 #include "ElectronicStructure/ElectronicBands.h"
 #include "ElectronicStructure/Wavefunctions.h"
+#include "ElectronicStructure/TetrahedraIsosurface.h"
 #include <memory>
 
 namespace elephon
@@ -72,6 +73,22 @@ public:
 
 	std::shared_ptr<const LatticeStructure::RegularBareGrid> get_interpol_reci_mesh_obj();
 
+	/**
+	 * obtain the tetrahedra mesh of the dense electronic band structure.
+	 *
+	 * @return shared pointer, initialized with the dense electron band mesh.
+	 */
+	std::shared_ptr<const LatticeStructure::TetrahedraGrid> get_tetrahedra_grid();
+
+	/**
+	 * obtain the tetrahedra iso-surface of the dense electronic band structure.
+	 *
+	 * Values for the isosurface are taken from the input parameter ea2F.
+	 *
+	 * @return shared pointer, initialized with the dense electron band mesh.
+	 */
+	std::shared_ptr<const ElectronicStructure::TetrahedraIsosurface> get_tetrahedra_isosurface();
+
 private:
 
 	std::shared_ptr<ElectronicStructureCodeInterface> dataLoader_;
@@ -96,6 +113,10 @@ private:
 
 	std::shared_ptr<LatticeStructure::RegularBareGrid> interpolKGrid_;
 
+	std::shared_ptr<LatticeStructure::TetrahedraGrid> tetraGrid_;
+
+	std::shared_ptr<ElectronicStructure::TetrahedraIsosurface> tetraIso_;
+
 	void initialize_phonon_obj();
 
 	void initialize_forceConstant_obj();
@@ -115,6 +136,10 @@ private:
 	void initialize_wfct_obj();
 
 	void initialize_interpol_reci_mesh_obj();
+
+	void initialize_tetrahedra_grid();
+
+	void initialize_tetrahedra_isosurface();
 };
 
 } /* namespace IOMethods */

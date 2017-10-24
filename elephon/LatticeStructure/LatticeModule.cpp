@@ -117,6 +117,12 @@ LatticeModule::get_volume() const
 	return vol_;
 }
 
+double
+LatticeModule::get_reci_volume() const
+{
+	return std::pow(2*M_PI,3)/vol_;
+}
+
 std::vector<double>
 LatticeModule::get_lattice_vector(int n) const
 {

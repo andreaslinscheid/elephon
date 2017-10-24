@@ -731,6 +731,24 @@ TetrahedraIsosurface::get_triangles(int isoNum, int ibnd) const
 	return triangles_[isoNum*numBands_+ibnd];
 }
 
+int
+TetrahedraIsosurface::get_nBnd() const
+{
+	return numBands_;
+}
+
+int
+TetrahedraIsosurface::get_num_iso_energies() const
+{
+	return numIsoE_;
+}
+
+std::shared_ptr<const LatticeStructure::TetrahedraGrid>
+TetrahedraIsosurface::get_tetra_grid() const
+{
+	return tetra_;
+}
+
 void
 TetrahedraIsosurface::generate_vtk_polydata(
 		int isoNum,
@@ -784,6 +802,20 @@ TetrahedraIsosurface::get_irreducible_iso_vector_integration_weights(
 	assert( (ibnd >= 0) and (ibnd < numBands_) );
 	kIso.assign(kIso_[isoNum*numBands_+ibnd]->begin(), kIso_[isoNum*numBands_+ibnd]->end());
 	kIsoWeights.assign(kIsoWeights_[isoNum*numBands_+ibnd].begin(), kIsoWeights_[isoNum*numBands_+ibnd].end());
+}
+
+void
+TetrahedraIsosurface::get_irreducible_iso_vector_integration_weights_no_multiplicty(
+		int isoNum,
+		int ibnd,
+		std::vector<double> & kIso,
+		std::vector<double> & kIsoWeights) const
+{
+	assert( (isoNum >= 0) and (isoNum < numIsoE_) );
+	assert( (ibnd >= 0) and (ibnd < numBands_) );
+	kIso.assign(kIso_[isoNum*numBands_+ibnd]->begin(), kIso_[isoNum*numBands_+ibnd]->end());
+	kIsoWeights.assign(kIsoReducibleWeights_[isoNum*numBands_+ibnd].begin(),
+						kIsoReducibleWeights_[isoNum*numBands_+ibnd].end());
 }
 
 void

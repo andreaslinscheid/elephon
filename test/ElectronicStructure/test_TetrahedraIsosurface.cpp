@@ -229,7 +229,7 @@ BOOST_AUTO_TEST_CASE( TetrahedraIsosurface_Al )
 
 	tetraSurf->write_polydata_file( surfDataFile.string(), 0);
 //	boost::filesystem::remove(surfDataFile);
-	plot_iso_surface(tetraSurf, 0);
+//	plot_iso_surface(tetraSurf, 0);
 
 
 	auto tetraIrred = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();

@@ -127,6 +127,25 @@ ResourceHandler::get_interpol_reci_mesh_obj()
 	return interpolKGrid_;
 }
 
+
+std::shared_ptr<const LatticeStructure::TetrahedraGrid>
+ResourceHandler::get_tetrahedra_grid()
+{
+	if ( ! tetraGrid_ )
+		this->initialize_tetrahedra_grid();
+	assert(tetraGrid_);
+	return tetraGrid_;
+}
+
+std::shared_ptr<const ElectronicStructure::TetrahedraIsosurface>
+ResourceHandler::get_tetrahedra_isosurface()
+{
+	if ( ! tetraIso_ )
+		this->initialize_tetrahedra_isosurface();
+	assert(tetraIso_);
+	return tetraIso_;
+}
+
 void
 ResourceHandler::initialize_phonon_obj()
 {
@@ -289,6 +308,25 @@ ResourceHandler::initialize_interpol_reci_mesh_obj()
 			bands->get_grid().get_grid_prec(),
 			dataLoader_->get_optns().get_ffts(),
 			bands->get_grid().get_lattice());
+}
+
+void
+ResourceHandler::initialize_tetrahedra_grid()
+{
+	LatticeStructure::TetrahedraGrid tg;
+	tg.initialize( std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>(
+			this->get_dense_electronic_bands_obj()->get_grid() ));
+	tetraGrid_ = std::make_shared<LatticeStructure::TetrahedraGrid>( std::move(tg) );
+}
+
+void
+ResourceHandler::initialize_tetrahedra_isosurface()
+{
+	ElectronicStructure::TetrahedraIsosurface tis;
+	tis.initialize( this->get_tetrahedra_grid(),
+					this->get_dense_electronic_bands_obj(),
+					this->get_optns().get_ea2f() );
+	tetraIso_ = std::make_shared<ElectronicStructure::TetrahedraIsosurface>( std::move(tis) );
 }
 
 } /* namespace IOMethods */

@@ -231,12 +231,11 @@ void ReadVASPWaveFunction::read_wavefunction(
 	if ( not wavecarfile_.is_open() )
 		throw std::logic_error( "Can only read wavefunction from an open file " );
 
-	int numKIrred = static_cast<int>(kpoints_.size())/3;
 	int Nk = static_cast<int>(kptindices.size());
 	int Nb = static_cast<int>(bandIndices.size());
 	if ( (Nk == 0) || (Nb == 0) )
 		return;
-	assert( Nk <= numKIrred );
+	assert( Nk <= static_cast<int>(kpoints_.size())/3 );
 	assert( Nb <= nBndsVASP_ );
 
 	//Determine the total amount of storage and the locator for the
@@ -247,7 +246,7 @@ void ReadVASPWaveFunction::read_wavefunction(
 		for ( int is = 0 ; is < nspin_; ++is)
 		{
 			int ik = kptindices[i];
-			assert( (ik < numKIrred) && ( ik >= 0 ) );
+			assert( (ik < static_cast<int>(kpoints_.size())/3) && ( ik >= 0 ) );
 			npwPerKpt[i] = npwSpinKpt_[ik*nspin_+is];
 			wfctData[i].resize( npwSpinKpt_[ik*nspin_+is]*Nb*nspin_ );
 		}
@@ -258,7 +257,7 @@ void ReadVASPWaveFunction::read_wavefunction(
 		for ( int i = 0 ; i < Nk; ++i)
 		{
 			int ik = kptindices[i];
-			assert( (ik < numKIrred) && ( ik >= 0 ) );
+			assert( (ik < static_cast<int>(kpoints_.size())/3) && ( ik >= 0 ) );
 
 			//locate the base record for this k point and spin
 			std::size_t wfctrecordStart = kptSpinPosToFile_[ik*nspin_+is]

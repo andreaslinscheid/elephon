@@ -46,6 +46,8 @@ public:
 
 	double get_volume() const;
 
+	double get_reci_volume() const;
+
 	double get_alat() const;
 
 	std::vector<double> get_lattice_vector(int n) const;

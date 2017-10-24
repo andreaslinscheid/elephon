@@ -40,7 +40,7 @@ DataRegularGrid<T>::initialize(
 		LatticeStructure::RegularSymmetricGrid grid)
 {
 	std::vector<T> dataEnergies;
-	int numBands;
+	int numBands = 0;
 	for ( int ikir = 0 ; ikir < grid.get_np_irred(); ++ikir)
 	{
 		int ikr = grid.get_maps_irreducible_to_reducible()[ikir][ grid.get_symmetry().get_identity_index() ];
@@ -93,6 +93,31 @@ DataRegularGrid<T>::initialize(
 	}
 	else
 		throw std::runtime_error("Problem in DataRegularGrid::initialize : input data does not match grid");
+}
+
+template<typename T>
+void
+DataRegularGrid<T>::initialize_accumulation(
+		int numBands,
+		T zeroEnergy,
+		std::vector<T> bandData,
+		LatticeStructure::RegularSymmetricGrid grid)
+{
+	if ( bandData.size() != grid.get_np_red()*numBands )
+		throw std::runtime_error("Problem in DataRegularGrid::initialize_accumulation : input data does not match reducible grid");
+
+	std::vector<T> irredbandData(grid.get_np_irred()*numBands, T(0));
+	for ( int irr = 0 ; irr < grid.get_np_irred(); ++irr )
+	{
+		auto star = grid.get_maps_irreducible_to_reducible()[irr];
+		for ( int istar = 0 ; istar < star.size() ; ++istar )
+		{
+			int ireducible = star[istar];
+			for ( int ibnd = 0 ; ibnd < numBands; ++ibnd )
+				irredbandData[irr*numBands + ibnd] += bandData[ ireducible*numBands + ibnd ];
+		}
+	}
+	this->initialize(numBands, zeroEnergy, std::move(irredbandData), std::move(grid) );
 }
 
 template<typename T>

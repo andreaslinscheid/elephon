@@ -1821,27 +1821,54 @@ where
 \end_inset
 
  is the Fermi surface area associated to a given Fermi vector.
- 
-\end_layout
+ Combining 
+\begin_inset Formula 
+\begin{equation}
+\frac{{\rm d}\boldsymbol{k}_{f}}{\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert}\approx\tilde{w}_{\boldsymbol{k}_{f}}
+\end{equation}
 
-\begin_layout Standard
-In practive we use the vtk library for the triangulations and sufficent
- decimation of triangles to the number suitable for a fast calculation.
- The weight 
-\begin_inset Formula $w_{\boldsymbol{k}_{f}}$
 \end_inset
 
-, i.e.
-\begin_inset space ~
+we can use the tetrahedra method of computing the DOS
+\begin_inset Formula 
+\begin{eqnarray}
+\rho(E_{f}) & = & \sum_{i}\int{\rm d}\boldsymbol{k}\delta(\varepsilon_{\boldsymbol{k}i}-E_{{\rm F}})\\
+ &  & \equiv\sum_{i}\int_{\varepsilon_{\boldsymbol{k}i}=E_{f}}\frac{{\rm d}^{2}\boldsymbol{k}_{f}}{\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert}\\
+ & \approx & \sum_{il}\tilde{w}_{l}^{i}\equiv\sum_{im}t_{m}^{i}
+\end{eqnarray}
+
 \end_inset
 
-the Fermi surface area is computed by going through the list of points and
- adding 
-\begin_inset Formula $1/3$
+where, thus, 
+\begin_inset Formula $\tilde{w}_{l}^{i}$
 \end_inset
 
- of the area of each triangle it is part of.
- The one remaining delta function is evaluated using a simple approximation
+ are the combination of area weight and inverse Fermi velocitiy at the Fermi
+ surface point 
+\begin_inset Formula $\boldsymbol{k}_{li}$
+\end_inset
+
+.
+ The tetrahedra method for computing the DOS adds up the contribution of
+ each individual tetrahedron 
+\begin_inset Formula $t_{m}^{i}$
+\end_inset
+
+.
+ In an additional step, we here compute the isosurface.
+ Each tetrahedron that intersects the Fermi surface has 3-4 Fermi corner
+ points that may conincide.
+ The strategy adopted here is to compute the contribution of each tetrahedron
+ to the DOS and distribute it evenly to the 3-4 Fermi points it creates.
+ This allows us to find an efficient approximation
+\begin_inset Formula 
+\begin{equation}
+\alpha^{2}\, F(\omega)\approx\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}ll^{\prime}\nu}\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}
+\end{equation}
+
+\end_inset
+
+The one remaining delta function is evaluated using a simple approximation
 \begin_inset Formula 
 \begin{equation}
 \delta(\omega)\approx\frac{1}{\omega_{0}}\Theta(\frac{\omega_{0}}{2}-\vert\omega\vert)
@@ -1865,6 +1892,87 @@ reference "eq:AlphaSquaredF"
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Subsection
+Symmetry properties of the electron-phonon matrix element
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+Here we investigate the transformation properties of 
+\begin_inset Formula 
+\begin{equation}
+g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})=\iint_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})
+\end{equation}
+
+\end_inset
+
+transforming space
+\begin_inset Formula 
+\begin{eqnarray}
+g_{T\boldsymbol{k},T\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(T\boldsymbol{k}^{\prime}-T\boldsymbol{k}) & = & \iint_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{T\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{T(\boldsymbol{k}^{\prime}-\boldsymbol{k})\nu}}\psi_{T\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\\
+ & = & \iint_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(T^{-1}\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(T^{-1}\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(T^{-1}\boldsymbol{r})\\
+ & = & \iint_{{\rm UC}}{\rm d}T^{-1}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})=g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})
+\end{eqnarray}
+
+\end_inset
+
+thus, we can write
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+
+\begin_inset Formula 
+\begin{eqnarray}
+\alpha^{2}\, F(\omega) & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+ & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+ & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\sum_{S_{l}}1
+\end{eqnarray}
+
+\end_inset
+
+where we have rearranged the sum over 
+\begin_inset Formula $l^{\prime}$
+\end_inset
+
+ such that 
+\begin_inset Formula $\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}=S_{l}^{-1}\boldsymbol{k}_{i^{\prime}l^{\prime}}\rightarrow\boldsymbol{k}_{i^{\prime}l^{\prime}}$
+\end_inset
+
+ which is possible since the full star is present and thus 
+\begin_inset Formula $S_{l}^{-1}\boldsymbol{k}_{i^{\prime}l^{\prime}}$
+\end_inset
+
+ is only reshuffeling vectors.
+ We have also used that 
+\begin_inset Formula $\varOmega_{\boldsymbol{q}\nu}$
+\end_inset
+
+ and the weights are grid symmetric.
+\end_layout
+
+\begin_layout Subsection
+Velocities
 \end_layout
 
 \begin_layout Standard
@@ -2318,6 +2426,178 @@ will be zero-padded to the desired density indicated with a bar.
 \begin{eqnarray}
 \varepsilon(R_{x},R_{y},R_{z}) & = & {\rm e}^{{\rm -}\frac{{\boldsymbol{k}_{0}}_{x}\cdot R_{x}}{N_{kx}}\frac{{\boldsymbol{k}_{0}}_{y}\cdot R_{y}}{N_{ky}}\frac{{\boldsymbol{k}_{0}}_{z}\cdot R_{z}}{N_{kz}}}\sum_{i,j,l}[\varepsilon(\boldsymbol{k})]{\rm e}^{{\rm -}\frac{i\cdot R_{x}}{N_{kx}}\frac{j\cdot R_{y}}{N_{ky}}\frac{l\cdot R_{z}}{N_{kz}}}\\
 \varepsilon(\bar{\boldsymbol{k}}) & = & {\rm FFT}\bigl({\rm Zero-Pad}\{{\rm FFT}\{\varepsilon(\boldsymbol{k})\}{\rm e}^{{\rm -}\frac{{\boldsymbol{k}_{0}}_{x}\cdot R_{x}}{N_{kx}}\frac{{\boldsymbol{k}_{0}}_{y}\cdot R_{y}}{N_{ky}}\frac{{\boldsymbol{k}_{0}}_{z}\cdot R_{z}}{N_{kz}}}\}{\rm e}^{\frac{{\mbox{\bar{\boldsymbol{k}}_{0}}}_{x}\cdot\bar{R}_{x}}{\bar{N}_{kx}}\frac{{\mbox{\bar{\boldsymbol{k}}_{0}}}_{y}\cdot\bar{R}_{y}}{\bar{N}_{ky}}\frac{{\mbox{\bar{\boldsymbol{k}}_{0}}}_{z}\cdot\bar{R}_{z}}{\bar{N}_{kz}}}\bigr)
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Nesting function
+\end_layout
+
+\begin_layout Standard
+As a prelimnary exercise, we compute the Nesting function
+\begin_inset Formula 
+\begin{equation}
+\chi_{nn^{\prime}}(\boldsymbol{q})=\sum_{\boldsymbol{k}}\delta(\varepsilon_{\boldsymbol{k}n}-\varepsilon_{F})\delta(\varepsilon_{\boldsymbol{k}+\boldsymbol{q}n^{\prime}}-\varepsilon_{F})
+\end{equation}
+
+\end_inset
+
+Note that in the contiunum limit for 
+\begin_inset Formula $\boldsymbol{k}$
+\end_inset
+
+ this can be written as
+\begin_inset Formula 
+\begin{eqnarray}
+\chi_{nn^{\prime}}(\boldsymbol{q}) & = & \int_{{\rm BZ}}{\rm d}^{3}k\delta(\varepsilon_{\boldsymbol{k}n}-\varepsilon_{F})\delta(\varepsilon_{\boldsymbol{k}+\boldsymbol{q}n^{\prime}}-\varepsilon_{F})\\
+ & = & \sum_{\boldsymbol{G}}\int_{{\rm BZ}}{\rm d}^{3}k\int_{{\rm BZ}}{\rm d}^{3}k^{\prime}\delta(\boldsymbol{k}^{\prime}-\boldsymbol{k}-\boldsymbol{q}+\boldsymbol{G})\delta(\varepsilon_{\boldsymbol{k}}-\varepsilon_{F})\delta(\varepsilon_{\boldsymbol{k}^{\prime}n^{\prime}}-\varepsilon_{F})\\
+ & = & \int_{\varepsilon_{\boldsymbol{k}n}=\varepsilon_{F}}\frac{{\rm d}^{2}k}{\vert\nabla\varepsilon_{\boldsymbol{k}n}\vert}\int_{\varepsilon_{\boldsymbol{k}^{\prime}n^{\prime}}=\varepsilon_{F}}\frac{{\rm d}^{2}k^{\prime}}{\vert\nabla\varepsilon_{\boldsymbol{k}^{\prime}n^{\prime}}\vert}\sum_{\boldsymbol{G}}\delta[\boldsymbol{q}-(\boldsymbol{k}^{\prime}-\boldsymbol{k})+\boldsymbol{G}]\\
+ & \approx & \sum_{ij}w_{i}^{n^{\prime}}w_{j}^{n}\sum_{\boldsymbol{G}}\delta[\boldsymbol{q}-(\boldsymbol{k}_{i}^{\prime}-\boldsymbol{k}_{j})+\boldsymbol{G}]
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $w_{i}$
+\end_inset
+
+ are the combined weights 
+\begin_inset Formula ${\rm d}^{2}k/\vert\nabla\varepsilon_{\boldsymbol{k}}\vert$
+\end_inset
+
+ at the iso-surface 
+\begin_inset Formula $\varepsilon_{F}$
+\end_inset
+
+.
+ The sum over 
+\begin_inset Formula $\boldsymbol{G}$
+\end_inset
+
+ effectively maps back to the first BZ in that is assures that if 
+\begin_inset Formula $\boldsymbol{q}-(\boldsymbol{k}_{i}^{\prime}-\boldsymbol{k}_{j})$
+\end_inset
+
+ is any lattice vector the contribution will be recorded.
+ Furthermore, since weights are the same for symmetry related iso-
+\begin_inset Formula $\boldsymbol{k}$
+\end_inset
+
+ points
+\begin_inset Formula 
+\begin{equation}
+\chi_{nn^{\prime}}(\boldsymbol{q})\approx\sum_{i,j\in{\rm irred}}w_{i}^{n^{\prime}}w_{j}^{n}\sum_{\boldsymbol{G}}\sum_{S_{i}S_{j}}\delta[\boldsymbol{q}-(S_{i}\boldsymbol{k}_{i}^{\prime}-S_{j}\boldsymbol{k}_{j})+\boldsymbol{G}]
+\end{equation}
+
+\end_inset
+
+with 
+\begin_inset Formula $S_{i}$
+\end_inset
+
+ begin the symmetry operations taking the irreducible 
+\begin_inset Formula $\boldsymbol{k}_{i}$
+\end_inset
+
+ to the elements of the star.
+ The way to read the formula above numerically is to compute for each combinatio
+n of points in the irreducible zone the product weight 
+\begin_inset Formula $w_{i}^{n^{\prime}}w_{j}^{n}$
+\end_inset
+
+ and add it to
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ 
+\begin_inset Formula $\chi(\boldsymbol{q})$
+\end_inset
+
+ at
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ the 
+\begin_inset Formula $\boldsymbol{q}$
+\end_inset
+
+ points of
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+ that can be generated by any star operation 
+\begin_inset Formula $S_{i}\boldsymbol{k}_{i}^{\prime}-S_{j}\boldsymbol{k}_{j}$
+\end_inset
+
+ mapped back to the 1.
+ Brillouin zone.
+ Points that are not on the border of the irreducible zone have a star of
+ full dimension of the group.
+ In that case, we can use the group property
+\begin_inset Formula 
+\begin{eqnarray}
+\{\boldsymbol{q}\} & = & \sum_{\boldsymbol{G}}\sum_{S_{i}S_{j}}(S_{i}\boldsymbol{k}_{i}^{\prime}-S_{j}\boldsymbol{k}_{j})+\boldsymbol{G}\in1.{\rm BZ}\\
+ & = & \sum_{\boldsymbol{G}^{\prime}}\sum_{S_{i}^{\prime}S_{j}}S_{j}(S_{i}^{\prime}\boldsymbol{k}_{i}^{\prime}-\boldsymbol{k}_{j}+\boldsymbol{G}^{\prime})\\
+ & = & \sum_{S_{j}}S_{j}\{\boldsymbol{q}\}_{{\rm irred}}
+\end{eqnarray}
+
+\end_inset
+
+Thus, as one would expect from the originial definition, the nesting function
+ 
+\begin_inset Formula $\chi_{nn^{\prime}}(\boldsymbol{q})$
+\end_inset
+
+ is symmetric and we only need to compute irreducible 
+\begin_inset Formula $\{\boldsymbol{q}\}_{{\rm irred}}=\sum_{\boldsymbol{G}}\sum_{S_{i}^{\prime}}(S_{i}^{\prime}\boldsymbol{k}_{i}^{\prime}-\boldsymbol{k}_{j})+\boldsymbol{G}\in1.{\rm BZ}$
+\end_inset
+
+.
+\begin_inset Formula 
+\begin{equation}
+\chi_{nn^{\prime}}(\{\boldsymbol{q}\}_{{\rm irred}})\approx\sum_{i,j\in{\rm irred}}w_{i}^{n^{\prime}}w_{j}^{n}\sum_{\boldsymbol{G}}\sum_{S_{i}}\delta[\boldsymbol{q}-(S_{i}\boldsymbol{k}_{i}^{\prime}-\boldsymbol{k}_{j})+\boldsymbol{G}]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that the integral
+\begin_inset Formula 
+\begin{eqnarray}
+\sum_{nn^{\prime}}\int{\rm d}^{3}q\chi_{nn^{\prime}}(\boldsymbol{q}) & = & \sum_{nn^{\prime}}\int{\rm d}^{3}q\int_{{\rm BZ}}{\rm d}^{3}k\delta(\varepsilon_{\boldsymbol{k}n}-\varepsilon_{F})\delta(\varepsilon_{\boldsymbol{k}+\boldsymbol{q}n^{\prime}}-\varepsilon_{F})\\
+ & = & \sum_{n}\int_{{\rm BZ}}{\rm d}^{3}k\delta(\varepsilon_{\boldsymbol{k}n}-\varepsilon_{F})\sum_{n^{\prime}}\int{\rm d}^{3}q\delta(\varepsilon_{\boldsymbol{q}n^{\prime}}-\varepsilon_{F})\\
+ &  & \equiv\rho(\varepsilon_{F})^{2}
 \end{eqnarray}
 
 \end_inset

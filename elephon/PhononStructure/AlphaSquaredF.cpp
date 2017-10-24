@@ -52,117 +52,53 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 	// obtain a Fermi surface (set of constant energy surfaces) as a list of k point and weights
 	int nSamples = resourceHandler->get_optns().get_numFS();
 	auto equalEnergySurfaces = resourceHandler->get_optns().get_ea2f();
-	for ( auto e : equalEnergySurfaces)
+
+	// load the isosurface
+	auto tetraIso = resourceHandler->get_tetrahedra_isosurface();
+
+	for ( int iE = 0 ; iE < equalEnergySurfaces.size() ; ++iE )
 	{
-		std::cout << "Calculating a2F(w) at energy " << e << "eV"<< std::endl;
+		auto e = equalEnergySurfaces[iE];
+		std::cout << "Calculating a2F(w) at energy e=" << e << "eV relative to the Fermi level\n";
 
-		auto bndsCrossing = bands->get_bands_crossing_energy_lvls({e});
-		std::vector<double> reducibleData;
-		bands->generate_interpolated_reducible_data(
-				bndsCrossing,
-				*interpolationKMesh,
-				reducibleData);
-
-		ElectronicStructure::FermiSurface fs;
-		fs.triangulate_surface(
-				*interpolationKMesh,
-				bndsCrossing.size(),
-				reducibleData,
-				nSamples,
-				e);
-
-		std::cout << "Found " << fs.get_Fermi_vectors().size()/3 << " Fermi vectors" <<std::endl;
-
-		for ( int ib1 = 0 ; ib1 < bndsCrossing.size(); ++ib1 )
+		for (int ibnd = 0 ; ibnd < tetraIso->get_nBnd(); ++ibnd )
 		{
-			std::vector<double> kf1, w1;
-			fs.obtain_irreducible_Fermi_vectors_for_band(ib1, bands->get_grid().get_symmetry(), kf1, w1);
+			std::vector<double> isoK, isoWeights;
+			tetraIso->get_irreducible_iso_vector_integration_weights(iE, ibnd, isoK, isoWeights);
+			if ( isoK.empty() )
+				continue;
 
-			// compute the Fermi velocities at vectors kf1 and build the surface integral weight
-			std::vector<double> FermiVelocitiesKf1;
-			std::vector<int> requiredGridIndices;
-			std::vector<double> gradDataAtRequestedIndices;
-			trilin.data_query( kf1, requiredGridIndices );
-			auto interpolated_band_data_loader = [&reducibleData, &bndsCrossing, &ib1] (int ikr, int ib){
-				// define the data loader that fetches the correct band for given 'ib1'
-				// note that compute_derivatives_sqr_polynom will call with ib = 0, since we only want this
-				// particular band ib1. However, in terms of bndsCrossing, this can be another band.
-				assert( ikr*bndsCrossing.size() + ib1 < reducibleData.size());
-				return reducibleData[ikr*bndsCrossing.size() + ib1];
-				};
-			Algorithms::localDerivatives::compute_derivatives_sqr_polynom<double>(
-					1,
-					requiredGridIndices,
-					&gradDataAtRequestedIndices,
-					nullptr,
-					*interpolationKMesh,
-					interpolated_band_data_loader);
-			assert(gradDataAtRequestedIndices.size() == 3*requiredGridIndices.size());
-			trilin.interpolate(3, gradDataAtRequestedIndices, FermiVelocitiesKf1);
-			for ( int ikf = 0 ; ikf < w1.size(); ++ikf)
+			for (int ibndP = 0 ; ibndP < tetraIso->get_nBnd(); ++ibndP )
 			{
-				double modGradE = std::sqrt(std::pow(FermiVelocitiesKf1[ikf*3+0],2)
-										+std::pow(FermiVelocitiesKf1[ikf*3+1],2)
-										+std::pow(FermiVelocitiesKf1[ikf*3+2],2));
-				if ( modGradE < 1e-6) //cutoff
-					modGradE = 1e-6;
-				w1[ikf] = w1[ikf]/modGradE*interpolationKMesh->get_lattice().get_volume()/std::pow(2*M_PI,3);
-			}
+				std::cout << "running bands "<< ibnd << " "  << ibndP << std::endl;
+				std::vector<double> isoKP, isoWeightsP;
+				tetraIso->get_reducible_iso_vector_integration_weights(iE, ibndP, isoKP, isoWeightsP);
+				if ( isoKP.empty() )
+					continue;
 
-			for ( int ib2 = 0 ; ib2 < bndsCrossing.size(); ++ib2 )
-			{
-				std::vector<double> kf2 = fs.get_Fermi_vectors_for_band(ib2);
-				std::vector<double> w2 = fs.get_Fermi_weights_for_band(ib2);
-
-				// compute the Fermi velocities at vectors kf2
-				std::vector<double> FermiVelocitiesKf2;
-				trilin.data_query( kf2, requiredGridIndices );
-				auto interpolated_band_data_loader_kp = [&reducibleData, &bndsCrossing, &ib2] (int ikr, int ib){
-					// define the data loader that fetches the correct band for given 'ib1'
-					// note that compute_derivatives_sqr_polynom will call with ib = 0, since we only want this
-					// particular band ib1. However, in terms of bndsCrossing, this can be another band.
-					assert( ikr*bndsCrossing.size() + ib2 < reducibleData.size());
-					return reducibleData[ikr*bndsCrossing.size() + ib2];
-					};
-				Algorithms::localDerivatives::compute_derivatives_sqr_polynom<double>(
-						1,
-						requiredGridIndices,
-						&gradDataAtRequestedIndices,
-						nullptr,
-						*interpolationKMesh,
-						interpolated_band_data_loader_kp);
-				assert(gradDataAtRequestedIndices.size() == 3*requiredGridIndices.size());
-				trilin.interpolate(3, gradDataAtRequestedIndices, FermiVelocitiesKf2);
-				for ( int ikf = 0 ; ikf < w2.size(); ++ikf)
+				for ( int ikIso = 0 ; ikIso < isoWeights.size(); ++ikIso )
 				{
-					double modGradE = std::sqrt(std::pow(FermiVelocitiesKf2[ikf*3+0],2)
-											+std::pow(FermiVelocitiesKf2[ikf*3+1],2)
-											+std::pow(FermiVelocitiesKf2[ikf*3+2],2));
-					if ( modGradE < 1e-6) //cutoff
-						modGradE = 1e-6;
-					w2[ikf] = w2[ikf]/modGradE*interpolationKMesh->get_lattice().get_volume()/std::pow(2*M_PI,3);
+					// compute the electron phonon matrix elements between these k points
+					ElectronPhononCoupling gkkp;
+					gkkp.generate_gkkp_and_phonon(isoK, isoKP, {ibnd}, {ibndP}, ph, dvscf, wfcts);
+
+					// integrate the function on each constant energy surfaces.
+					for ( int ikf1 = 0 ; ikf1 < isoWeights.size() ; ++ikf1)
+						for ( int ikf2 = 0 ; ikf2 < isoWeightsP.size() ; ++ikf2)
+						{
+							std::vector<std::complex<float>>::iterator gkkpitB, gkkpitE;
+							std::vector<float>::iterator phitB, phitE;
+							gkkp.get_local_matrix_range(ikf1, ikf2, gkkpitB, gkkpitE, phitB, phitE);
+							assert( (std::distance(gkkpitB, gkkpitE) == nModes)
+									&& (std::distance(phitB, phitE) == nModes));
+
+							std::vector<float> gkkpModSqr(nModes);
+							for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu )
+								gkkpModSqr[inu] = isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB));
+
+							this->map_freq_grid_slot(gkkpModSqr.begin(), phitB, phitE);
+						}
 				}
-
-				// compute the electron phonon matrix elements between these k points
-				ElectronPhononCoupling gkkp;
-				gkkp.generate_gkkp_and_phonon(kf1, kf2, {ib1}, {ib2}, ph, dvscf, wfcts);
-
-				// integrate the function on each constant energy surfaces.
-				for ( int ikf1 = 0 ; ikf1 < w1.size() ; ++ikf1)
-					for ( int ikf2 = 0 ; ikf2 < w2.size() ; ++ikf2)
-					{
-						std::vector<std::complex<float>>::iterator gkkpitB, gkkpitE;
-						std::vector<float>::iterator phitB, phitE;
-						gkkp.get_local_matrix_range(ikf1, ikf2, gkkpitB, gkkpitE, phitB, phitE);
-						assert( (std::distance(gkkpitB, gkkpitE) == nModes)
-								&& (std::distance(phitB, phitE) == nModes));
-
-						std::vector<float> gkkpModSqr(nModes);
-						for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu )
-							gkkpModSqr[inu] = w1[ikf1]*w2[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB));
-
-						this->map_freq_grid_slot(gkkpModSqr.begin(), phitB, phitE);
-					}
 			}
 		}
 	}

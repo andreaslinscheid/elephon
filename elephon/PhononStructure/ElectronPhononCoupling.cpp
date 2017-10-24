@@ -43,6 +43,8 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	assert(kpList.size()%3 == 0);
 	nK_ = kList.size()/3;
 	nKp_ = kpList.size()/3;
+	if ( (nK_ == 0) or (nKp_ == 0) )
+		return;
 
 	std::vector<double> modes;
 	std::vector<std::complex<double> > dynmat;
@@ -92,6 +94,11 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 			std::vector<double> q{	kList[ik*3+0]-kpList[ik*3+0],
 									kList[ik*3+1]-kpList[ik*3+1],
 									kList[ik*3+2]-kpList[ik*3+2]};
+
+			// map q vectors back to the 1. BZ
+			for ( auto &qi : q )
+				qi -= std::floor(qi+0.5);
+
 			ph->compute_at_q( q, modes, dynmat );
 			dvscf->compute_dvscf_q( q, dynmat, ph->get_masses(), dvscfData);
 			phononFrequencies_.insert(std::end(phononFrequencies_), modes.begin(), modes.end() );

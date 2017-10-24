@@ -493,6 +493,10 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 				kB[i] -= std::floor(kB[i]);
 				kv[i] -= std::floor(kv[i]);
 				kv[i] = (kv[i] - kB[i])/dxi[i];
+				// due to finite numerical accuracy we need to put these guards
+				assert( (kv[i] > -1e-8) and (kv[i] < 1.0+1e-8) );
+				kv[i] = kv[i] < 0.0 ? 0.0 : kv[i];
+				kv[i] = kv[i] > 1.0 ? 1.0 : kv[i];
 			}
 	 		interpol.interpolate_within_single_cube(
 	 				kv,

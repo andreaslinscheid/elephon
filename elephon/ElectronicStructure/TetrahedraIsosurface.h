@@ -65,6 +65,12 @@ public:
 			std::vector<double> & kIso,
 			std::vector<double> & kIsoWeights) const;
 
+	void get_irreducible_iso_vector_integration_weights_no_multiplicty(
+			int isoNum,
+			int ibnd,
+			std::vector<double> & kIso,
+			std::vector<double> & kIsoWeights) const;
+
 	/**
 	 *
 	 *  Description of the Algorithm:
@@ -86,6 +92,13 @@ public:
 	int get_num_triangles(int isoNum, int ibnd) const;
 
 	std::vector<Triangle> const & get_triangles(int isoNum, int ibnd) const;
+
+	int get_nBnd() const;
+
+	int get_num_iso_energies() const;
+
+	std::shared_ptr<const LatticeStructure::TetrahedraGrid> get_tetra_grid() const;
+
 private:
 
 	int numIsoE_ = 0;

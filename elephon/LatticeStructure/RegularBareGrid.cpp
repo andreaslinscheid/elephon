@@ -192,8 +192,10 @@ RegularBareGrid::compute_reducible_cube_indices_surrounding_nongrid_point(
 		vfbz -= std::floor(vfbz);
 		int cellstart = int(std::floor(vfbz*pointMesh_[i]));
 		int cellend = cellstart + 1;
-		//Apply periodicity
-		cellend = cellend < pointMesh_[i] ? cellend : 0;
+		//Apply periodicity: due to finite accuracy of floating point numbers, we have
+		// to do this for cellstart, too.
+		cellstart = cellstart >= pointMesh_[i] ? cellstart - pointMesh_[i] : cellstart;
+		cellend = cellend >= pointMesh_[i] ? cellend - pointMesh_[i] : cellend;
 		minMaxEachDim[i] = std::make_pair(cellstart,cellend);
 	}
 
@@ -232,6 +234,26 @@ RegularBareGrid::compute_reducible_cube_indices_surrounding_nongrid_point(
 	result[7] = this->get_xyz_to_reducible( dima ) ;
 
 	return result;
+}
+
+void
+RegularBareGrid::find_closest_reducible_grid_points(
+		std::vector<double> const & nonGridPoints,
+		std::vector<int> & reducibleGridIndices) const
+{
+	assert( nonGridPoints.size()%3 == 0 );
+	int nptsA = nonGridPoints.size()/3;
+	reducibleGridIndices.resize(nptsA);
+	for ( int ip = 0 ; ip < nptsA ; ++ip)
+	{
+		double x = (nonGridPoints[ip*3+0] - std::floor(nonGridPoints[ip*3+0]) - pointShift_[0])*pointMesh_[0];
+		double y = (nonGridPoints[ip*3+1] - std::floor(nonGridPoints[ip*3+1]) - pointShift_[1])*pointMesh_[1];
+		double z = (nonGridPoints[ip*3+2] - std::floor(nonGridPoints[ip*3+2]) - pointShift_[2])*pointMesh_[2];
+		std::vector<int> xyz{ 	static_cast<int>(std::floor(x+0.5)),
+								static_cast<int>(std::floor(y+0.5)),
+								static_cast<int>(std::floor(z+0.5))};
+		reducibleGridIndices[ip] = this->get_xyz_to_reducible_periodic(xyz);
+	}
 }
 
 void

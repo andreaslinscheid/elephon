@@ -60,6 +60,25 @@ public:
 			LatticeStructure::RegularSymmetricGrid grid);
 
 	/**
+	 * Set the data in the the data structure by adding data into the irreducible zone.
+	 *
+	 * The data is assumed to match the reducible irreducible grid.
+	 * As opposed to ::initialize it will assume the data is distributed in the reducible zone and needs to be
+	 * summed. Note that \p zeroEnergy is subtracted _after_ the accumulation.
+	 *
+	 * @param numBands	Number of bands
+	 * @param zeroEnergy	energy reference of the \p bandData
+	 * @param bandData	N, which is the number of k points, times number of bands data values
+	 * 					with 'bands' as the fast running dimension such as [(b=0,k=0),(b=1,k=0),...(b=num bands,k=N-1)]
+	 * @param grid		K point grid
+	 */
+	void initialize_accumulation(
+			int numBands,
+			T zeroEnergy,
+			std::vector<T> bandData,
+			LatticeStructure::RegularSymmetricGrid grid);
+
+	/**
 	 * return a list of bands that cross either one of submitted energy levels.
 	 *
 	 * @param energies	List of energy levels. Must not be empty.

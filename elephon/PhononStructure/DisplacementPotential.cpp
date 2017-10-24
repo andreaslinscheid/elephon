@@ -431,7 +431,7 @@ DisplacementPotential::write_dvscf_q(
 	};
 
 	IOMethods::WriteVASPRealSpaceData writer;
-	for ( int iq = 0; iq < qVect.size()/3 ; ++iq )
+	for ( int iq = 0; iq < nq ; ++iq )
 	{
 		for ( auto mu : modeIndices )
 		{

@@ -70,6 +70,10 @@ public:
 	std::vector<int> compute_reducible_cube_indices_surrounding_nongrid_point(
 			std::vector<double> const& v) const;
 
+	void find_closest_reducible_grid_points(
+			std::vector<double> const & nonGridPoints,
+			std::vector<int> & reducibleGridIndices) const;
+
 	void compute_grid_cubes_surrounding_nongrid_points(
 			std::vector<double> const & nonGridPoints,
 			std::vector<int> & nonGridPtToCubeMap,
