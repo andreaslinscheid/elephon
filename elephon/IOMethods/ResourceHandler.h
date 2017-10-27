@@ -22,6 +22,7 @@
 
 #include "IOMethods/ElectronicStructureCodeInterface.h"
 #include "PhononStructure/Phonon.h"
+#include "PhononStructure/PhononGrid.h"
 #include "PhononStructure/ForceConstantMatrix.h"
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/AtomDisplacement.h"
@@ -51,9 +52,13 @@ public:
 
 	ResourceHandler( std::shared_ptr<ElectronicStructureCodeInterface> dataLoader);
 
+	std::shared_ptr<ElectronicStructureCodeInterface> get_electronic_structure_interface();
+
 	IOMethods::InputOptions const & get_optns() const;
 
 	std::shared_ptr<const PhononStructure::Phonon> get_phonon_obj();
+
+	std::shared_ptr<const PhononStructure::PhononGrid> get_phonon_grid_obj();
 
 	std::shared_ptr<const PhononStructure::ForceConstantMatrix> get_forceConstant_obj();
 
@@ -69,8 +74,15 @@ public:
 
 	std::shared_ptr<const PhononStructure::DisplacementPotential> get_displacement_potential_obj();
 
+	std::shared_ptr<const LatticeStructure::RegularBareGrid> get_real_space_grid_unitcell_obj();
+
 	std::shared_ptr<const ElectronicStructure::Wavefunctions> get_wfct_obj();
 
+	/**
+	 * obtain a reciprocal mesh according to the input fft dimension.
+	 *
+	 * @return shared pointer, initialized with a regular bare grid describing the fft mesh.
+	 */
 	std::shared_ptr<const LatticeStructure::RegularBareGrid> get_interpol_reci_mesh_obj();
 
 	/**
@@ -95,6 +107,8 @@ private:
 
 	std::shared_ptr<PhononStructure::Phonon> ph_;
 
+	std::shared_ptr<PhononStructure::PhononGrid> phGrid_;
+
 	std::shared_ptr<PhononStructure::ForceConstantMatrix> fc_;
 
 	std::shared_ptr< LatticeStructure::UnitCell > primUC_;
@@ -109,6 +123,8 @@ private:
 
 	std::shared_ptr<PhononStructure::DisplacementPotential> displPot_;
 
+	std::shared_ptr<LatticeStructure::RegularBareGrid> rsGridUC_;
+
 	std::shared_ptr<ElectronicStructure::Wavefunctions> wfct_;
 
 	std::shared_ptr<LatticeStructure::RegularBareGrid> interpolKGrid_;
@@ -118,6 +134,8 @@ private:
 	std::shared_ptr<ElectronicStructure::TetrahedraIsosurface> tetraIso_;
 
 	void initialize_phonon_obj();
+
+	void initialize_phonon_grid_obj();
 
 	void initialize_forceConstant_obj();
 
@@ -132,6 +150,8 @@ private:
 	void initialize_dense_electronic_bands_obj();
 
 	void initialize_displacement_potential_obj();
+
+	void initialize_real_space_grid_unitcell_obj();
 
 	void initialize_wfct_obj();
 

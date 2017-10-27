@@ -20,6 +20,7 @@
 #define BOOST_TEST_MODULE ElectronicStructure
 #include <boost/test/unit_test.hpp>
 #include "IOMethods/VASPInterface.h"
+#include "IOMethods/ResourceHandler.h"
 #include "ElectronicStructure/BandStructureAnalysis.h"
 #include "fixtures/MockStartup.h"
 #include <vector>
@@ -234,8 +235,9 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_fcc_Al_vasp )
 			opts);
 
 	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+	auto resources = std::make_shared<elephon::IOMethods::ResourceHandler>(loader);
 
-	ElectronicStructure::BandStructureAnalysis::do_band_structure_analysis(loader);
+	ElectronicStructure::BandStructureAnalysis::do_band_structure_analysis(resources);
 
 	BOOST_REQUIRE(boost::filesystem::exists(massTens));
 

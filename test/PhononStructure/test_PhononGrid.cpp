@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 
 	std::cout << "Integrated phonon DOS : "<< nM << " with a number of modes of " << ph->get_num_modes() << std::endl;
 	BOOST_CHECK_CLOSE( nM , phgrid.get_nData_gpt() , 10);
-	//boost::filesystem::remove(phDosFilename);
+	boost::filesystem::remove(phDosFilename);
 
 	std::vector<double> phDos_wan;
 	phgrid.compute_DOS_wan(*ph, frequencies, phDos_wan);

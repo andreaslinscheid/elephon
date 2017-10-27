@@ -288,6 +288,42 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	auto m = std::max_element(energies_.begin(), energies_.end());
 	if ( *m == std::numeric_limits<double>::infinity() )
 		throw std::runtime_error("Problem parsing energy values from vasprun.xml - energies missing");
+
+	wfctFourierDim_.assign(3, 0);
+	chargeFourierDim_.assign(3, 0);
+	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.parameters") )
+	{
+	    if(val.first == "separator")
+	    {
+	        std::string temp = val.second.get_child("<xmlattr>.name").data();
+			if ( temp == "grids")
+			{
+				BOOST_FOREACH( ptree::value_type const& val2, val.second )
+				{
+					if ( val2.first == "i" )
+					{
+						std::string gridtag = val2.second.get_child("<xmlattr>.name").data();
+						if ( gridtag == "NGX" )
+							wfctFourierDim_[0] = std::stoi(val2.second.data());
+						if ( gridtag == "NGY" )
+							wfctFourierDim_[1] = std::stoi(val2.second.data());
+						if ( gridtag == "NGZ" )
+							wfctFourierDim_[2] = std::stoi(val2.second.data());
+						if ( gridtag == "NGXF" )
+							chargeFourierDim_[0] = std::stoi(val2.second.data());
+						if ( gridtag == "NGYF" )
+							chargeFourierDim_[1] = std::stoi(val2.second.data());
+						if ( gridtag == "NGZF" )
+							chargeFourierDim_[2] = std::stoi(val2.second.data());
+					}
+				}
+			}
+	    }
+	}
+	if ( *std::min_element(wfctFourierDim_.begin(), wfctFourierDim_.end()) <= 0 )
+		throw std::runtime_error("Problem parsing fourier grids for wavefunctions from vasprun.xml");
+	if ( *std::min_element(chargeFourierDim_.begin(), chargeFourierDim_.end()) <= 0 )
+		throw std::runtime_error("Problem parsing fourier grids for the charge from vasprun.xml");
 }
 
 std::vector<double> const &
@@ -336,6 +372,18 @@ std::vector<LatticeStructure::Atom> const &
 ReadVASPxmlFile::get_atoms_list() const
 {
 	return atoms_;
+}
+
+std::vector<int>
+ReadVASPxmlFile::get_wfct_fourier_dim() const
+{
+	return wfctFourierDim_;
+}
+
+std::vector<int>
+ReadVASPxmlFile::get_charge_fourier_dim() const
+{
+	return chargeFourierDim_;
 }
 
 } /* namespace IOMethods */

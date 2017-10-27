@@ -56,8 +56,6 @@ private:
 			std::vector<float>::const_iterator begData,
 			std::vector<float>::const_iterator begFreq,
 			std::vector<float>::const_iterator endFreq);
-
-	void set_freq_grid(std::vector<double> const & freqRange, int npts);
 };
 
 } /* namespace PhononStructure */

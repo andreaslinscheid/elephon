@@ -70,6 +70,9 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	nB_ = bandList.size();
 	nBp_ = bandpList.size();
 
+	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
+	Algorithms::LinearAlgebraInterface linalg;
+
 	std::cout << "\tComputing ele-phon coupling :" <<std::endl;
 
 	phononFrequencies_.reserve(nK_*nKp_*nM_);
@@ -123,13 +126,14 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 					auto ptr_wf1 = bufferWfct1.data() + ib*nr;
 					auto ptr_wf2 = bufferWfct2.data() + ibp*nr;
 
+					for (int ir = 0 ; ir < nr ; ++ir)
+						wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir];
+
 					for (int imu = 0 ; imu < nM_ ; ++imu)
 					{
 						auto ptr_dvscf = dvscfData.data() + imu*nr;
-						data_[this->tensor_layout(ik,ikp,ib,ibp,imu)] = std::complex<float>(0);
-						for (int ir = 0 ; ir < nr ; ++ir)
-							data_[this->tensor_layout(ik,ikp,ib,ibp,imu)] +=
-									ptr_wf1[ir]*ptr_dvscf[ir]*ptr_wf2[ir];
+						data_[this->tensor_layout(ik,ikp,ib,ibp,imu)] =
+								linalg.call_dotu(nr, &wfcProdBuffRealSpace[0], 1, &ptr_dvscf[0], 1);
 					}
 				}
 		}

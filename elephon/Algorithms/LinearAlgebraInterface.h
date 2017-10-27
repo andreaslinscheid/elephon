@@ -95,6 +95,16 @@ public:
 
 	//Here come the low level routines
 
+	std::complex<float> call_dotu(
+			int n,
+			std::complex<float> * dx, int incx,
+			std::complex<float> * dy, int incy) const;
+
+	std::complex<double> call_dotu(
+			int n,
+			std::complex<double> * dx, int incx,
+			std::complex<double> * dy, int incy) const;
+
 	int call_gemm(
 			char transA, char transB,
 	        int m, int n, int k, double alpha, double const * A, int lda,

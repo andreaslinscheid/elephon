@@ -31,6 +31,12 @@ ResourceHandler::ResourceHandler( std::shared_ptr<ElectronicStructureCodeInterfa
 
 }
 
+std::shared_ptr<ElectronicStructureCodeInterface>
+ResourceHandler::get_electronic_structure_interface()
+{
+	return dataLoader_;
+}
+
 IOMethods::InputOptions const &
 ResourceHandler::get_optns() const
 {
@@ -44,6 +50,15 @@ ResourceHandler::get_phonon_obj()
 		this->initialize_phonon_obj();
 	assert(ph_);
 	return ph_;
+}
+
+std::shared_ptr<const PhononStructure::PhononGrid>
+ResourceHandler::get_phonon_grid_obj()
+{
+	if ( ! phGrid_ )
+		this->initialize_phonon_grid_obj();
+	assert(phGrid_);
+	return phGrid_;
 }
 
 std::shared_ptr<const PhononStructure::ForceConstantMatrix>
@@ -109,6 +124,15 @@ ResourceHandler::get_displacement_potential_obj()
 	return displPot_;
 }
 
+std::shared_ptr<const LatticeStructure::RegularBareGrid>
+ResourceHandler::get_real_space_grid_unitcell_obj()
+{
+	if ( ! rsGridUC_ )
+		this->initialize_real_space_grid_unitcell_obj();
+	assert(rsGridUC_);
+	return rsGridUC_;
+}
+
 std::shared_ptr<const ElectronicStructure::Wavefunctions>
 ResourceHandler::get_wfct_obj()
 {
@@ -156,6 +180,23 @@ ResourceHandler::initialize_phonon_obj()
 		atomicMasses.push_back( it->get_mass() );
 	ph_ = std::make_shared<PhononStructure::Phonon>();
 	ph_->initialize(this->get_forceConstant_obj(), std::move(atomicMasses) );
+}
+
+void
+ResourceHandler::initialize_phonon_grid_obj()
+{
+	PhononStructure::PhononGrid phGrid;
+	auto fftgrid = this->get_interpol_reci_mesh_obj();
+	auto kgrid = this->get_electronic_bands_obj()->get_grid();
+	LatticeStructure::RegularSymmetricGrid symmetricGrid;
+	symmetricGrid.initialize( 	fftgrid->get_grid_dim(),
+								fftgrid->get_grid_prec(),
+								fftgrid->get_grid_shift(),
+								kgrid.get_symmetry(),
+								kgrid.get_lattice());
+	phGrid.initialize(0.0, *this->get_phonon_obj(), std::move(symmetricGrid));
+	phGrid_ = std::make_shared<PhononStructure::PhononGrid>(std::move(phGrid));
+
 }
 
 void
@@ -281,6 +322,22 @@ ResourceHandler::initialize_displacement_potential_obj()
 			std::move(rsGridSC),
 			primitiveCellPotential,
 			displPot);
+}
+
+void
+ResourceHandler::initialize_real_space_grid_unitcell_obj()
+{
+	auto root_dir = boost::filesystem::path( dataLoader_->get_optns().get_root_dir());
+	auto gPrec = dataLoader_->get_optns().get_gPrec();
+
+	auto unitcell = this->get_primitive_unitcell_obj();
+
+	rsGridUC_ = std::make_shared<LatticeStructure::RegularBareGrid>();
+	rsGridUC_->initialize(dataLoader_->read_charge_real_space_grid_dim(root_dir.string()),
+						  /* is reciprocal mesh */false,
+						  gPrec,
+						  {0.0, 0.0, 0.0},
+						  unitcell->get_lattice() );
 }
 
 void

@@ -52,6 +52,10 @@ public:
 	std::vector<double> const & get_lattice_matrix() const;
 
 	std::vector<LatticeStructure::Atom> const & get_atoms_list() const;
+
+	std::vector<int> get_wfct_fourier_dim() const;
+
+	std::vector<int> get_charge_fourier_dim() const;
 private:
 
 	int nBnd_ = 0;
@@ -69,6 +73,10 @@ private:
 	std::vector<double> latticeMat_;
 
 	std::vector<LatticeStructure::Atom> atoms_;
+
+	std::vector<int> wfctFourierDim_;
+
+	std::vector<int> chargeFourierDim_;
 };
 
 } /* namespace IOMethods */

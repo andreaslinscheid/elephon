@@ -75,6 +75,18 @@ void VASPInterface::set_up_run(
 	this->modify_incar_file( incarNew.string(), options );
 }
 
+void
+VASPInterface::copy_charge(
+		std::string root_directory,
+		std::string target_directory) const
+{
+	boost::filesystem::path root(root_directory);
+	boost::filesystem::path elphd(target_directory);
+	boost::filesystem::path chgcarPrev = root / "CHGCAR" ;
+	boost::filesystem::path chgcarNew = elphd /  "CHGCAR";
+	boost::filesystem::copy( chgcarPrev, chgcarNew );
+}
+
 std::map<std::string,std::string>
 VASPInterface::options_nscf_keep_wfctns_no_relax() const
 {
@@ -97,7 +109,6 @@ VASPInterface::options_scf_supercell_no_wfctns_no_relax() const
 	options["NSW"] = "0";
 	options["ICHARG"] = "1";
 	options["LVTOT"] = ".TRUE.";
-	options["PREC"] = "High";
 	options["LVHAR"] = ".FALSE.";
 	return options;
 }
@@ -169,6 +180,23 @@ VASPInterface::read_cell_paramters(
 	kpointSymmetry.set_reciprocal_space_sym();
 	kPointMesh.initialize( kDim, symPrec, shifts, kpointSymmetry, lattice, irreducibleKPoints );
 }
+
+std::vector<int>
+VASPInterface::read_wfct_real_space_grid_dim(std::string root_directory)
+{
+	boost::filesystem::path rootdir(root_directory);
+	xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
+	return xmlReader_.get_wfct_fourier_dim();
+}
+
+std::vector<int>
+VASPInterface::read_charge_real_space_grid_dim(std::string root_directory)
+{
+	boost::filesystem::path rootdir(root_directory);
+	xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
+	return xmlReader_.get_charge_fourier_dim();
+}
+
 
 void
 VASPInterface::read_unit_cell(
@@ -441,17 +469,26 @@ void VASPInterface::overwrite_POSCAR_file( std::string filename,
 	fileContent += "elephon created this file.\n";
 
 	//scale factor
-	fileContent += std::to_string(unitcell.get_alat())+"\n";
+	fileContent += " 1.0\n";
+
+	auto a1 = unitcell.get_lattice().get_lattice_vector(0);
+	for (auto & xi : a1 )
+		xi *= unitcell.get_alat();
+
+	auto a2 = unitcell.get_lattice().get_lattice_vector(1);
+	for (auto & xi : a2 )
+		xi *= unitcell.get_alat();
+
+	auto a3 = unitcell.get_lattice().get_lattice_vector(2);
+	for (auto & xi : a3 )
+		xi *= unitcell.get_alat();
 
 	//Lattice matrix
-	std::string a1str =
-			floatAccLine( unitcell.get_lattice().get_lattice_vector(0) , 6 );
+	std::string a1str =	floatAccLine( a1 , 12 );
 	fileContent += a1str+"\n";
-	std::string a2str =
-			floatAccLine( unitcell.get_lattice().get_lattice_vector(1) , 6 );
+	std::string a2str = floatAccLine( a2 , 12 );
 	fileContent += a2str+"\n";
-	std::string a3str =
-			floatAccLine( unitcell.get_lattice().get_lattice_vector(2) , 6 );
+	std::string a3str = floatAccLine( a3 , 12 );
 	fileContent += a3str+"\n";
 
 	//atom types - here it gets tricky, because we need to match the order in the POTCAR file
@@ -483,7 +520,7 @@ void VASPInterface::overwrite_POSCAR_file( std::string filename,
 				for ( auto & xi : pos )
 					xi = xi < 0 ? xi + 1.0 : xi;
 
-				fileContent += floatAccLine( pos , 6 )+" "+atomFile+"\n";
+				fileContent += floatAccLine( pos , 12 )+" "+atomFile+"\n";
 			}
 
 	std::ofstream file( filename.c_str() );
@@ -497,11 +534,7 @@ void VASPInterface::write_KPOINTS_file(std::string filename,
 	assert( monkhPackGrid.size() == 3 );
 	std::string fileContent = "elephon created this file\n"
 			"0\n";
-	bool gamma = true;
-	for ( auto ks : kptShift )
-		if ( gamma  and (std::abs(ks) < 1e-6 ))
-			gamma = false;
-	fileContent += gamma ? "Gamma Monkhorst-Pack\n" :  "Monkhorst-Pack\n";
+	fileContent += "Gamma Monkhorst-Pack\n"; // internally, the k point shift is always measured from zero.
 	fileContent += std::to_string(monkhPackGrid[0])+" "
 			+std::to_string(monkhPackGrid[1])+" "
 			+std::to_string(monkhPackGrid[2])+"\n";

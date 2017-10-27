@@ -95,6 +95,16 @@ public:
 			int startBnD, int endBnd,
 			std::vector<int> const & newDims,
 			std::vector<double> const & gridShift) const;
+
+	/**
+	 * Compute and write the electron DOS to file.
+	 *
+	 * @param filename		The name of the file. Will be overwritten if exists and
+	 * @param energySamples	Energies where the DOS will be evaluated.
+	 */
+	void write_tetrahedra_dos_file(
+			std::string const & filename,
+			std::vector<double> energySamples) const;
 };
 
 } /* namespace ElectronicStructure */

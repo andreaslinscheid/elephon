@@ -72,11 +72,11 @@ ReadVASPKpoints::read_kpoints(
 
 		if ( std::getline( file, line) )
 		{
-			gridShift_[0] += std::stoi(line,&sz);
+			gridShift_[0] += std::stod(line,&sz);
 			remainder = line.substr(sz);
-			gridShift_[1] += std::stoi(remainder,&sz);
+			gridShift_[1] += std::stod(remainder,&sz);
 			remainder = remainder.substr(sz);
-			gridShift_[2] += std::stoi(remainder,&sz);
+			gridShift_[2] += std::stod(remainder,&sz);
 		}
 	}
 	if ( (line.front() == 'a') or (line.front() == 'A') )

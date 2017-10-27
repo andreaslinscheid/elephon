@@ -193,6 +193,8 @@ public:
 	 */
 	T & write(int i, int ib);
 
+	std::vector<double> setup_frequency_grid(std::vector<double> range, int numpts) const;
+
 
 	void compute_DOS(
 			std::vector<double> const & energies,

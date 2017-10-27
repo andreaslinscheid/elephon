@@ -54,23 +54,10 @@ BOOST_AUTO_TEST_CASE( Build_Al_primitive_folderstructure_VASP )
 			content, options );
 
 	//Here we use the VASP interface to generate the folder structure
-	elephon::IOMethods::VASPInterface vi(options);
-	elephon::LatticeStructure::Symmetry sym;
-	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::LatticeModule lattice;
-	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
-	vi.read_cell_paramters(
-			rootDir.string(),
-			1e-6,
-			kgrid,
-			lattice,
-			atoms,
-			sym);
+	auto vi = std::make_shared<elephon::IOMethods::VASPInterface>(options);
+	auto res = std::make_shared<elephon::IOMethods::ResourceHandler>(vi);
 
-	elephon::LatticeStructure::UnitCell uc;
-	uc.initialize( atoms, lattice, sym);
-
-	builder.build( options, uc, vi );
+	builder.build( res );
 
 	BOOST_REQUIRE( builder.check_is_build( targetDir.string() )  ==  true );
 
@@ -87,6 +74,7 @@ BOOST_AUTO_TEST_CASE( Build_Al_primitive_folderstructure_VASP )
 	BOOST_REQUIRE( exists(targetDir / "displ_0" / "INCAR" )  == true );
 	BOOST_REQUIRE( exists(targetDir / "displ_0" / "POTCAR" )  == true );
 	BOOST_REQUIRE( exists(targetDir / "displ_1" )  == false );
+	remove_all(targetDir);
 }
 
 BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
@@ -111,27 +99,14 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 			content, options );
 
 	//Here we use the VASP interface to generate the folder structure
-	elephon::IOMethods::VASPInterface vi(options);
-	elephon::LatticeStructure::Symmetry sym;
-	std::vector<elephon::LatticeStructure::Atom> atoms;
-	elephon::LatticeStructure::LatticeModule lattice;
-	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
-	vi.read_cell_paramters(
-			rootDir.string(),
-			1e-6,
-			kgrid,
-			lattice,
-			atoms,
-			sym);
-
-	elephon::LatticeStructure::UnitCell uc;
-	uc.initialize( atoms, lattice, sym);
+	auto vi = std::make_shared<elephon::IOMethods::VASPInterface>(options);
+	auto res = std::make_shared<elephon::IOMethods::ResourceHandler>(vi);
 
 	remove_all(targetDir);
 
 	BOOST_CHECK( builder.check_is_build( targetDir.string() )  == false );
 
-	builder.build( options, uc, vi );
+	builder.build( res );
 
 	BOOST_REQUIRE( builder.check_is_build( targetDir.string() )  ==  true );
 
@@ -143,4 +118,5 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	BOOST_REQUIRE( exists(targetDir / "displ_2" )  == true );
 	BOOST_REQUIRE( exists(targetDir / "displ_3" )  == true );
 	BOOST_REQUIRE( exists(targetDir / "displ_4" )  == false );
+	remove_all(targetDir);
 }

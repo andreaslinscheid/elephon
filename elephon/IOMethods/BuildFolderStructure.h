@@ -20,12 +20,14 @@
 #ifndef ELEPHON_IOMETHODS_BUILDFOLDERSTRUCTURE_H_
 #define ELEPHON_IOMETHODS_BUILDFOLDERSTRUCTURE_H_
 
-#include <string>
-#include <boost/filesystem.hpp>
 #include "IOMethods/InputOptions.h"
 #include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "IOMethods/ResourceHandler.h"
 #include "LatticeStructure/AtomDisplacement.h"
 #include "LatticeStructure/UnitCell.h"
+#include <memory>
+#include <string>
+#include <boost/filesystem.hpp>
 
 namespace elephon
 {
@@ -35,6 +37,8 @@ namespace IOMethods
 class BuildFolderStructure
 {
 public:
+
+	void build(std::shared_ptr<ResourceHandler> resources) const;
 
 	void build(
 			IOMethods::InputOptions const & input,

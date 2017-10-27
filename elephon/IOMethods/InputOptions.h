@@ -39,15 +39,30 @@ class InputOptions : public InputBase<InputOptions>
 			std::string);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			lep,
+			"Determine if an electron-phonon calculation will be done.",
+			"false",
+			false,
+			bool);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			lp,
+			"Determine if a phonon calculation will be done.",
+			"false",
+			false,
+			bool);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			elphd,
-			"Where we build the directory structure.",
+			"Where we build the directory structure.\n"
+			"Any relative path is relative to root_dir. Only significant if lep=true",
 			"./el_ph/",
 			"./el_ph/",
 			std::string);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			eld,
-			"Where do read the 'dense' electron states and band structure from.\n"
+			"Where to read/set-up the 'dense' electron states and band structure from/to.\n"
 			"If its a relative path, is relative to 'elphd'\n"
 			"If empty, the band data from root_dir will used at its place,\n"
 			"i.e. no separate 'dense' electronic calculation will be done",
@@ -87,20 +102,32 @@ class InputOptions : public InputBase<InputOptions>
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			kdense,
-			"Monkhorst-Pack point grid sampling the Brillouin zone for the\n"
-			"calculation of the electronic structure for the overlap matrix elements.\n"
-			"A value <= 0 means automatic which means we scale up by a factor of 5 in each direction",
-			"( -1 , -1 , -1 )",
-			{-1 COMMA_SUBSTITUTION -1 COMMA_SUBSTITUTION -1},
+			"Monkhorst-Pack point grid sampling the Brillouin zone.\n"
+			"Can be a list of 3 non-negative integers which will be the grid devision.\n"
+			"Setting a dimension to 0 means no interpolation in this direction.\n"
+			"Can also be single positive integer, in which case it will be a scaling to the read-in grid.\n",
+			"4",
+			{ 4 },
 			std::vector<int>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			ksdense,
+			"Monkhorst-Pack point grid shift in the Brillouin zone.\n"
+			"Must be a list of 3 non-negative floating point values smaller 1.0 which"
+			"will be the shift grid relative to the grid spacing.\n"
+			"E.g. '0.5 0.0 0.0' will shift the grid by 0.5/kdense[0] in x direction if kdense determines the grid directly.\n",
+			"( 0.0 0.0 0.0 )",
+			{ 0.0 COMMA_SUBSTITUTION 0.0 COMMA_SUBSTITUTION 0.0 },
+			std::vector<double>);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
 			kscell,
 			"Monkhorst-Pack point grid sampling the Brillouin zone for the\n"
-			"supercell calculation. A value <= 0 means automatic which \n"
-			"means we scale down by a factor of 1/scell[i] in each direction",
-			"( -1 , -1 , -1 )",
-			{-1 COMMA_SUBSTITUTION -1 COMMA_SUBSTITUTION -1},
+			"supercell calculation. By 'default' it will be the original grid divided by the supercell dimension.\n"
+			"Can be a list of 3 non-negative integers which will be the grid devision.\n"
+			"Setting a dimension to 0 means 'default' in this direction.\n",
+			"( 0 , 0 , 0 )",
+			{0 COMMA_SUBSTITUTION 0 COMMA_SUBSTITUTION 0},
 			std::vector<int>);
 
 	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
@@ -233,6 +260,23 @@ class InputOptions : public InputBase<InputOptions>
 			"Number of sampling points for the phonon DOS and the a2F.\n"
 			"Note: For the a2F integration, higher numbers require the Fermi surface sampling to be increased or the data\n"
 			"can become noisy.\n",
+			"100",
+			100,
+			int);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			f_dos,
+			"If this string is set, the code will compute and print the electronic density of states to this file.\n"
+			"The reciprocal grid that will be used to compute it is determined by fftd and ffts.\n"
+			"The range will be determined by ewinbnd with a number of sampling points edosnpts.\n"
+			"The method is 'tetrahedra'",
+			"",
+			"",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			edosnpts,
+			"Number of sampling points for the electronic DOS.\n",
 			"100",
 			100,
 			int);

@@ -21,7 +21,7 @@
 #define ELEPHON_ELECTRONICSTRUCTURE_BANDSTRUCTUREANALYSIS_H_
 
 #include "ElectronicStructure/ElectronicBands.h"
-#include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "IOMethods/ResourceHandler.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -50,7 +50,7 @@ void write_mass_tensor_file(
 		std::vector<double> const & energyWindow,
 		int method);
 
-void do_band_structure_analysis(std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> loader);
+void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> loader);
 
 } /* namespace BandStructureAnalysis */
 } /* namespace ElectronicStructure */

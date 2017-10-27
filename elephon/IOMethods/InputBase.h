@@ -160,6 +160,7 @@ private:
  *	have a method that return the value from the Input object. 3) We also need to
  *	register the parsing of the corresponding variable so that it will be read from the input.
  *	4) Furthermore would we like to generate a manual entry from the description.
+ *	5) The directly derived class should be allowed to process, i.e. to change input variables.
  *	This require non-locality. Thus, an auxiliary void pointer is included that is initialized
  *	with a function call_##quantityName##_processing(). Inside this function (which returns the Nullptr)
  *	we add the manual entry and register the parsing of the variable.
@@ -191,6 +192,15 @@ public:                                                                         
 									"before calling parse_variables()");					\
 		};																					\
 		return _##quantityName;                                                         	\
+	};                                                                                  	\
+public:                                                                                 	\
+	void set_##quantityName(typeQ val) {          		                                  	\
+		if ( not this->isInit_ )															\
+		{																					\
+			throw std::logic_error("Calling set_"#quantityName"()"							\
+									"before calling parse_variables()");					\
+		};																					\
+		_##quantityName = val;                                                         		\
 	};                                                                                  	\
 private:																					\
 	typeQ _##quantityName;																	\
@@ -233,6 +243,15 @@ public:                                                                         
 									"before calling parse_variables()",1);					\
 		};																					\
 		return _##quantityName;                                                         	\
+	};                                                                                  	\
+public:                                                                                 	\
+	void set_##quantityName(typeQ val) {             		                               	\
+		if ( not this->isInit_ )															\
+		{																					\
+			throw std::logic_error("Calling set_"#quantityName"()"							\
+									"before calling parse_variables()");					\
+		};																					\
+		_##quantityName = val;                                                         		\
 	};                                                                                  	\
 private:																					\
 	typeQ _##quantityName;																	\

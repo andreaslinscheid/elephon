@@ -316,6 +316,33 @@ DataRegularGrid<T>::write(int i, int ib)
 }
 
 template<typename T>
+std::vector<double>
+DataRegularGrid<T>::setup_frequency_grid(std::vector<double> range, int numpts) const
+{
+	assert(numpts > 1);
+	if ( range.size() == 0 )
+	{
+		auto r = this->get_min_max();
+		range.push_back( r.first );
+		range.push_back( r.second );
+	}
+	if ( range.size() == 1 )
+	{
+		double max = range.front();
+		range.clear();
+		range.push_back( 0.0 );
+		range.push_back( max );
+	}
+	if ( (range.size() > 2) or (range[0] >= range[1]) )
+		throw std::runtime_error("DataRegularGrid setup_frequency_grid: range empty or incorrect");
+
+	std::vector<double> frequencies(numpts);
+	for ( int iw = 0 ; iw < numpts ; ++iw )
+		frequencies[iw] = range[0] + (range[1]-range[0])*static_cast<double>(iw)/(numpts-1);
+	return frequencies;
+}
+
+template<typename T>
 void
 DataRegularGrid<T>::compute_DOS(
 		std::vector<double> const & energies,

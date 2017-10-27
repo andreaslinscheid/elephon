@@ -276,31 +276,43 @@ void write_mass_tensor_file(
 	file.close();
 }
 
-void do_band_structure_analysis(std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> loader)
+void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> resource)
 {
-	auto const & opt = loader->get_optns();
+	auto const & opt = resource->get_optns();
 	// Find the locations of extrema and print the mass tensor if desired ...
-	if ( not opt.get_f_mtens().empty() )
+	if ( not opt.get_f_mtens().empty()
+		or not opt.get_f_dos().empty() )
 	{
-		ElectronicStructure::ElectronicBands bands;
-		loader->read_band_structure( opt.get_root_dir(), bands);
+		auto bands = resource->get_electronic_bands_obj();
 
-		std::vector<double> eneWin = loader->get_optns().get_ewinbnd();
+		std::vector<double> eneWin = opt.get_ewinbnd();
 		if ( eneWin.empty() )
 		{
-			auto mm = bands.get_min_max();
+			auto mm = bands->get_min_max();
 			eneWin = std::vector<double>{mm.first, mm.second};
 		}
-		auto bandIndicesInWindow = bands.get_bands_crossing_energy_window( eneWin );
+		auto bandIndicesInWindow = bands->get_bands_crossing_energy_window( eneWin );
 		auto mm = std::minmax_element(bandIndicesInWindow.begin(), bandIndicesInWindow.end() );
-		auto subsetBands = bands.fft_interpolate_part(*(mm.first), *(mm.second), opt.get_fftd(), opt.get_ffts());
+		int beginBand = *(mm.first);
+		int endBand = *(mm.second) + 1;
+		auto subsetBands = bands->fft_interpolate_part(beginBand, endBand, opt.get_fftd(), opt.get_ffts());
 
-		int dmeth = 0;
-		if ( opt.get_dmeth().compare("fft") == 0 )
-			dmeth = 1;
-		else if ( opt.get_dmeth().compare("pol") != 0 )
-			throw std::runtime_error("unrecognized derivative method");
-		write_mass_tensor_file(opt.get_f_mtens(), subsetBands, *(mm.first), eneWin, dmeth);
+		if (not opt.get_f_mtens().empty())
+		{
+			int dmeth = 0;
+			if ( opt.get_dmeth().compare("fft") == 0 )
+				dmeth = 1;
+			else if ( opt.get_dmeth().compare("pol") != 0 )
+				throw std::runtime_error("unrecognized derivative method");
+			write_mass_tensor_file(opt.get_f_mtens(), subsetBands, *(mm.first), eneWin, dmeth);
+		}
+
+		if ( not opt.get_f_dos().empty() )
+		{
+			auto energySamples = subsetBands.setup_frequency_grid(eneWin, opt.get_edosnpts());
+			subsetBands.write_tetrahedra_dos_file(opt.get_f_dos(), energySamples);
+			bands->write_tetrahedra_dos_file(opt.get_f_dos()+"_2", energySamples);
+		}
 	}
 }
 

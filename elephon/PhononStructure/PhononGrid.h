@@ -39,9 +39,13 @@ public:
 	int num_modes() const;
 
 	void write_phonon_dos_file(std::string const & filename,
-			std::vector<double> const & frequencies,
+			std::vector<double> frequencies = std::vector<double>(),
 			std::shared_ptr<const LatticeStructure::TetrahedraGrid> tetra = nullptr,
 			std::shared_ptr<const Phonon> ph = nullptr) const;
+
+	void write_phonon_tetrahedra_dos_file(
+			std::string const & filename,
+			std::vector<double> frequencies) const;
 
 private:
 };

@@ -53,6 +53,10 @@ public:
 			LatticeStructure::UnitCell const & unitcell,
 			std::map<std::string,std::string> const& options) const;
 
+	void copy_charge(
+			std::string root_directory,
+			std::string target_directory) const;
+
 	std::map<std::string,std::string>
 			options_nscf_keep_wfctns_no_relax() const;
 
@@ -80,6 +84,12 @@ public:
 			LatticeStructure::LatticeModule & lattice,
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry);
+
+	std::vector<int>
+			read_wfct_real_space_grid_dim(std::string root_directory);
+
+	std::vector<int>
+			read_charge_real_space_grid_dim(std::string root_directory);
 
 	void read_unit_cell(
 			std::string root_directory,

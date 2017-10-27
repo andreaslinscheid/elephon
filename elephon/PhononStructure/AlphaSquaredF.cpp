@@ -42,7 +42,15 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 	auto ph = resourceHandler->get_phonon_obj();
 	int nModes = ph->get_num_modes();
 
-	this->set_freq_grid( resourceHandler->get_optns().get_phrange(), resourceHandler->get_optns().get_phnpts());
+	// set the frequency grid
+	auto phGrid = resourceHandler->get_phonon_grid_obj();
+	auto frequencies =  phGrid->setup_frequency_grid(
+			resourceHandler->get_optns().get_phrange(),
+			resourceHandler->get_optns().get_phnpts());
+	freqMin_ = frequencies.front();
+	freqMax_ = frequencies.back();
+	freqNPts_ = resourceHandler->get_optns().get_phnpts();
+	a2F_.assign(freqNPts_ , 0.0);
 
 	auto dvscf = resourceHandler->get_displacement_potential_obj();
 	auto interpolationKMesh = resourceHandler->get_interpol_reci_mesh_obj();
@@ -70,35 +78,33 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 
 			for (int ibndP = 0 ; ibndP < tetraIso->get_nBnd(); ++ibndP )
 			{
-				std::cout << "running bands "<< ibnd << " "  << ibndP << std::endl;
 				std::vector<double> isoKP, isoWeightsP;
 				tetraIso->get_reducible_iso_vector_integration_weights(iE, ibndP, isoKP, isoWeightsP);
 				if ( isoKP.empty() )
 					continue;
 
-				for ( int ikIso = 0 ; ikIso < isoWeights.size(); ++ikIso )
-				{
-					// compute the electron phonon matrix elements between these k points
-					ElectronPhononCoupling gkkp;
-					gkkp.generate_gkkp_and_phonon(isoK, isoKP, {ibnd}, {ibndP}, ph, dvscf, wfcts);
+				std::cout << "\trunning bands "<< ibnd << " "  << ibndP << std::endl;
 
-					// integrate the function on each constant energy surfaces.
-					for ( int ikf1 = 0 ; ikf1 < isoWeights.size() ; ++ikf1)
-						for ( int ikf2 = 0 ; ikf2 < isoWeightsP.size() ; ++ikf2)
-						{
-							std::vector<std::complex<float>>::iterator gkkpitB, gkkpitE;
-							std::vector<float>::iterator phitB, phitE;
-							gkkp.get_local_matrix_range(ikf1, ikf2, gkkpitB, gkkpitE, phitB, phitE);
-							assert( (std::distance(gkkpitB, gkkpitE) == nModes)
-									&& (std::distance(phitB, phitE) == nModes));
+				// compute the electron phonon matrix elements between these k points
+				ElectronPhononCoupling gkkp;
+				gkkp.generate_gkkp_and_phonon(isoK, isoKP, {ibnd}, {ibndP}, ph, dvscf, wfcts);
 
-							std::vector<float> gkkpModSqr(nModes);
-							for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu )
-								gkkpModSqr[inu] = isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB));
+				// integrate the function on each constant energy surfaces.
+				for ( int ikf1 = 0 ; ikf1 < isoWeights.size() ; ++ikf1)
+					for ( int ikf2 = 0 ; ikf2 < isoWeightsP.size() ; ++ikf2)
+					{
+						std::vector<std::complex<float>>::iterator gkkpitB, gkkpitE;
+						std::vector<float>::iterator phitB, phitE;
+						gkkp.get_local_matrix_range(ikf1, ikf2, gkkpitB, gkkpitE, phitB, phitE);
+						assert( (std::distance(gkkpitB, gkkpitE) == nModes)
+								&& (std::distance(phitB, phitE) == nModes));
 
-							this->map_freq_grid_slot(gkkpModSqr.begin(), phitB, phitE);
-						}
-				}
+						std::vector<float> gkkpModSqr(nModes);
+						for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu )
+							gkkpModSqr[inu] = isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB));
+
+						this->map_freq_grid_slot(gkkpModSqr.begin(), phitB, phitE);
+					}
 			}
 		}
 	}
@@ -141,28 +147,6 @@ AlphaSquaredF::write_a2F_file(std::string const & filename) const
 		double w = freqMin_ + (iw + 0.5)*(freqMax_ - freqMin_)/freqNPts_;
 		file << w << '\t' << a2F_[iw] << '\n';
 	}
-}
-
-void
-AlphaSquaredF::set_freq_grid(std::vector<double> const & freqRange, int npts)
-{
-	if ( freqRange.empty() )
-	{
-		// determine the phonon range automatically
-		throw std::runtime_error("Automatic determination of the phonon range not implemented");
-	}
-	else if (freqRange.size() == 1)
-	{
-		freqMin_ = 0;
-		freqMax_ = freqRange.front();
-	}
-	else if (freqRange.size() == 2)
-	{
-		freqMin_ = freqRange[0];
-		freqMax_ = freqRange[1];
-	}
-	freqNPts_ = npts;
-	a2F_.resize(freqNPts_);
 }
 
 } /* namespace PhononStructure */

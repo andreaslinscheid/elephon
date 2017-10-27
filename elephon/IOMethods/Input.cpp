@@ -22,6 +22,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <boost/filesystem.hpp>
 
 namespace elephon
 {
@@ -41,7 +42,7 @@ Input::Input( int argc, char* argv[] )
 	std::vector<std::string> const unusedKeys = inputFile_.get_list_unread_input_parameters();;
 	for ( auto & key : unusedKeys )
 		std::cout << "WARNING: Key '"+ key +"' defined in the input file has not been\n"
-				" matched to a variable used by the code. Typo?" ;
+				" matched to a variable used by the code. Typo?" <<std::endl;
 
 	auto scd = opts_.get_scell();
 	if ( scd.size() != 3 )
@@ -80,6 +81,51 @@ Input::Input( int argc, char* argv[] )
 	{
 		std::cout << "Problem on input: phnpts must be >= 1" << std::endl;
 		std::exit(0);
+	}
+
+	// convert file paths to absolute ones
+	boost::filesystem::path rootdir;
+	if ( opts_.get_root_dir().empty() )
+		rootdir = boost::filesystem::path(boost::filesystem::current_path());
+	else
+		rootdir = boost::filesystem::path(opts_.get_root_dir());
+	opts_.set_root_dir(rootdir.string());
+
+	auto check_is_relative_path_unix = [] (std::string const & path) {
+		if ( not path.empty() )
+			return (path.front() != '/');
+		return true; // define: empty is a relative path
+	};
+
+	boost::filesystem::path elphd_p(opts_.get_elphd());
+	if ( check_is_relative_path_unix(opts_.get_elphd()) )
+		elphd_p = rootdir / opts_.get_elphd();
+	opts_.set_elphd(elphd_p.string());
+
+	// in case this flag is empty, we do not consider an independent dense
+	// electronic structure calculation
+	if ( not opts_.get_eld().empty() )
+	{
+		boost::filesystem::path eld_p(opts_.get_eld());
+		if ( check_is_relative_path_unix(opts_.get_eld()) )
+			eld_p = elphd_p / opts_.get_eld();
+		opts_.set_eld(eld_p.string());
+	}
+
+	if ( not opts_.get_f_a2F().empty() )
+	{
+		boost::filesystem::path a2F_p(opts_.get_f_a2F());
+		if ( check_is_relative_path_unix(opts_.get_f_a2F()) )
+			a2F_p = elphd_p / opts_.get_f_a2F();
+		opts_.set_f_a2F(a2F_p.string());
+	}
+
+	if ( not opts_.get_f_phdos().empty() )
+	{
+		boost::filesystem::path phdos_p(opts_.get_f_phdos());
+		if ( check_is_relative_path_unix(opts_.get_f_phdos()) )
+			phdos_p = elphd_p / opts_.get_f_phdos();
+		opts_.set_f_phdos(phdos_p.string());
 	}
 }
 

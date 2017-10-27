@@ -20,6 +20,7 @@
 #include "PhononStructure/PhononGrid.h"
 #include <chrono>
 #include <fstream>
+#include <memory>
 
 namespace elephon
 {
@@ -35,7 +36,7 @@ PhononGrid::num_modes() const
 void
 PhononGrid::write_phonon_dos_file(
 		std::string const & filename,
-		std::vector<double> const & frequencies,
+		std::vector<double> frequencies,
 		std::shared_ptr<const LatticeStructure::TetrahedraGrid> tetra,
 		std::shared_ptr<const Phonon> ph) const
 {
@@ -60,6 +61,16 @@ PhononGrid::write_phonon_dos_file(
 	for ( int iw = 0 ; iw < frequencies.size() ; ++iw)
 		file << frequencies[iw] << '\t' << phdos[iw] << '\n';
 	file.close();
+}
+
+void
+PhononGrid::write_phonon_tetrahedra_dos_file(
+		std::string const & filename,
+		std::vector<double> frequencies) const
+{
+	auto tetra = std::make_shared<LatticeStructure::TetrahedraGrid>();
+	tetra->initialize( std::make_shared<LatticeStructure::RegularSymmetricGrid>(this->get_grid()));
+	this->write_phonon_dos_file(filename, frequencies, tetra);
 }
 
 } /* namespace PhononStructure */

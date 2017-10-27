@@ -35,6 +35,32 @@ LinearAlgebraInterface::clear_buffer()
 	rWork_.clear();
 }
 
+std::complex<float>
+LinearAlgebraInterface::call_dotu(
+		int n,
+		std::complex<float> * dx, int incx,
+		std::complex<float> * dy, int incy) const
+{
+	std::complex<float> result;
+	cblas_cdotu_sub(n, reinterpret_cast<const void*>(dx), incx,
+					   reinterpret_cast<const void*>(dy), incy,
+					   reinterpret_cast<void*>(&result));
+	return result;
+}
+
+std::complex<double>
+LinearAlgebraInterface::call_dotu(
+		int n,
+		std::complex<double> * dx, int incx,
+		std::complex<double> * dy, int incy) const
+{
+	std::complex<double> result;
+	cblas_zdotu_sub(n, reinterpret_cast<const void*>(dx), incx,
+					   reinterpret_cast<const void*>(dy), incy,
+					   reinterpret_cast<void*>(&result));
+	return result;
+}
+
 int
 LinearAlgebraInterface::call_gemm(
 		char transA, char transB,

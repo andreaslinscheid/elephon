@@ -22,6 +22,8 @@
 #include "Algorithms/LinearAlgebraInterface.h"
 #include <stdexcept>
 #include <set>
+#include <chrono>
+#include <fstream>
 
 namespace elephon
 {
@@ -105,13 +107,38 @@ ElectronicBands::fft_interpolate_part(
 				newGrid.view_bare_grid(),
 				bndData);
 
+		int idSymIndex = newGrid.get_symmetry().get_identity_index();
 		for ( int ik = 0 ; ik < newGrid.get_np_irred(); ++ik)
-			allData[ik*(endBnd-startBnD)+(ib-startBnD)] = bndData[ik];
+			allData[ik*(endBnd-startBnD)+(ib-startBnD)] =
+					bndData[newGrid.get_maps_irreducible_to_reducible()[ik][idSymIndex]];
 	}
 
 	ElectronicBands newBands;
 	newBands.initialize((endBnd-startBnD), 0.0, std::move(allData), std::move(newGrid));
 	return newBands;
+}
+
+void
+ElectronicBands::write_tetrahedra_dos_file(
+		std::string const & filename,
+		std::vector<double> frequencies) const
+{
+	auto tetra = std::make_shared<LatticeStructure::TetrahedraGrid>();
+	tetra->initialize( std::make_shared<LatticeStructure::RegularSymmetricGrid>(this->get_grid()));
+
+	std::ofstream file( filename.c_str() );
+	if ( not file.good() )
+		throw std::runtime_error(std::string("Problem opening file ")+filename+" for writing the phonon DOS data");
+
+	std::vector<double> dos;
+	this->compute_DOS_tetra(tetra, frequencies, dos);
+
+	auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	file << "# phonon DOS in units of 1/THz with frequency in units of THz. Date is " << std::ctime(&now);
+
+	for ( int iw = 0 ; iw < frequencies.size() ; ++iw)
+		file << frequencies[iw] << '\t' << dos[iw] << '\n';
+	file.close();
 }
 
 } /* namespace ElectronicStructure */

@@ -27,6 +27,7 @@
 #include <vector>
 #include <string>
 #include <complex>
+#include <memory>
 
 namespace elephon
 {
@@ -52,6 +53,10 @@ public:
 			std::vector<double> const & kptShift,
 			LatticeStructure::UnitCell const & unitcell,
 			std::map<std::string,std::string> const& options) const = 0;
+
+	virtual void copy_charge(
+			std::string root_directory,
+			std::string target_directory)  const = 0;
 
 	virtual std::map<std::string,std::string>
 			options_nscf_keep_wfctns_no_relax() const = 0;
@@ -80,6 +85,12 @@ public:
 			LatticeStructure::LatticeModule & lattice,
 			std::vector<LatticeStructure::Atom> & atoms,
 			LatticeStructure::Symmetry & symmetry) = 0;
+
+	virtual std::vector<int>
+			read_wfct_real_space_grid_dim(std::string root_directory) = 0;
+
+	virtual std::vector<int>
+			read_charge_real_space_grid_dim(std::string root_directory) = 0;
 
 	virtual void read_unit_cell(
 			std::string root_directory,
