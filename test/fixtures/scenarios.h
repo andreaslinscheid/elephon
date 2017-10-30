@@ -40,16 +40,17 @@ std::shared_ptr<IOMethods::ResourceHandler>
 load_Al_fcc_primitive_vasp_sc2x2x2()
 {
 	test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "phonon_run" ;
-	auto phononDir = rootDir / "phonon";
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
+	auto phononDir = rootDir / "el_ph";
 	std::string content = std::string()+
 			"scell=2 2 2\n"
+			"lep = true\n"
+			"lp = true\n"
 			"root_dir="+rootDir.string()+"\n"
 			"elphd="+phononDir.string()+"\n"
-			"eld="+ (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive").string()+"\n"
-			"f_a2F="+ (ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "output" / "a2F.dat").string()+"\n"
+			"eld="+ (phononDir / "electrons").string()+"\n"
+			"f_a2F="+ (phononDir / "a2F.dat").string()+"\n"
 			"phrange = 10\n"
-			"numFS = 10"
 			"";
 	test::fixtures::DataLoader dl;
 	return dl.create_resource_handler( content );

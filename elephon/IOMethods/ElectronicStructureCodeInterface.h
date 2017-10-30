@@ -46,6 +46,9 @@ public:
 
 	virtual ~ElectronicStructureCodeInterface();
 
+	virtual void check_prep_run(
+			std::string root_directory ) const = 0;
+
 	virtual void set_up_run(
 			std::string root_directory,
 			std::string target_directory,
@@ -109,6 +112,10 @@ public:
 	virtual void read_band_structure(
 			std::string root_directory,
 			ElectronicStructure::ElectronicBands & bands) = 0;
+
+	virtual void read_reciprocal_symmetric_grid(
+			std::string root_directory,
+			LatticeStructure::RegularSymmetricGrid & kgrid) = 0;
 
 	//The returned forces must be in the same order as the atoms in the unperturbed supercell!
 	virtual void read_forces(

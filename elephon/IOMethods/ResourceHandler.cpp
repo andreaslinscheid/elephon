@@ -268,8 +268,21 @@ void
 ResourceHandler::initialize_dense_electronic_bands_obj()
 {
 	auto elDir = dataLoader_->get_optns().get_eld();
+
+	// if the path 'eld' does not exist, we gracefully try
+	// the location of the root dir. Only neither one works, we bail.
+	if ( not elDir.empty() )
+	{
+		boost::filesystem::path eldense_path(elDir);
+		if ( not boost::filesystem::exists(eldense_path) )
+			elDir.clear();
+	}
+
 	if ( elDir.empty() )
-		bandsD_ = bands_;
+	{
+		auto normalBands = this->get_electronic_bands_obj();
+		bandsD_ = std::make_shared<ElectronicStructure::ElectronicBands>(std::move(*normalBands));
+	}
 	else
 	{
 		ElectronicStructure::ElectronicBands bands;
@@ -345,9 +358,22 @@ ResourceHandler::initialize_wfct_obj()
 {
 	ElectronicStructure::Wavefunctions wfcts;
 	std::string wfctdir = dataLoader_->get_optns().get_eld();
+
+	// if the path 'eld' does not exist, we gracefully try
+	// the location of the root dir. Only neither one works, we bail.
+	if ( not wfctdir.empty() )
+	{
+		boost::filesystem::path wfct_path(wfctdir);
+		if ( not boost::filesystem::exists(wfct_path) )
+			wfctdir.clear();
+	}
+
 	if ( wfctdir.empty() )
 		wfctdir = dataLoader_->get_optns().get_root_dir();
-	wfcts.initialize(wfctdir, dataLoader_ );
+
+	auto denseBands = this->get_dense_electronic_bands_obj();
+
+	wfcts.initialize(wfctdir, denseBands->get_grid(), denseBands->get_nBnd(), dataLoader_ );
 	wfct_ = std::make_shared<ElectronicStructure::Wavefunctions>(std::move(wfcts));
 }
 

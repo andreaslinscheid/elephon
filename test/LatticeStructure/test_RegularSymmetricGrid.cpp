@@ -22,9 +22,101 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/VASPInterface.h"
+#include "IOMethods/ResourceHandler.h"
 #include <LatticeStructure/RegularSymmetricGrid.h>
 #include "fixtures/MockStartup.h"
 #include <iostream>
+
+BOOST_AUTO_TEST_CASE( FeSe_vasp_k_points_file_reference )
+{
+	elephon::test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "FeSe" / "vasp" / "wfct" /"symmetric";
+
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+
+	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
+	loader->read_reciprocal_symmetric_grid(testd.string(), kgrid);
+
+	// taken from the VASP symmetric output
+	std::vector<double> known_irreducible_points{
+		 0.125000, 0.125000, 0.250000 ,
+		 0.375000, 0.125000, 0.250000 ,
+		 0.375000, 0.375000, 0.250000 };
+	std::vector<int> weights{ 8, 16, 8 };
+
+	// taken from the VASP output with symmetry switched off
+	std::vector<double> known_reducible_points{
+		 0.125000, 0.125000, 0.250000  ,
+		 0.375000, 0.125000, 0.250000 ,
+		-0.375000, 0.125000, 0.250000 ,
+		-0.125000, 0.125000, 0.250000 ,
+		 0.125000, 0.375000, 0.250000 ,
+		 0.375000, 0.375000, 0.250000 ,
+		-0.375000, 0.375000, 0.250000 ,
+		-0.125000, 0.375000, 0.250000 ,
+		 0.125000,-0.375000, 0.250000 ,
+		 0.375000,-0.375000, 0.250000 ,
+		-0.375000,-0.375000, 0.250000 ,
+		-0.125000,-0.375000, 0.250000 ,
+		 0.125000,-0.125000, 0.250000 ,
+		 0.375000,-0.125000, 0.250000 ,
+		-0.375000,-0.125000, 0.250000 ,
+		-0.125000,-0.125000, 0.250000 ,
+		 0.125000, 0.125000,-0.250000 ,
+		 0.375000, 0.125000,-0.250000 ,
+		-0.375000, 0.125000,-0.250000 ,
+		-0.125000, 0.125000,-0.250000 ,
+		 0.125000, 0.375000,-0.250000 ,
+		 0.375000, 0.375000,-0.250000 ,
+		-0.375000, 0.375000,-0.250000 ,
+		-0.125000, 0.375000,-0.250000 ,
+		 0.125000,-0.375000,-0.250000 ,
+		 0.375000,-0.375000,-0.250000 ,
+		-0.375000,-0.375000,-0.250000 ,
+		-0.125000,-0.375000,-0.250000 ,
+		 0.125000,-0.125000,-0.250000 ,
+		 0.375000,-0.125000,-0.250000 ,
+		-0.375000,-0.125000,-0.250000 ,
+		-0.125000,-0.125000,-0.250000  };
+
+	BOOST_REQUIRE_EQUAL(kgrid.get_np_irred(), known_irreducible_points.size()/3 );
+
+	BOOST_REQUIRE_EQUAL(kgrid.get_np_red(), known_reducible_points.size()/3 );
+
+	for ( int ikirred = 0; ikirred  < kgrid.get_np_irred() ; ++ ikirred )
+	{
+		auto irtor = kgrid.get_maps_irreducible_to_reducible()[ikirred];
+		BOOST_REQUIRE_EQUAL(irtor.size(), weights[ikirred]);
+		auto symirtor = kgrid.get_maps_sym_irred_to_reducible()[ikirred];
+
+		// confirm the irreducible k point coordinates
+		int idSymOpIndex = kgrid.get_symmetry().get_identity_index();
+		auto irredvec = kgrid.get_vector_direct(irtor[idSymOpIndex]);
+		std::vector<double> ref_irredvec( &known_irreducible_points[ikirred*3],
+										  &known_irreducible_points[ikirred*3]+3);
+		for ( int i = 0; i < 3; ++i)
+			BOOST_CHECK_SMALL(irredvec[i]-ref_irredvec[i], kgrid.get_grid_prec());
+
+		// confirm the reducible k point connection
+		for ( int istar = 0 ; istar < symirtor.size() ; ++istar)
+		{
+			int ikred = irtor[istar];
+			auto redvec = kgrid.get_vector_direct(ikred);
+			std::vector<double> ref_redvec( &known_reducible_points[ikred*3],
+										    &known_reducible_points[ikred*3]+3);
+			for ( int i = 0; i < 3; ++i)
+				BOOST_CHECK_SMALL(redvec[i]-ref_redvec[i], kgrid.get_grid_prec());
+		}
+	}
+}
 
 BOOST_AUTO_TEST_CASE( Al_fcc_UnitCell )
 {
@@ -188,7 +280,6 @@ BOOST_AUTO_TEST_CASE( FeSe_UnitCell )
 	}
 }
 
-
 BOOST_AUTO_TEST_CASE( MgB2_k_points )
 {
 	elephon::test::fixtures::MockStartup ms;
@@ -267,3 +358,4 @@ BOOST_AUTO_TEST_CASE( MgB2_k_points )
 		}
 	}
 }
+

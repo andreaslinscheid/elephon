@@ -49,8 +49,8 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 
 	//First we make sure that the k point that irreducible k point have the same data in the reducible grid
 	//The analogy is put for this hand crafted input data by hand!
-	std::vector<int> irredNoSym = {0,1,2,6,7,12};
-	assert( wfcSymRead.get_num_kpts() == 6 );
+	std::vector<int> irredNoSym = {0,1,5};
+	assert( wfcSymRead.get_num_kpts() == 3 );
 	BOOST_REQUIRE( wfcSymRead.get_num_bands() == wfcNoSymRead.get_num_bands());
 	double diffIrreducibeWedge = 0;
 	for ( int ik = 0 ; ik < wfcSymRead.get_num_kpts(); ++ik)
@@ -91,9 +91,9 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 
 	elephon::LatticeStructure::RegularSymmetricGrid gridNoSym;
 	gridNoSym.initialize(
-			std::vector<int>({5,5,2}),
+			std::vector<int>({4,4,2}),
 			1e-6,
-			std::vector<double>({0.0,0.0,0.5}),
+			std::vector<double>({0.5,0.5,0.5}),
 			identity,
 			bands_sym.get_grid().get_lattice() );
 
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 			diff += 1.0/wfcSymRead.get_num_bands()/bands_sym.get_grid().get_np_red()*
 					std::abs( dataSym[ i*bands_sym.get_nBnd()+j ]
 							- dataNoSym[ i*bands_sym.get_nBnd()+j ] );
-	BOOST_REQUIRE( diff < 1e-6 );
+	BOOST_CHECK_SMALL( diff, 2e-2 );
 }
 
 /** Test the generation of data on a reducible grid

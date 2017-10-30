@@ -22,7 +22,8 @@
 
 #include "ElectronicStructure/Wavefunctions.h"
 #include "ElectronicStructure/GradientFFTReciprocalGrid.h"
-#include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "IOMethods/ResourceHandler.h"
+#include "ElectronicStructure/TetrahedraIsosurface.h"
 #include <vector>
 #include <string>
 #include <memory>
@@ -38,12 +39,11 @@ public:
 
 	void compute_ldos(
 			std::vector<double> energies,
-			Wavefunctions const& wfcts,
+			std::shared_ptr<const Wavefunctions> wfcts,
 			std::shared_ptr<const LatticeStructure::UnitCell> unitcell,
 			int nkpointsPerSurface,
-			std::vector<int> realSpaceRes,
-			ElectronicBands const & bands,
-			LatticeStructure::RegularBareGrid const & interpolGrid,
+			std::shared_ptr<const LatticeStructure::RegularBareGrid> realSpaceRes,
+			std::shared_ptr<const TetrahedraIsosurface> tetraIso,
 			bool symmetrize);
 
 	/**
@@ -58,12 +58,12 @@ public:
 	 */
 	void compute_ldos(
 			std::vector<double> const & energies,
-			std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> loader );
+			std::shared_ptr<IOMethods::ResourceHandler> loader );
 
 	void write_file( std::string const & filename, bool binary = false) const;
 private:
 
-	std::vector<int> rsDims_;
+	std::shared_ptr<const LatticeStructure::RegularBareGrid> rsDims_;
 
 	std::vector<double> isoEnergies_;
 

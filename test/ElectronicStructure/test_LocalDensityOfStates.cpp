@@ -22,6 +22,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/VASPInterface.h"
+#include "IOMethods/ResourceHandler.h"
 #include "ElectronicStructure/LocalDensityOfStates.h"
 #include "fixtures/MockStartup.h"
 #include <vector>
@@ -47,9 +48,10 @@ BOOST_AUTO_TEST_CASE( ldos_MgB2_vasp )
 			opts);
 
 	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+	auto resources = std::make_shared<elephon::IOMethods::ResourceHandler>(loader);
 
 	elephon::ElectronicStructure::LocalDensityOfStates ldos;
-	ldos.compute_ldos(opts.get_eldos(), loader);
+	ldos.compute_ldos(opts.get_eldos(), resources);
 	ldos.write_file(opts.get_f_ldos());
 
 	BOOST_REQUIRE( boost::filesystem::exists(outfile) );
@@ -75,9 +77,10 @@ BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
 			opts);
 
 	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+	auto resources = std::make_shared<elephon::IOMethods::ResourceHandler>(loader);
 
 	elephon::ElectronicStructure::LocalDensityOfStates ldos;
-	ldos.compute_ldos(opts.get_eldos(), loader);
+	ldos.compute_ldos(opts.get_eldos(), resources);
 	ldos.write_file(opts.get_f_ldos());
 
 	BOOST_REQUIRE( boost::filesystem::exists(outfile) );

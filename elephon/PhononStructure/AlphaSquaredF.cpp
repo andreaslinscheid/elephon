@@ -38,7 +38,7 @@ void
 AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resourceHandler )
 {
 	auto wfcts = resourceHandler->get_wfct_obj();
-	auto bands = resourceHandler->get_electronic_bands_obj();
+	auto bands = resourceHandler->get_dense_electronic_bands_obj();
 	auto ph = resourceHandler->get_phonon_obj();
 	int nModes = ph->get_num_modes();
 
@@ -61,13 +61,21 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 	int nSamples = resourceHandler->get_optns().get_numFS();
 	auto equalEnergySurfaces = resourceHandler->get_optns().get_ea2f();
 
+	std::vector<double> DOS;
+	bands->compute_DOS_tetra(
+			resourceHandler->get_tetrahedra_grid(),
+			equalEnergySurfaces,
+			DOS);
+
 	// load the isosurface
 	auto tetraIso = resourceHandler->get_tetrahedra_isosurface();
+	const float eVToTHz = 241.79893;
 
 	for ( int iE = 0 ; iE < equalEnergySurfaces.size() ; ++iE )
 	{
 		auto e = equalEnergySurfaces[iE];
 		std::cout << "Calculating a2F(w) at energy e=" << e << "eV relative to the Fermi level\n";
+		std::cout << "\tComputing electron-phonon coupling for\n";
 
 		for (int ibnd = 0 ; ibnd < tetraIso->get_nBnd(); ++ibnd )
 		{
@@ -83,7 +91,7 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 				if ( isoKP.empty() )
 					continue;
 
-				std::cout << "\trunning bands "<< ibnd << " "  << ibndP << std::endl;
+				std::cout << "\tbands ("<< ibnd << ") ==> ("  << ibndP << ")" << std::endl;
 
 				// compute the electron phonon matrix elements between these k points
 				ElectronPhononCoupling gkkp;
@@ -99,9 +107,11 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 						assert( (std::distance(gkkpitB, gkkpitE) == nModes)
 								&& (std::distance(phitB, phitE) == nModes));
 
+						auto phononFreqIt = phitB;
 						std::vector<float> gkkpModSqr(nModes);
-						for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu )
-							gkkpModSqr[inu] = isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB));
+						for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu, ++phononFreqIt )
+							gkkpModSqr[inu] = isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB))
+												/ 2.0f /(*phononFreqIt) / DOS[iE] * eVToTHz;
 
 						this->map_freq_grid_slot(gkkpModSqr.begin(), phitB, phitE);
 					}

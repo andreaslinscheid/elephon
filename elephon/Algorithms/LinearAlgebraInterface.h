@@ -95,6 +95,27 @@ public:
 
 	//Here come the low level routines
 
+	/**
+	 * GEMV  performs one of the matrix-vector operations
+	 *
+	 * y := alpha*A*x + beta*y,   or   y := alpha*A**T*x + beta*y,
+	 *
+	 *	where alpha and beta are scalars, x and y are vectors and A is an
+	 *	m by n matrix.
+	 */
+	void call_gemv(
+			char TRANS,
+			int M,
+			int N,
+			std::complex<float> ALPHA,
+			std::complex<float> const *	A,
+			int LDA,
+			std::complex<float> const * X,
+			int INCX,
+			std::complex<float> BETA,
+			std::complex<float> * Y,
+			int  INCY) const;
+
 	std::complex<float> call_dotu(
 			int n,
 			std::complex<float> * dx, int incx,

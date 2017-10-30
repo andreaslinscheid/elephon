@@ -36,7 +36,6 @@ Wavefunctions::initialize( LatticeStructure::RegularSymmetricGrid kgrid,
 	wfctInterface_ = wfctInterface;
 	rootDir_ = wfctInterface_->get_optns().get_root_dir();
 	grid_ = std::move(kgrid);
-
 	wfctInterface_->read_nBnd(rootDir_, nBnd_);
 }
 
@@ -46,21 +45,22 @@ Wavefunctions::initialize(
 		std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface)
 {
 	wfctInterface_ = wfctInterface;
-	rootDir_ = std::move(rootDir);
-
-	//Read and set up the symmetry module and the lattice module
-	LatticeStructure::LatticeModule lattice;
-	LatticeStructure::Symmetry sym;
-	std::vector<LatticeStructure::Atom> atoms;
-	wfctInterface_->read_cell_paramters(
-			rootDir_,
-			wfctInterface->get_optns().get_gPrec(),
-			grid_,
-			lattice,
-			atoms,
-			sym);
-
+	rootDir_ = rootDir;
+	wfctInterface_->read_reciprocal_symmetric_grid(rootDir_, grid_);
 	wfctInterface_->read_nBnd(rootDir_, nBnd_);
+}
+
+void
+Wavefunctions::initialize(
+		std::string rootDir,
+		LatticeStructure::RegularSymmetricGrid kgrid,
+		int numBands,
+		std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface)
+{
+	wfctInterface_ = wfctInterface;
+	rootDir_ = std::move(rootDir);
+	grid_ = std::move(kgrid);
+	nBnd_ = numBands;
 }
 
 void

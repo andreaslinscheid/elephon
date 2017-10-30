@@ -39,7 +39,8 @@
 #include <stdlib.h>
 #include <time.h>
 
-elephon::ElectronicStructure::Wavefunctions get_MgB2_vasp_wfct()
+elephon::ElectronicStructure::Wavefunctions
+get_MgB2_vasp_wfct()
 {
 	elephon::test::fixtures::MockStartup ms;
 	auto testd = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
@@ -52,12 +53,8 @@ elephon::ElectronicStructure::Wavefunctions get_MgB2_vasp_wfct()
 			opts);
 
 	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
-
-	elephon::ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize(
-			testd.string(),
-			loader);
-	return wfcts;
+	auto resource = std::make_shared<elephon::IOMethods::ResourceHandler>(loader);
+	return *(resource->get_wfct_obj());
 }
 
 void write_MgB2_vasp_chg(
@@ -137,19 +134,11 @@ load_Al_fcc_vasp_wfcts()
 {
 	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
-
-	std::vector<double> kvec = {0.0, 0.0, 0.0};
-	//Here we test the use case where we look up the cube around a point and compute those wavefunction
-	//Wave functions are on a regular grid and in G (reciprocal) space
-	//First, load the cubes of wave functions for linear interpolation
-
 	std::string content = std::string("root_dir=")+rootDir.string()+"\n";
 	elephon::test::fixtures::DataLoader dl;
 	auto loader = dl.create_vasp_loader( content );
-
-	elephon::ElectronicStructure::Wavefunctions wfcts;
-	wfcts.initialize(rootDir.string(), loader);
-	return wfcts;
+	auto resource = std::make_shared<elephon::IOMethods::ResourceHandler>(loader);
+	return *(resource->get_wfct_obj());
 }
 
 BOOST_AUTO_TEST_CASE( Al_vasp_wfct_interpol_star )
@@ -304,9 +293,11 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 		 *  We have selected a k point that has a full star so that each symmetry
 		 * 	operation must generate an complete new wave function and at a given
 		 * 	k point there is no degenerate subspace. This reduces ambiguity and allows
-		 * 	for an easier comparison
+		 * 	for an easier comparison. Please consult the OUTCAR file in 'testd' to confirm
+		 * 	that the index below corresponds to a k point with weight 16, i.e. the full
+		 * 	number of symmetry operations for FeSe.
 		 */
-		if ( ikir != 4)
+		if ( ikir != 2)
 			continue;
 
 		auto symIrToRed = kgrid.get_maps_sym_irred_to_reducible()[ikir];

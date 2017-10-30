@@ -1,0 +1,6 @@
+This file is created to make the parser find the correct information and
+thus allows us to test the behavior without actually shipping a pseudo potential with the code.
+   VRHFIN = B: s2p1
+   POMASS =   10.811;
+   VRHFIN =Mg: p6s2
+   POMASS =   24.305;

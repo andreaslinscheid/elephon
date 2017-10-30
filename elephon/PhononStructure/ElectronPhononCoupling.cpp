@@ -71,9 +71,8 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	nBp_ = bandpList.size();
 
 	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
+	std::vector<std::complex<float> > localGkkp(nM_);
 	Algorithms::LinearAlgebraInterface linalg;
-
-	std::cout << "\tComputing ele-phon coupling :" <<std::endl;
 
 	phononFrequencies_.reserve(nK_*nKp_*nM_);
 	data_.resize( nK_*nKp_*nM_*nB_*nBp_ );
@@ -120,6 +119,7 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 			assert( bufferWfct1.size() == nr*nB_ );
 			assert( bufferWfct2.size() == nr*nBp_ );
 			assert( dvscfData.size() == nr*nM_ );
+
 			for ( int ib = 0 ; ib < bandList.size(); ++ib )
 				for ( int ibp = 0 ; ibp < bandpList.size(); ++ibp )
 				{
@@ -129,12 +129,13 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 					for (int ir = 0 ; ir < nr ; ++ir)
 						wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir];
 
+					linalg.call_gemv('n', nM_, nr,
+							std::complex<float>(1.0f/static_cast<float>(nr)),
+							dvscfData.data(), nM_,
+							wfcProdBuffRealSpace.data(), 1,
+							std::complex<float>(0.0f), localGkkp.data(), 1);
 					for (int imu = 0 ; imu < nM_ ; ++imu)
-					{
-						auto ptr_dvscf = dvscfData.data() + imu*nr;
-						data_[this->tensor_layout(ik,ikp,ib,ibp,imu)] =
-								linalg.call_dotu(nr, &wfcProdBuffRealSpace[0], 1, &ptr_dvscf[0], 1);
-					}
+						data_[this->tensor_layout(ik,ikp,ib,ibp,imu)] = localGkkp[imu];
 				}
 		}
 		auto thisTime_clock = std::chrono::system_clock::now();

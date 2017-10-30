@@ -1,0 +1,17 @@
+ALGO = Normal
+EDIFF = 1e-8
+ENCUT = 300
+IBRION = -1
+ICHARG = 1
+ISIF = 3
+ISMEAR = 2
+ISPIN = 1
+LREAL = False
+LVHAR = .FALSE.
+LVTOT = .TRUE.
+LWAVE = True
+NELM = 100
+NSW = 0
+PREC = Accurate
+SIGMA = 0.2
+NWRITE = 3

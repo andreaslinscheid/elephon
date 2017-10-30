@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <fstream>
 #include <stdexcept>
+#include <algorithm>
 
 namespace elephon
 {
@@ -37,6 +38,43 @@ std::string
 VASPInterface::code_tag() const
 {
 	return "vasp";
+}
+
+void
+VASPInterface::check_prep_run(
+		std::string root_directory ) const
+{
+	//Fortunately the scallop input file method can read the VASP INCAR file too ...
+	boost::filesystem::path root(root_directory);
+	IOMethods::InputFile inputfile;
+	inputfile.read_input_file( (root / "INCAR").string() );
+	auto keyValuePairs = inputfile.get_all_input_config_values();
+
+	auto print_warning = [] (std::string const & message) {
+		std::string completeMessage = std::string("WARNING: ")+message+"\n";
+		int nEqalChars = 0;
+		std::stringstream ss(completeMessage);
+		std::string item;
+		while (std::getline(ss, item, '\n'))
+		{
+			nEqalChars = std::max(nEqalChars, static_cast<int>(item.size()));
+		}
+		std::cerr << std::string(nEqalChars, '=') << "\n"
+				  << completeMessage;
+		std::cerr << std::string(nEqalChars, '=') <<std::endl;
+	};
+
+	// Check if the user is running the tetrahedra integration scheme which is not a good idea
+	// when phonons / electron-phonon calculations are done.
+	if ( this->get_optns().get_lep() or this->get_optns().get_lp())
+	{
+		auto ret = keyValuePairs.find("ISMEAR");
+		if ( ret != keyValuePairs.end() )
+			if ( std::stoi(ret->second) < 0 )
+				print_warning("It seems you are using the Tetrahedra BZ integration scheme for a phonon calculation\n"
+						"This is not a good idea (see VASP manual). Continue only if you know what you are doing!!");
+	}
+
 }
 
 void VASPInterface::set_up_run(
@@ -110,6 +148,7 @@ VASPInterface::options_scf_supercell_no_wfctns_no_relax() const
 	options["ICHARG"] = "1";
 	options["LVTOT"] = ".TRUE.";
 	options["LVHAR"] = ".FALSE.";
+	options["LCHARG"] = ".FALSE.";
 	return options;
 }
 
@@ -223,6 +262,14 @@ VASPInterface::read_lattice_structure(
 	if ( not boost::filesystem::exists(rootdir) )
 		throw std::runtime_error(std::string("Directory ")+root_directory + " does not exist."
 				" Failed to read lattice structure.");
+
+	if (boost::filesystem::exists(rootdir / "vasprun.xml" ))
+	{
+		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+		lattice.initialize( xmlReader_.get_lattice_matrix() );
+		return;
+	}
+
 	if ( boost::filesystem::exists(rootdir / "POSCAR" ) )
 	{
 		if ( posReader_.get_atoms_list().empty() )
@@ -233,14 +280,10 @@ VASPInterface::read_lattice_structure(
 			posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
 		}
 		lattice.initialize( posReader_.get_lattice_matrix() );
+		return;
 	}
-	else if (boost::filesystem::exists(rootdir / "vasprun.xml" ))
-	{
-		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
-		lattice.initialize( xmlReader_.get_lattice_matrix() );
-	}
-	else
-		throw std::runtime_error(std::string("No file to parse structure from.\n") +
+
+	throw std::runtime_error(std::string("No file to parse structure from.\n") +
 				" Need either a POSCAR or a vasprun.xml file in directory "+root_directory);
 }
 
@@ -250,6 +293,14 @@ VASPInterface::read_atoms_list(
 		std::vector<LatticeStructure::Atom> & atoms)
 {
 	boost::filesystem::path rootdir(root_directory);
+
+	if (boost::filesystem::exists(rootdir / "vasprun.xml" ))
+	{
+		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
+		atoms = xmlReader_.get_atoms_list();
+		return;
+	}
+
 	if ( boost::filesystem::exists(rootdir / "POSCAR" ) )
 	{
 		if ( posReader_.get_atoms_list().empty() )
@@ -260,14 +311,10 @@ VASPInterface::read_atoms_list(
 			posReader_.read_file( (rootdir / "POSCAR").string(), atomOrder );
 		}
 		atoms = posReader_.get_atoms_list();
+		return;
 	}
-	else if (boost::filesystem::exists(rootdir / "vasprun.xml" ))
-	{
-		xmlReader_.parse_file( (rootdir / "vasprun.xml").string() );
-		atoms = xmlReader_.get_atoms_list();
-	}
-	else
-		throw std::runtime_error("No file to parse structure from");
+
+	throw std::runtime_error("No file to parse structure from");
 }
 
 void
@@ -580,6 +627,40 @@ void VASPInterface::read_kpt_sampling(
 
 	kptSampling = kpointReader_.get_grid_dim();
 	shifts = kpointReader_.get_grid_shift();
+}
+
+void
+VASPInterface::read_reciprocal_symmetric_grid(
+		std::string root_directory,
+		LatticeStructure::RegularSymmetricGrid & kgrid)
+{
+	boost::filesystem::path rootdir(root_directory);
+	std::vector<int> kptSampling;
+	std::vector<double> shifts;
+	this->read_kpt_sampling(root_directory, kptSampling, shifts);
+
+	LatticeStructure::LatticeModule lattice;
+	this->read_lattice_structure(root_directory, lattice);
+
+	LatticeStructure::Symmetry sym;
+	this->read_symmetry(root_directory, this->get_optns().get_gPrec(), lattice, sym);
+	sym.set_reciprocal_space_sym(true);
+
+	//make sure that the irreducible zone of elephon and VASP agree
+	std::vector<double> irreducibleKPoints;
+	if ( boost::filesystem::exists( rootdir / "WAVECAR" ) )
+	{
+		wfcReader_.prepare_wavecar( (rootdir / "WAVECAR").string() );
+		irreducibleKPoints = wfcReader_.get_k_points();
+	}
+	else if ( boost::filesystem::exists( rootdir / "vasprun.xml" ) )
+	{
+		xmlReader_.parse_file(  (rootdir / "vasprun.xml").string() );
+		irreducibleKPoints = xmlReader_.get_k_points();
+	}
+	LatticeStructure::RegularSymmetricGrid g;
+	g.initialize(kptSampling, this->get_optns().get_gPrec(), shifts, sym, lattice, irreducibleKPoints);
+	kgrid = g;
 }
 
 std::string VASPInterface::get_textfile_content( std::string filename ) const

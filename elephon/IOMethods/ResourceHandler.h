@@ -70,12 +70,31 @@ public:
 
 	std::shared_ptr<const ElectronicStructure::ElectronicBands> get_electronic_bands_obj();
 
+	/**
+	 * obtain the dense electronic band object.
+	 *
+	 * The code will first try to obtain the 'dense' electronic structure specified in
+	 * the 'eld' input option. If that directory does not exist, we gracefully try to load
+	 * the band structure in the root directory. Only if these do not exist either, we bail.
+	 * Thus the logic is 'get the most dense band structure you can get'.
+	 *
+	 * @return shared pointer, initialized with the 'dense' band structure.
+	 */
 	std::shared_ptr<const ElectronicStructure::ElectronicBands> get_dense_electronic_bands_obj();
 
 	std::shared_ptr<const PhononStructure::DisplacementPotential> get_displacement_potential_obj();
 
 	std::shared_ptr<const LatticeStructure::RegularBareGrid> get_real_space_grid_unitcell_obj();
 
+	/**
+	 * obtain the wavefunctions object.
+	 *
+	 * The code will first try to obtain the 'dense' electronic wavefunctions specified in
+	 * the 'eld' input option. If that directory does not exist, we gracefully try to load
+	 * the wavefunctions in the root directory. Only if these do not exist either, we bail.
+	 *
+	 * @return shared pointer, initialized with the wavefunction to be used in the code.
+	 */
 	std::shared_ptr<const ElectronicStructure::Wavefunctions> get_wfct_obj();
 
 	/**
@@ -88,6 +107,10 @@ public:
 	/**
 	 * obtain the tetrahedra mesh of the dense electronic band structure.
 	 *
+	 * The code will first try to obtain the 'dense' electronic wavefunctions specified in
+	 * the 'eld' input option. If that directory does not exist, we gracefully try to load
+	 * the wavefunctions in the root directory. Only if these do not exist either, we bail.
+	 *
 	 * @return shared pointer, initialized with the dense electron band mesh.
 	 */
 	std::shared_ptr<const LatticeStructure::TetrahedraGrid> get_tetrahedra_grid();
@@ -96,6 +119,9 @@ public:
 	 * obtain the tetrahedra iso-surface of the dense electronic band structure.
 	 *
 	 * Values for the isosurface are taken from the input parameter ea2F.
+	 * The code will first try to obtain the 'dense' electronic wavefunctions specified in
+	 * the 'eld' input option. If that directory does not exist, we gracefully try to load
+	 * the wavefunctions in the root directory. Only if these do not exist either, we bail.
 	 *
 	 * @return shared pointer, initialized with the dense electron band mesh.
 	 */

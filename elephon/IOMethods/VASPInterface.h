@@ -45,6 +45,9 @@ public:
 
 	std::string code_tag() const;
 
+	void check_prep_run(
+			std::string root_directory ) const;
+
 	void set_up_run(
 			std::string root_directory,
 			std::string target_directory,
@@ -114,6 +117,10 @@ public:
 			std::vector<int> & kptSampling,
 			std::vector<double> & shifts);
 
+	void read_reciprocal_symmetric_grid(
+			std::string root_directory,
+			LatticeStructure::RegularSymmetricGrid & kgrid);
+
 	void read_band_structure(
 			std::string root_directory,
 			ElectronicStructure::ElectronicBands & bands);
@@ -133,6 +140,17 @@ public:
 			std::string root_directory,
 			int & nBnd);
 
+	/**
+	 * read the symmetry of the system from the OUTCAR file.
+	 *
+	 * NOTE: the symmetry will be initially set to a real-space
+	 * symmetry, i.e. time reversal symmetry is not automatically an inversion.
+	 *
+	 * @param root_directory	The directory where to look for the OUTCAR file.
+	 * @param symprec			The precision of the lattice.
+	 * @param lattice			The description of the cell.
+	 * @param symmetry			the object to be set to the symmetry of the system.
+	 */
 	void read_symmetry(
 			std::string root_directory,
 			double symprec,

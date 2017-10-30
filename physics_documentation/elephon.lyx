@@ -838,6 +838,66 @@ so that we have to diagonalize
  
 \end_layout
 
+\begin_layout Subsubsection
+Units
+\end_layout
+
+\begin_layout Standard
+The quantity 
+\begin_inset Formula $\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2})/\sqrt{m_{\kappa_{1}}m_{\kappa_{2}}}$
+\end_inset
+
+ as computed by VASP has units 
+\begin_inset Formula 
+\begin{equation}
+\frac{{\rm eV}}{{\rm \AA}^{2}{\rm u}}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula ${\rm u}$
+\end_inset
+
+ is the unit of atomic mass, i.e.
+ the mass of the proton.
+ Since 
+\begin_inset Formula $C_{\boldsymbol{q}\mu_{1}\nu}$
+\end_inset
+
+ and 
+\begin_inset Formula $\hat{b}_{\boldsymbol{q}\nu}$
+\end_inset
+
+ are dimensionless, 
+\begin_inset Formula $\hbar\varOmega_{\boldsymbol{q}\nu}$
+\end_inset
+
+ must have the unit of energy, obviously and thus, converting to SI units
+\begin_inset Formula 
+\begin{eqnarray}
+\varOmega_{\boldsymbol{q}\nu} & \sim & \sqrt{\frac{{\rm eV}}{{\rm \AA}^{2}{\rm u}}}=\sqrt{\frac{1.6021766208\times10^{-19}{\rm J}}{1.660539040\times10^{-27}\cdot10^{-20}{\rm m}^{2}\cdot{\rm kg}}}\\
+ &  & =\sqrt{\frac{1.6021766208}{1.660539040}}\frac{1}{{\rm s}}\times10^{14}
+\end{eqnarray}
+
+\end_inset
+
+The common unit Hz is in units of 
+\begin_inset Formula ${\rm rad}/{\rm s}$
+\end_inset
+
+ so
+\begin_inset Formula 
+\begin{eqnarray}
+\varOmega_{\boldsymbol{q}\nu} & \sim & \sqrt{\frac{1.6021766208}{1.660539040}}\frac{10^{2}}{2\pi}\;{\rm THz}\\
+ &  & \approx15.633304300669519191\;{\rm THz}
+\end{eqnarray}
+
+\end_inset
+
+ 
+\end_layout
+
 \begin_layout Subsection
 Phonon velocities
 \end_layout
@@ -1519,7 +1579,7 @@ and the linear displacement potential in cartesian coordinates as a solution
  in the least squares sense
 \begin_inset Formula 
 \begin{equation}
-{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}(\boldsymbol{r}-\boldsymbol{R})=\mathcal{V}_{\boldsymbol{R}}^{\alpha}(\boldsymbol{r})\cdot U_{\alpha}^{+}
+{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}(\boldsymbol{r}-\boldsymbol{R})=\mathcal{V}_{\boldsymbol{R}}^{\alpha}(\boldsymbol{r})\cdot U_{\alpha}^{+}\label{eq:DisplacementPotentialLinear}
 \end{equation}
 
 \end_inset
@@ -1612,7 +1672,7 @@ Now, let us compute the overlap among Bloch states
  created by the transformed
 \begin_inset Formula 
 \begin{equation}
-\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
+\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
 \end{equation}
 
 \end_inset
@@ -1779,7 +1839,7 @@ begin{widetext}
 
 \begin_inset Formula 
 \begin{equation}
-\alpha^{2}\, F(\omega)=\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int{\rm d}\boldsymbol{k}\int{\rm d}\boldsymbol{k}^{\prime}\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}\delta(\varepsilon_{\boldsymbol{k}i}-E_{{\rm F}})\delta(\varepsilon_{\boldsymbol{k}^{\prime}i^{\prime}}-E_{{\rm F}})\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)
+\alpha^{2}\, F(\omega)=\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int{\rm d}\boldsymbol{k}\int{\rm d}\boldsymbol{k}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\delta(\varepsilon_{\boldsymbol{k}i}-E_{{\rm F}})\delta(\varepsilon_{\boldsymbol{k}^{\prime}i^{\prime}}-E_{{\rm F}})\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)
 \end{equation}
 
 \end_inset
@@ -1810,8 +1870,8 @@ which transform the
  With our triangulations, the surface integral is readily computed as
 \begin_inset Formula 
 \begin{eqnarray}
-\alpha^{2}\, F(\omega) & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)\label{eq:AlphaSquaredF}\\
- & \approx & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\sum_{\boldsymbol{k}_{f}}\sum_{\boldsymbol{k}_{f}^{\prime}}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)w_{\boldsymbol{k}_{f}}w_{\boldsymbol{k}_{f}^{\prime}}
+\alpha^{2}\, F(\omega) & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)\label{eq:AlphaSquaredF}\\
+ & \approx & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\sum_{\boldsymbol{k}_{f}}\sum_{\boldsymbol{k}_{f}^{\prime}}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)w_{\boldsymbol{k}_{f}}w_{\boldsymbol{k}_{f}^{\prime}}
 \end{eqnarray}
 
 \end_inset
@@ -1863,7 +1923,7 @@ where, thus,
  This allows us to find an efficient approximation
 \begin_inset Formula 
 \begin{equation}
-\alpha^{2}\, F(\omega)\approx\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}ll^{\prime}\nu}\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}
+\alpha^{2}\, F(\omega)\approx\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}ll^{\prime}\nu}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{\varOmega_{\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}
 \end{equation}
 
 \end_inset
@@ -1944,9 +2004,9 @@ thus, we can write
 
 \begin_inset Formula 
 \begin{eqnarray}
-\alpha^{2}\, F(\omega) & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
- & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
- & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\sum_{S_{l}}1
+\alpha^{2}\, F(\omega) & = & \frac{1}{2\omega\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+ & = & \frac{1}{2\omega\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+ & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{ii^{\prime}l^{\prime}\nu}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\sum_{S_{l}}1\label{eq:a2FSymmetricTetra}
 \end{eqnarray}
 
 \end_inset
@@ -1969,6 +2029,308 @@ where we have rearranged the sum over
 \end_inset
 
  and the weights are grid symmetric.
+\end_layout
+
+\begin_layout Subsubsection
+Numerical formulation in terms of matrix multiplications
+\end_layout
+
+\begin_layout Standard
+There are easily 
+\begin_inset Formula $\mathcal{O}(10^{3}-10^{4})$
+\end_inset
+
+ Fermi wave vectors per band, requiering that the above equation 
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:a2FSymmetricTetra"
+
+\end_inset
+
+ is efficiently implemented.
+ A good way to ensure this is to formulate the summations in terms of matrix
+ multiplications.
+ First, note that the numerical order of complexity for computing the electron
+ phonon matrix elements is (dropping band indices for the following consideratio
+n)
+\begin_inset Formula 
+\begin{eqnarray}
+\mathcal{O}(g_{\boldsymbol{k}_{l},\boldsymbol{k}_{l^{\prime}}}^{\nu}(\boldsymbol{k}_{l^{\prime}}-\boldsymbol{k}_{l})) & \approx & \mathcal{O}(\frac{V_{{\rm UC}}}{N_{j}}\sum_{j}\psi_{\boldsymbol{k}_{l}}^{\ast}(\boldsymbol{r}_{j})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}_{j})}{\delta u_{\boldsymbol{k}_{l^{\prime}}-\boldsymbol{k}_{l}\nu}}\psi_{\boldsymbol{k}_{l^{\prime}}}(\boldsymbol{r}_{j}))\\
+ & = & \mathcal{O}(N_{\boldsymbol{k}_{l}}^{{\rm irred}}N_{\boldsymbol{k}_{l^{\prime}}}^{{\rm reducible}}N_{{\rm charge-FFT}}N_{{\rm Atoms}})
+\end{eqnarray}
+
+\end_inset
+
+and thus is the most demanding step and should be the target of an efficient
+ formulation.
+ In particular the 
+\begin_inset Formula $N_{{\rm charge-FFT}}$
+\end_inset
+
+ is easily of order 
+\begin_inset Formula $10^{6}$
+\end_inset
+
+.
+ Let us fix 
+\begin_inset Formula $\boldsymbol{k}_{l}$
+\end_inset
+
+ and 
+\begin_inset Formula $\boldsymbol{k}_{l^{\prime}}$
+\end_inset
+
+ (indicated by a superscript) and interpret
+\begin_inset Formula 
+\begin{eqnarray}
+A_{\boldsymbol{r}_{j}}^{(\boldsymbol{k}_{l},\boldsymbol{k}_{l^{\prime}})} & = & \psi_{\boldsymbol{k}_{l}}^{\ast}(\boldsymbol{r}_{j})\psi_{\boldsymbol{k}_{l^{\prime}}}(\boldsymbol{r}_{j})\\
+B_{\nu,\boldsymbol{r}_{j},}^{(\boldsymbol{k}_{l},\boldsymbol{k}_{l^{\prime}})} & = & \frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}_{j})}{\delta u_{\boldsymbol{k}_{l^{\prime}}-\boldsymbol{k}_{l}\nu}}
+\end{eqnarray}
+
+\end_inset
+
+then 
+\begin_inset Formula 
+\begin{equation}
+g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})=B_{\nu}^{(\boldsymbol{k}_{l},\boldsymbol{k}_{l^{\prime}})}(\cdot_{\boldsymbol{r}_{j}})A^{(\boldsymbol{k}_{l},\boldsymbol{k}_{l^{\prime}})}\label{eq:GkkpMatVec}
+\end{equation}
+
+\end_inset
+
+So we have written the calculation as a matrix times vector operations.
+ Alternatively
+\begin_inset Formula 
+\begin{eqnarray}
+\tilde{A}_{\boldsymbol{k}_{l^{\prime}},\boldsymbol{r}_{j}} & = & \psi_{\boldsymbol{k}_{l^{\prime}}}(\boldsymbol{r}_{j})\\
+\tilde{B}_{\boldsymbol{r}_{j},\nu\otimes\boldsymbol{k}_{l}} & = & \frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}_{j})}{\delta u_{\boldsymbol{k}_{l^{\prime}}-\boldsymbol{k}_{l}\nu}}\psi_{\boldsymbol{k}_{l}}^{\ast}(\boldsymbol{r}_{j})
+\end{eqnarray}
+
+\end_inset
+
+then 
+\begin_inset Formula 
+\begin{equation}
+g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})=(\tilde{A}\cdot\tilde{B})_{\boldsymbol{k}_{l^{\prime}},\nu\otimes\boldsymbol{k}_{l}}
+\end{equation}
+
+\end_inset
+
+which is a matrix matrix operation.
+ Let us consider the storage requirements.
+ Since the wavefunctions can be computed on the fly the matrix vector operation
+ is very memory efficient.
+ Let us estimate 
+\begin_inset Formula $\mathcal{O}(\boldsymbol{k}_{l})=N_{\boldsymbol{k}_{l}}^{{\rm irred}}\sim10^{2}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathcal{O}(\boldsymbol{k}_{l^{\prime}})=N_{\boldsymbol{k}_{l}}^{{\rm irred}}\sim10^{3}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathcal{O}(\boldsymbol{r}_{j})=N_{{\rm charge-FFT}}=10^{6}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathcal{O}(\nu)=3N_{{\rm Atoms}}\sim10^{2}$
+\end_inset
+
+.
+ Thus 
+\begin_inset Formula $\mathcal{O}(B)=10^{2}\cdot10^{6}$
+\end_inset
+
+ while clearly 
+\begin_inset Formula $\mathcal{O}(A)=10^{6}$
+\end_inset
+
+.
+ Thus we have approximately 
+\begin_inset Formula $8\times10^{8}$
+\end_inset
+
+ byte for single precision complex data.
+ This is order 1GB and easily fits into modern computer memory.
+\end_layout
+
+\begin_layout Standard
+The matrix-matrix operation requires pre-calculation and storage of 
+\begin_inset Formula $\mathcal{O}(\tilde{A})=\mathcal{O}(\boldsymbol{k}_{l^{\prime}})\mathcal{O}(\boldsymbol{r}_{j})\sim10^{3}\cdot10^{6}$
+\end_inset
+
+ plus 
+\begin_inset Formula $\mathcal{O}(\tilde{B})=\mathcal{O}(\boldsymbol{r}_{j})\mathcal{O}(\nu\otimes\boldsymbol{k}_{l})=10^{6}\cdot10^{2}\cdot10^{2}$
+\end_inset
+
+.
+ This means a storage requirement of 
+\begin_inset Formula $\sim10^{10}$
+\end_inset
+
+ complex data elements.
+ In single precision, this means 
+\begin_inset Formula $8\times10^{10}$
+\end_inset
+
+ byte for single precision complex data.
+ This is order 100GB and thus, too much to be practical.
+ Even for smaller systems, this can be excessive because a denser 
+\begin_inset Formula $k$
+\end_inset
+
+ resolution is nescsseary.
+ Thus, we determine, it is better to generate data on the fly as in Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:GkkpMatVec"
+
+\end_inset
+
+ even though matrix operations are usually more efficient.
+\end_layout
+
+\begin_layout Subsubsection
+Units
+\end_layout
+
+\begin_layout Standard
+The units of the gkkp matrix elements are with wavefunctions being the inverse
+ square root of states per volume of the unit cell and the displacement
+ potential 
+\begin_inset Formula $\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})$
+\end_inset
+
+ being determined by Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:DisplacementPotentialLinear"
+
+\end_inset
+
+ has units eV per angstrom.
+ Furthermore, because 
+\begin_inset Formula $\hbar=1$
+\end_inset
+
+ and we measure energies in 
+\begin_inset Formula ${\rm eV}$
+\end_inset
+
+ and length in 
+\begin_inset Formula ${\rm \AA}$
+\end_inset
+
+, 
+\begin_inset Formula $\sqrt{m_{\mu}}$
+\end_inset
+
+ has units 
+\begin_inset Formula ${\rm \AA}/\sqrt{{\rm eV}}$
+\end_inset
+
+.
+ 
+\begin_inset Formula 
+\begin{equation}
+[\sqrt{\frac{\hbar}{m_{\mu}}}]=\sqrt{\frac{{\rm kg}{\rm m}^{2}}{{\rm kg}{\rm s}}}=\frac{{\rm \AA}}{\sqrt{{\rm s}}}
+\end{equation}
+
+\end_inset
+
+Consquently, its Fourier transform Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:ModeDisplacementPotential"
+
+\end_inset
+
+ has units
+\begin_inset Formula 
+\begin{equation}
+[\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}]=[\sqrt{\frac{\hbar}{m_{\mu}}}][\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]=\frac{{\rm eV}}{\sqrt{{\rm s}}}\equiv\frac{{\rm eV}}{{\rm \AA}\sqrt{{\rm u}}}
+\end{equation}
+
+\end_inset
+
+where 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula ${\rm u}$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ is the unit of mass in atomic units.
+ Thus
+\begin_inset Formula 
+\begin{equation}
+\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\sim({\rm eV})^{2}
+\end{equation}
+
+\end_inset
+
+now, since we measure 
+\begin_inset Formula $\rho(E_{{\rm F}})\sim\tilde{w}_{l^{\prime}}^{i^{\prime}}\sim\tilde{w}_{l}^{i}\sim{\rm eV}^{-1}$
+\end_inset
+
+ and 
+\begin_inset Formula $\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\sim{\rm THz}^{-1}$
+\end_inset
+
+ we need to convert THz to eV so that
+\begin_inset Formula 
+\begin{eqnarray}
+\alpha^{2}\, F(\omega) & \sim & \rho(E_{{\rm F}})^{-1}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+ & \sim & \frac{{\rm eV}}{{\rm THz}}
+\end{eqnarray}
+
+\end_inset
+
+In order to achieve that, we simply convert 
+\begin_inset Formula $\rho(E_{{\rm F}})^{-1}$
+\end_inset
+
+ from 
+\begin_inset Formula ${\rm eV}$
+\end_inset
+
+ to 
+\begin_inset Formula ${\rm THz}$
+\end_inset
+
+ using the numerical factor 241.79893
 \end_layout
 
 \begin_layout Subsection

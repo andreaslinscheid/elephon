@@ -42,6 +42,12 @@ public:
 			std::string rootDir,
 			std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface);
 
+	void initialize(
+			std::string rootDir,
+			LatticeStructure::RegularSymmetricGrid kgrid,
+			int numBands,
+			std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface);
+
 	void generate_reducible_grid_wfcts(
 			std::vector<int> const & bndIndices,
 			std::vector<int> const & redKptIndices,

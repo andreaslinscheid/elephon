@@ -97,20 +97,3 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 
 	//how to test this?
 }
-
-
-BOOST_AUTO_TEST_CASE( Load_Al_vasp_fcc_primitve )
-{
-	using namespace elephon;
-	elephon::test::fixtures::MockStartup ms;
-	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "phonon_run";
-
-	std::string content = std::string("root_dir=")+rootDir.string()+"\n";
-	elephon::test::fixtures::DataLoader dl;
-	auto loader = dl.create_vasp_loader( content );
-
-	LatticeStructure::UnitCell uc;
-	loader->read_unit_cell(rootDir.string(), loader->get_optns().get_gPrec(),uc);
-
-	BOOST_REQUIRE_EQUAL(uc.get_site_symmetry( 0 ).get_num_symmetries(), 48);
-}

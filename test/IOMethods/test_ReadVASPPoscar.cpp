@@ -63,13 +63,14 @@ BOOST_AUTO_TEST_CASE( Read_Al_fcc_primitive_vasp )
 		BOOST_CHECK( a.get_kind().compare("Al") == 0 );
 	}
 
-	std::vector<double> latmatRef = { 	2.8560000000, 1.4280000000, 1.4280000000,
-										0.0000000000, 2.4733685532, 0.8244561844,
-										0.0000000000, 0.0000000000, 2.3319142351};
+	std::vector<double> latmatRef{
+		-2.0190061864268953,  0.0000000000000000, -2.0190061864268953,
+		 0.0000000000000000,  2.0190061864268953,  2.0190061864268953,
+		 2.0190061864268953,  2.0190061864268953,  0.0000000000000000 };
 
 	auto A = filerreader.get_lattice_matrix();
 	BOOST_REQUIRE( A.size() == 9 );
 	for ( int i = 0 ; i < 3; ++i)
 		for ( int j = 0 ; j < 3; ++j)
-			BOOST_CHECK_CLOSE( A[i*3+j] , latmatRef[i*3+j], 0.0000001 );
+			BOOST_CHECK_SMALL( A[i*3+j] - latmatRef[i*3+j], 0.0000001 );
 }

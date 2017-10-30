@@ -33,6 +33,7 @@ BOOST_AUTO_TEST_CASE( MgB2_realspace_data_format )
 {
 	elephon::test::fixtures::MockStartup ms;
 	auto testf = ms.get_data_for_testing_dir() / "vasp_realspace_data.dat";
+	boost::filesystem::remove( testf );
 
 	auto loadD = ms.get_data_for_testing_dir() / "MgB2" / "vasp" / "ldos";
 	std::string content = std::string("root_dir=")+loadD.string()+"\n";
@@ -47,12 +48,14 @@ BOOST_AUTO_TEST_CASE( MgB2_realspace_data_format )
 
 	elephon::IOMethods::ReadVASPLocpot locpot;
 	locpot.read_scf_potential(testf.string(), dims, data);
+	boost::filesystem::remove( testf );
 }
 
 BOOST_AUTO_TEST_CASE( write_VASP_realspace_output )
 {
 	elephon::test::fixtures::MockStartup ms;
 	auto testf = ms.get_data_for_testing_dir() / "vasp_realspace_data.dat";
+	boost::filesystem::remove( testf );
 
 	auto loadD = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
 	std::string content = std::string("root_dir=")+loadD.string()+"\n";
@@ -69,5 +72,6 @@ BOOST_AUTO_TEST_CASE( write_VASP_realspace_output )
 	data[5] = 1e99;
 	data[5] = -1e-100;
 	wd.write_file( testf.string(), "Test file comment", dims, unitCell, data );
+	boost::filesystem::remove( testf );
 }
 

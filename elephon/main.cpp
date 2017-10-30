@@ -36,11 +36,14 @@ main(int argc, char* argv[])
 	auto dataLoader = choose_interface(options);
 	auto resources = std::make_shared<IOMethods::ResourceHandler>(dataLoader);
 
+	// Print error messages if we are concerned the user is doing something stupid.
+	dataLoader->check_prep_run( options.get_root_dir() );
+
 	// Print the LDOS to file if desired ...
 	if ( not options.get_f_ldos().empty() )
 	{
 		ElectronicStructure::LocalDensityOfStates ldos;
-		ldos.compute_ldos(options.get_eldos(), dataLoader);
+		ldos.compute_ldos(options.get_eldos(), resources);
 		ldos.write_file(options.get_f_ldos());
 	}
 

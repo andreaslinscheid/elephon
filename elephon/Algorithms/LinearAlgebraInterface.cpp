@@ -35,6 +35,32 @@ LinearAlgebraInterface::clear_buffer()
 	rWork_.clear();
 }
 
+void
+LinearAlgebraInterface::call_gemv(
+		char TRANS,
+		int M,
+		int N,
+		std::complex<float> ALPHA,
+		std::complex<float> const *	A,
+		int LDA,
+		std::complex<float> const * X,
+		int INCX,
+		std::complex<float> BETA,
+		std::complex<float> * Y,
+		int INCY) const
+{
+	auto cblasTrans = CblasNoTrans;
+	if ( (TRANS == 'T') or (TRANS == 't') )
+		cblasTrans = CblasTrans;
+	if ( (TRANS == 'C') or (TRANS == 'c') )
+		cblasTrans = CblasConjTrans;
+	cblas_cgemv(CblasColMajor, cblasTrans, M, N,
+			reinterpret_cast<const void*>(&ALPHA),
+			reinterpret_cast<const void*>(A), LDA,
+			reinterpret_cast<const void*>(X), INCX,
+			reinterpret_cast<const void*>(&BETA), reinterpret_cast<void *>(Y), INCY);
+}
+
 std::complex<float>
 LinearAlgebraInterface::call_dotu(
 		int n,
