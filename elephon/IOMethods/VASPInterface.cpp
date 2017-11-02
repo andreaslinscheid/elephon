@@ -619,14 +619,27 @@ void VASPInterface::read_kpt_sampling(
 		std::vector<double> & shifts)
 {
 	boost::filesystem::path root(root_directory);
-	auto filename = (root / "KPOINTS").string();
+	if ( boost::filesystem::exists( root / "vasprun.xml" ) )
+	{
+		xmlReader_.parse_file( (root / "vasprun.xml").string() );
+		kptSampling = xmlReader_.get_k_grid_dim();
+		shifts = xmlReader_.get_k_grid_shift();
+		return;
+	}
 
-	LatticeStructure::LatticeModule lattice;
-	this->read_lattice_structure(root.string(), lattice);
-	kpointReader_.read_kpoints(filename, lattice);
+	if ( boost::filesystem::exists( (root / "KPOINTS") ) )
+	{
 
-	kptSampling = kpointReader_.get_grid_dim();
-	shifts = kpointReader_.get_grid_shift();
+		LatticeStructure::LatticeModule lattice;
+		this->read_lattice_structure(root.string(), lattice);
+		kpointReader_.read_kpoints((root / "KPOINTS").string(), lattice);
+
+		kptSampling = kpointReader_.get_grid_dim();
+		shifts = kpointReader_.get_grid_shift();
+		return;
+	}
+
+	throw std::runtime_error("Need vasprun.xml or KPOINTS to read the k grid parameters");
 }
 
 void

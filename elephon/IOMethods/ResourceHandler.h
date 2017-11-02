@@ -21,6 +21,7 @@
 #define ELEPHON_IOMETHODS_RESOURCEHANDLER_H_
 
 #include "IOMethods/ElectronicStructureCodeInterface.h"
+#include "IOMethods/KPath.h"
 #include "PhononStructure/Phonon.h"
 #include "PhononStructure/PhononGrid.h"
 #include "PhononStructure/ForceConstantMatrix.h"
@@ -127,6 +128,7 @@ public:
 	 */
 	std::shared_ptr<const ElectronicStructure::TetrahedraIsosurface> get_tetrahedra_isosurface();
 
+	std::shared_ptr<const IOMethods::KPath> get_k_path();
 private:
 
 	std::shared_ptr<ElectronicStructureCodeInterface> dataLoader_;
@@ -159,6 +161,8 @@ private:
 
 	std::shared_ptr<ElectronicStructure::TetrahedraIsosurface> tetraIso_;
 
+	std::shared_ptr<IOMethods::KPath> kpath_;
+
 	void initialize_phonon_obj();
 
 	void initialize_phonon_grid_obj();
@@ -186,6 +190,8 @@ private:
 	void initialize_tetrahedra_grid();
 
 	void initialize_tetrahedra_isosurface();
+
+	void initialize_k_path();
 };
 
 } /* namespace IOMethods */

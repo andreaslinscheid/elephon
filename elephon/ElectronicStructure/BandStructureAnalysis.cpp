@@ -20,6 +20,7 @@
 #include "ElectronicStructure/BandStructureAnalysis.h"
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "Algorithms/FFTInterface.h"
+#include "Auxillary/UnitConversion.h"
 #include <fstream>
 #include <set>
 #include <stdexcept>
@@ -84,6 +85,9 @@ void find_band_extrema(
 				compareValues[1+in] = bands(neighbours[in], ib);
 
 			auto m = std::minmax_element(compareValues.begin(), compareValues.end());
+			if ( (*m.first < energyWindow[0]) or (*m.second > energyWindow[1]) )
+				continue;
+
 			if ( std::distance(m.first, compareValues.begin()) == 0 )
 			{
 				b_extrema e;
@@ -127,8 +131,8 @@ void compute_mass_tensor_at_extrema_poly(
 	auto d = kgrid.get_grid_dim();
 
 	std::set<int> bandSet(bandIndicesExtrema.begin(), bandIndicesExtrema.end());
-	std::vector<float> hessian;
-	bands.compute_derivatives_sqr_polynom<float>(
+	std::vector<double> hessian;
+	bands.compute_derivatives_sqr_polynom<double>(
 			std::vector<int>(bandSet.begin(), bandSet.end()),
 			kIndicesExtrema,
 			nullptr,
@@ -152,14 +156,17 @@ void compute_mass_tensor_at_extrema_poly(
 		int offset = (ikm*bandSet.size()+ibm)*6;
 		assert(hessian.size() > (offset+5));
 		std::vector<double> h(9);
-		h[0*3+0] = static_cast<double>(hessian[offset+0]);
-		h[1*3+0] = h[0*3+1] = static_cast<double>(hessian[offset+1]);
-		h[2*3+0] = h[0*3+2] = static_cast<double>(hessian[offset+2]);
-		h[1*3+1] = static_cast<double>(hessian[offset+3]);
-		h[2*3+1] = h[1*3+2] = static_cast<double>(hessian[offset+4]);
-		h[2*3+2] = static_cast<double>(hessian[offset+5]);
+		h[0*3+0] = hessian[offset+0];
+		h[1*3+0] = h[0*3+1] = hessian[offset+1];
+		h[2*3+0] = h[0*3+2] = hessian[offset+2];
+		h[1*3+1] = hessian[offset+3];
+		h[2*3+1] = h[1*3+2] = hessian[offset+4];
+		h[2*3+2] = hessian[offset+5];
 
 		linalg.inverse(std::move(h),massTensor[ie]);
+
+		for ( auto & mij : massTensor[ie] )
+			mij *= Auxillary::units::INVERSE_EV_TIMES_A2_TO_ME;
 	}
 }
 
@@ -312,6 +319,29 @@ void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> reso
 			auto energySamples = subsetBands.setup_frequency_grid(eneWin, opt.get_edosnpts());
 			subsetBands.write_tetrahedra_dos_file(opt.get_f_dos(), energySamples);
 			bands->write_tetrahedra_dos_file(opt.get_f_dos()+"_2", energySamples);
+		}
+
+		if ( not opt.get_f_bands().empty() )
+		{
+			auto bandsObj = resource->get_dense_electronic_bands_obj();
+			auto kpath = resource->get_k_path();
+
+			std::vector<double> bandsAlongPath;
+			int numBandsInWindow;
+			bands->compute_bands_along_path( kpath->get_k_points(),
+					resource->get_optns().get_ewinbnd(),
+					bandsAlongPath,
+					numBandsInWindow,
+					resource->get_interpol_reci_mesh_obj());
+
+			auto gnuplotFile = opt.get_f_bands()+".gp";
+			kpath->produce_gnuplot_script_stable_particle(
+					gnuplotFile,
+					opt.get_f_bands(),
+					"\\varepsilon(\\bf{k})",
+					bandsAlongPath,
+					numBandsInWindow,
+					bands->interpret_range(resource->get_optns().get_ewinbnd()));
 		}
 	}
 }

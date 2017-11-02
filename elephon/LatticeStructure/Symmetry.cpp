@@ -77,21 +77,28 @@ Symmetry::initialize(
 			break;
 		}
 
+	bool inversionRotation = false;
 	hasInversion_ = false;
 	for (int isym = 0 ; isym < numSymmetries_; ++isym)
 		if ( std::vector<int>( &symmetries_[9*isym], &symmetries_[9*isym]+9)
 				== std::vector<int>({-1,0,0, 0,-1,0, 0,0,-1}) )
 		{
+			inversionRotation = true;
+			// a non-symmorpthic inversion symmetry does not count
+			// as inversion symmetry
+			if ( (std::abs(fractTrans_[isym*3+0]) > symmPrec)
+					or (std::abs(fractTrans_[isym*3+1]) > symmPrec)
+					or (std::abs(fractTrans_[isym*3+2]) > symmPrec))
+				continue;
 			hasInversion_ = true;
 			break;
 		}
 
-	//In case we don't have inversion but time reversal the number of symmetry operations in
+	//In case we don't have inversion as a rotation but time reversal the number of symmetry operations in
 	//reciprocal space is different.
-	if ( (not hasInversion_) and hasTimeReversal_ )
+	numRotations_ = numSymmetries_;
+	if ( (not inversionRotation) and hasTimeReversal_ )
 		numRotations_ = 2*numSymmetries_;
-	else
-		numRotations_ = numSymmetries_;
 
 	//For fast lookups, we define an ordering according to the function below.
 	//It takes two symmetry operations 'a' and 'b' and decides which one is smaller by an element wise comparison
@@ -119,7 +126,7 @@ Symmetry::initialize(
 
 		//In case of time reversal symmetry but no inversion we add the generated additional
 		//rotation into the set. They get a flag which orders them to end of the map.
-		if ( (not hasInversion_) and hasTimeReversal_ )
+		if ( (not inversionRotation) and hasTimeReversal_ )
 		{
 			s_cart[0] = 1.0; // > 0 flags time reversal enabled symmetry operation
 			std::copy(&symmetries_[9*isym],&symmetries_[9*isym]+9,&s_cart[1]);
@@ -177,7 +184,7 @@ Symmetry::initialize(
 	}
 
 	//Append the symmetry operations and fractional translations
-	if ( (not hasInversion_) and hasTimeReversal_ )
+	if ( (not inversionRotation) and hasTimeReversal_ )
 	{
 		symmetries_.reserve(numRotations_*9);
 		fractTrans_.reserve(numRotations_*3);
@@ -211,7 +218,8 @@ Symmetry::initialize(
 			{
 				symmetriesReciprocal_[(irot*3+i)*3+j] = std::floor(tmpCart[(irot*3+i)*3+j]+0.5);
 				if ( std::abs(symmetriesReciprocal_[(irot*3+i)*3+j] - tmpCart[(irot*3+i)*3+j]) > symmPrec )
-					throw std::runtime_error("reciprocal symmetries are not described by integegers");
+					throw std::runtime_error("reciprocal symmetries are not described by integers.\n"
+							"Please verify that the (final) structure has the correct symmetry and possibly reduce gPrec on input!");
 			}
 	//TODO We should make sure that the lattice and the symmetries are compatible
 }

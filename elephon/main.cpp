@@ -23,6 +23,7 @@
 #include "IOMethods/ResourceHandler.h"
 #include "IOMethods/BuildFolderStructure.h"
 #include "PhononStructure/AlphaSquaredF.h"
+#include <memory>
 
 using namespace elephon;
 

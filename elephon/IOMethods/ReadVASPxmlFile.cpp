@@ -68,30 +68,40 @@ ReadVASPxmlFile::parse_file( std::string filename )
 		throw std::runtime_error("Could not locate the caluclation with the eigenvalues in vasprun.xml");
 
 	std::vector<double> lmat;
-	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf.get_child("structure.crystal") )
+	BOOST_FOREACH( ptree::value_type const& val0, pt.get_child("modeling") )
 	{
-	    if(val.first == "varray")
-	    {
-	        std::string temp = val.second.get_child("<xmlattr>.name").data();
-	        if ( temp == "basis")
+		if(val0.first == "structure")
+		{
+	        std::string temp = val0.second.get_child("<xmlattr>.name").data();
+	        if ( temp == "finalpos")
 	        {
-	        	BOOST_FOREACH( ptree::value_type const& val2, val.second )
+				BOOST_FOREACH( ptree::value_type const& val, val0.second.get_child("crystal") )
 				{
-	        		if ( val2.first == "v" )
-	        		{
-	        			double tmp;
-	        			std::stringstream ss( val2.second.data() );
-	        			for ( int i = 0 ; i < 3 ; ++i)
-	        			{
-	        				ss >> tmp;
-	        				lmat.push_back( tmp );
-	        			}
-	        		}
+					if(val.first == "varray")
+					{
+						std::string temp = val.second.get_child("<xmlattr>.name").data();
+						if ( temp == "basis")
+						{
+							BOOST_FOREACH( ptree::value_type const& val2, val.second )
+							{
+								if ( val2.first == "v" )
+								{
+									double tmp;
+									std::stringstream ss( val2.second.data() );
+									for ( int i = 0 ; i < 3 ; ++i)
+									{
+										ss >> tmp;
+										lmat.push_back( tmp );
+									}
+								}
+							}
+							if ( lmat.size() != 9 )
+								throw std::runtime_error("Problem reading lattice matrix - size incorrect");
+						}
+					}
 				}
-	        	if ( lmat.size() != 9 )
-	        		throw std::runtime_error("Problem reading lattice matrix - size incorrect");
 	        }
-	    }
+		}
 	}
 	latticeMat_.resize(9);
 	for ( int  i = 0 ; i < 3 ; ++i)
@@ -324,6 +334,30 @@ ReadVASPxmlFile::parse_file( std::string filename )
 		throw std::runtime_error("Problem parsing fourier grids for wavefunctions from vasprun.xml");
 	if ( *std::min_element(chargeFourierDim_.begin(), chargeFourierDim_.end()) <= 0 )
 		throw std::runtime_error("Problem parsing fourier grids for the charge from vasprun.xml");
+
+	kDim_.assign(3, -1);
+	kShift_.assign(3, 0.0);
+	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.kpoints.generation") )
+	{
+		if (  val.first != "v")
+			continue;
+        std::string temp = val.second.get_child("<xmlattr>.name").data();
+        if ( temp == "divisions" )
+        {
+        	std::stringstream ss(val.second.data());
+        	ss >> kDim_[0] >> kDim_[1] >> kDim_[2];
+        }
+        if ( (temp == "usershift") or (temp == "shift") )
+        {
+        	std::stringstream ss(val.second.data());
+        	std::vector<double> kShiftLocal(3,0);
+        	ss >> kShiftLocal[0] >> kShiftLocal[1] >> kShiftLocal[2];
+        	for ( int i = 0 ; i < 3 ; ++i )
+        		kShift_[i] += kShiftLocal[i];
+        }
+	}
+	if ( *std::min_element(kDim_.begin(), kDim_.end()) <= 0 )
+		throw std::runtime_error("Problem parsing k grid dimensions from vasprun.xml");
 }
 
 std::vector<double> const &
@@ -384,6 +418,18 @@ std::vector<int>
 ReadVASPxmlFile::get_charge_fourier_dim() const
 {
 	return chargeFourierDim_;
+}
+
+std::vector<int>
+ReadVASPxmlFile::get_k_grid_dim() const
+{
+	return kDim_;
+}
+
+std::vector<double>
+ReadVASPxmlFile::get_k_grid_shift() const
+{
+	return kShift_;
 }
 
 } /* namespace IOMethods */

@@ -56,6 +56,10 @@ public:
 	std::vector<int> get_wfct_fourier_dim() const;
 
 	std::vector<int> get_charge_fourier_dim() const;
+
+	std::vector<int> get_k_grid_dim() const;
+
+	std::vector<double> get_k_grid_shift() const;
 private:
 
 	int nBnd_ = 0;
@@ -73,6 +77,10 @@ private:
 	std::vector<double> latticeMat_;
 
 	std::vector<LatticeStructure::Atom> atoms_;
+
+	std::vector<int> kDim_;
+
+	std::vector<double> kShift_;
 
 	std::vector<int> wfctFourierDim_;
 

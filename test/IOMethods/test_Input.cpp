@@ -24,6 +24,16 @@
 #include "IOMethods/Input.h"
 #include "fixtures/MockStartup.h"
 
+BOOST_AUTO_TEST_CASE( Print_Manual )
+{
+	elephon::test::fixtures::MockStartup ms;
+	auto mainDir = ms.get_data_for_testing_dir() / ".." / ".." ;
+	auto manualPath = mainDir / "manual.txt";
+
+	elephon::IOMethods::InputOptions options;
+	options.build_input_manual( manualPath.string() );
+}
+
 BOOST_AUTO_TEST_CASE( Default_Args )
 {
 	using namespace boost::filesystem;

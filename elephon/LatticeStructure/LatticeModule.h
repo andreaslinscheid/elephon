@@ -76,6 +76,11 @@ public:
 
 	void reci_direct_to_cartesian_2pibya(double * p , int nelem) const;
 
+	/**
+	 * transform a reciprocal vector from crystal to cartesian coordinates in units of inverse Angstroems.
+	 *
+	 * @param v		A vector with 3D coordinates k1x, k1y, k1z, k2x ... .
+	 */
 	void reci_direct_to_cartesian_2pibya(std::vector<double> & v) const;
 private:
 

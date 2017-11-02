@@ -320,6 +320,17 @@ std::vector<double>
 DataRegularGrid<T>::setup_frequency_grid(std::vector<double> range, int numpts) const
 {
 	assert(numpts > 1);
+	auto mm = this->interpret_range(std::move(range));
+	std::vector<double> frequencies(numpts);
+	for ( int iw = 0 ; iw < numpts ; ++iw )
+		frequencies[iw] = mm.first + (mm.second-mm.first)*static_cast<double>(iw)/(numpts-1);
+	return frequencies;
+}
+
+template<typename T>
+std::pair<T,T>
+DataRegularGrid<T>::interpret_range(std::vector<double> range) const
+{
 	if ( range.size() == 0 )
 	{
 		auto r = this->get_min_max();
@@ -334,12 +345,8 @@ DataRegularGrid<T>::setup_frequency_grid(std::vector<double> range, int numpts) 
 		range.push_back( max );
 	}
 	if ( (range.size() > 2) or (range[0] >= range[1]) )
-		throw std::runtime_error("DataRegularGrid setup_frequency_grid: range empty or incorrect");
-
-	std::vector<double> frequencies(numpts);
-	for ( int iw = 0 ; iw < numpts ; ++iw )
-		frequencies[iw] = range[0] + (range[1]-range[0])*static_cast<double>(iw)/(numpts-1);
-	return frequencies;
+		throw std::runtime_error("DataRegularGrid interpret_range: range empty or incorrect");
+	return std::make_pair(range[0], range[1]);
 }
 
 template<typename T>
@@ -507,6 +514,44 @@ DataRegularGrid<T>::compute_DOS_general(
 				dos[iw] += kw[ikf] / modGradE * grid_.get_lattice().get_volume() / std::pow(2.0*M_PI,3);
 			}
 		}
+	}
+}
+
+template<typename T>
+void
+DataRegularGrid<T>::compute_bands_along_path(
+		std::vector<double> const & nonGridPoints,
+		std::vector<T> energyRange,
+		std::vector<T> & bands,
+		int &numBands,
+		std::shared_ptr<const LatticeStructure::RegularBareGrid> interpolMesh) const
+{
+	auto bandIndices = this->get_bands_crossing_energy_window(energyRange);
+	numBands = bandIndices.size();
+
+	std::shared_ptr<const LatticeStructure::RegularBareGrid> fineRegularMesh = interpolMesh;
+	if ( not fineRegularMesh )
+		fineRegularMesh = std::make_shared<const LatticeStructure::RegularBareGrid>(grid_.view_bare_grid());
+
+	const int numKptsPath = nonGridPoints.size()/3;
+	bands.resize(numKptsPath*numBands);
+
+	std::vector<int> queriedGridIndices;
+	Algorithms::TrilinearInterpolation trilin(*fineRegularMesh);
+	trilin.data_query(nonGridPoints, queriedGridIndices);
+
+	std::vector<T> interpolBndsRegularGrid, dataQueried, thisBandData;
+	for ( auto ibnd : bandIndices)
+	{
+		this->generate_interpolated_reducible_data({ibnd}, *fineRegularMesh, interpolBndsRegularGrid);
+
+		dataQueried.resize(queriedGridIndices.size());
+		for ( int i = 0 ; i < queriedGridIndices.size(); ++i)
+			dataQueried[i] = interpolBndsRegularGrid[queriedGridIndices[i]];
+
+		trilin.interpolate(1, dataQueried, thisBandData);
+		for ( int ikpath = 0 ; ikpath < numKptsPath ; ++ikpath)
+			bands[ikpath*numBands+ibnd] = thisBandData[ikpath];
 	}
 }
 

@@ -27,6 +27,29 @@
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "fixtures/MockStartup.h"
 
+BOOST_AUTO_TEST_CASE( Si_vasp )
+{
+	elephon::test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Si" / "vasp" / "conventional";
+	std::string input = std::string()+
+			"root_dir = "+testd.string()+"\n";
+	elephon::IOMethods::InputOptions opts;
+	ms.simulate_elephon_input(
+			(testd / "infile").string(),
+			input,
+			opts);
+
+	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
+	elephon::LatticeStructure::LatticeModule lat;
+	loader->read_lattice_structure(opts.get_root_dir(), lat);
+
+	elephon::LatticeStructure::Symmetry sym;
+	loader->read_symmetry( opts.get_root_dir(), 1e-4, lat, sym);
+
+	BOOST_CHECK( sym.get_num_symmetries() == 48 );
+	BOOST_CHECK( sym.has_inversion() == false);
+}
+
 BOOST_AUTO_TEST_CASE( test_MgB2 )
 {
 	elephon::test::fixtures::MockStartup ms;
@@ -135,7 +158,6 @@ BOOST_AUTO_TEST_CASE( Symemtry_reduction )
 	elephon::LatticeStructure::Symmetry sym;
 	sym.initialize( 1e-6, symReader.get_symmetries(), symReader.get_fractionTranslations(), lattice, true );
 }
-
 
 BOOST_AUTO_TEST_CASE( MgB2_vasp )
 {

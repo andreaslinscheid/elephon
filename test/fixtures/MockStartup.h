@@ -42,6 +42,10 @@ public:
 			std::string const & inputFileName,
 			std::string const & inputFileContent,
 			elephon::IOMethods::InputOptions & inputOpts);
+
+	void write_kpath_file_fcc(std::string filename) const;
+
+	void write_kpath_file_tetra(std::string filename) const;
 };
 
 } /* namespace fixtures */

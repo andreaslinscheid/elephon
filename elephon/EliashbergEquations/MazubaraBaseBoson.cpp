@@ -20,6 +20,7 @@
 #include "Algorithms/helperfunctions.hpp"
 #include "EliashbergEquations/MatsubaraBaseBoson.h"
 #include <assert.h>
+#include <math.h>
 
 namespace elephon
 {
@@ -34,7 +35,7 @@ MatsubaraBaseBoson::initialize(
 {
 	assert(numDataPerIndex > 0);
 	nMatsBoson_ = this->compute_n_mats_cutoff(temperature, energyCutoffMats);
-	nMatsFermi_ = Algorithms::helperfunctions::num_Mats_Fermi_cutoff(temperature, energyCutoffMats);
+//	nMatsFermi_ = Algorithms::helperfunctions::num_Mats_Fermi_cutoff(temperature, energyCutoffMats);
 	nDataPerMats_ = numDataPerIndex;
 	data_.assign( nMatsBoson_*nDataPerMats_ , 0.0);
 }
@@ -80,7 +81,8 @@ MatsubaraBaseBoson::compute_n_mats_cutoff(
 		double temperature,
 		double energyCutoffMats ) const
 {
-	return Algorithms::helperfunctions::num_Mats_Fermi_cutoff(temperature, energyCutoffMats)*2 + 1;
+//	return Algorithms::helperfunctions::num_Mats_Fermi_cutoff(temperature, energyCutoffMats)*2 + 1;
+	return 0;
 }
 
 int
@@ -93,7 +95,7 @@ namespace detail
 {
 
 MatsubaraFreq::MatsubaraFreq(double temperature)
-	: inverseTemperature_( Algorithms::helperfunctions::inverse_temperature_eV(temperature) )
+	: inverseTemperature_( 0.0)// Algorithms::helperfunctions::inverse_temperature_eV(temperature) )
 {
 }
 

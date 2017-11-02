@@ -66,6 +66,39 @@ MockStartup::simulate_elephon_input(
 	boost::filesystem::remove( boost::filesystem::path(inputFileName) );
 }
 
+void
+MockStartup::write_kpath_file_tetra(std::string filename) const
+{
+	std::string content = ""
+	"$\\Gamma$ 0.0000  0.0000  0.0000 40 X        0.5000  0.0000  0.0000\n"
+	"X        0.5000  0.0000  0.0000 40 M        0.5000 -0.5000  0.0000\n"
+	"M        0.5000 -0.5000  0.0000 57 $\\Gamma$ 0.0000  0.0000  0.0000\n";
+
+	std::ofstream file(filename.c_str());
+	if ( ! file.good() )
+		throw std::runtime_error("Problem opening file");
+
+	file << content << std::endl;
+	file.close();
+}
+
+void
+MockStartup::write_kpath_file_fcc(std::string filename) const
+{
+	std::string content = ""
+	"$\\Gamma$ 0.0000  0.0000  0.0000 40 X        0.0000  0.5000  0.5000\n"
+	"X        0.0000  0.5000  0.5000 40 W        0.2500  0.7500  0.5000\n"
+	"W        0.2500  0.7500  0.5000 40 K        0.3750  0.7500  0.3750\n"
+	"K        0.3750  0.7500  0.3750 57 $\\Gamma$ 0.0000  0.0000  0.0000\n";
+
+	std::ofstream file(filename.c_str());
+	if ( ! file.good() )
+		throw std::runtime_error("Problem opening file");
+
+	file << content << std::endl;
+	file.close();
+}
+
 } /* namespace fixtures */
 } /* namespace test */
 } /* namespace elephon */

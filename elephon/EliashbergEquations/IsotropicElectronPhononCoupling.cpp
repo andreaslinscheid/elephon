@@ -31,7 +31,7 @@ IsotropicElectronPhononCoupling::initialize(
 		double temperature,
 		double energyCutoff)
 {
-	std::ifstream
+//	std::ifstream
 }
 
 void

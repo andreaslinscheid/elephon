@@ -170,6 +170,15 @@ ResourceHandler::get_tetrahedra_isosurface()
 	return tetraIso_;
 }
 
+std::shared_ptr<const IOMethods::KPath>
+ResourceHandler::get_k_path()
+{
+	if ( ! kpath_ )
+		this->initialize_k_path();
+	assert(kpath_);
+	return kpath_;
+}
+
 void
 ResourceHandler::initialize_phonon_obj()
 {
@@ -410,6 +419,13 @@ ResourceHandler::initialize_tetrahedra_isosurface()
 					this->get_dense_electronic_bands_obj(),
 					this->get_optns().get_ea2f() );
 	tetraIso_ = std::make_shared<ElectronicStructure::TetrahedraIsosurface>( std::move(tis) );
+}
+
+void
+ResourceHandler::initialize_k_path()
+{
+	kpath_ = std::make_shared<IOMethods::KPath>();
+	kpath_->read_kpath_file(this->get_optns().get_f_kpath());
 }
 
 } /* namespace IOMethods */

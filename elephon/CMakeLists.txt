@@ -53,18 +53,23 @@ SUBDIRLIST( subdirlist ${CMAKE_CURRENT_SOURCE_DIR} )
 list(APPEND elephon_OPTS "-Wall" "-Wno-sign-compare" "-Wno-deprecated-declarations")
 
 #add a library each
+set(elephonLibraryNames "")
 foreach(libElephon ${subdirlist})
 	file(GLOB_RECURSE sources ${libElephon}/*.cpp ${libElephon}/*.h)
-	add_library( ${libElephon} ${sources} )
-	target_compile_options(${libElephon} PUBLIC ${elephon_OPTS} )
-	target_include_directories(${libElephon} PUBLIC ${elephon_src_tree} ${elephon_INCLUDE})
+	file(GLOB_RECURSE check_not_header_only ${libElephon}/*.cpp)
+	if( check_not_header_only )
+		add_library( ${libElephon} ${sources} )
+		target_compile_options(${libElephon} PUBLIC ${elephon_OPTS} )
+		target_include_directories(${libElephon} PUBLIC ${elephon_src_tree} ${elephon_INCLUDE})
+		list(APPEND elephonLibraryNames ${libElephon})
+	endif()
 endforeach(libElephon)
 
 # The projects own libraries
 # %%%% HACK (!!!) %%%%
-# ${subdirlist} appears twice to resolve cross dependencies of symbols
+# ${elephonLibraryNames} appears multiple times to resolve cross dependencies of symbols
 # the linker should stop searching once it hits the first, so this should work without causing harm ..
-list(INSERT elephon_LD_LIBS 0 ${subdirlist} ${subdirlist} ${subdirlist})
+list(INSERT elephon_LD_LIBS 0 ${elephonLibraryNames} ${elephonLibraryNames} ${elephonLibraryNames})
 list(INSERT elephon_INCLUDE 0 ${elephon_src_tree})
 
 #add a library with the tests
@@ -93,7 +98,6 @@ foreach(testSrc ${sources_test})
        	add_executable(${testName} ${testSrc})
 
        	#link to Boost libraries AND your targets and dependencies
-       	#HACK see before - ${subdirlist} appears twice
        	target_link_libraries(${testName} PUBLIC libTest ${elephon_LD_LIBS} )
 
        	#I like to move testing binaries into a test/bin directory

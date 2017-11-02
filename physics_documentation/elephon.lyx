@@ -2387,6 +2387,61 @@ N_{e} & = & \int_{-\infty}^{E_{f}}{\rm d}\omega\rho(\omega)\\
 \end_layout
 
 \begin_layout Subsection
+The mass tensor
+\end_layout
+
+\begin_layout Subsubsection
+Units
+\end_layout
+
+\begin_layout Standard
+We compute the derivative of the dispersion which has units of
+\begin_inset Formula 
+\begin{equation}
+[\partial_{k_{l}}\partial_{k_{l^{\prime}}}\varepsilon_{\boldsymbol{k}i}]={\rm eV}\times{\rm \AA}^{2}
+\end{equation}
+
+\end_inset
+
+comparison with the second term in the taylor exapnsion implies that
+\begin_inset Formula 
+\begin{eqnarray}
+M_{ll^{\prime}}^{\ast-1} & = & \frac{1}{\hbar^{2}}\partial_{k_{l}}\partial_{k_{l^{\prime}}}\varepsilon_{\boldsymbol{k}i}\\
+ & = & \frac{10^{32}}{(6.582119514)^{2}}\frac{{\rm \AA}^{2}}{{\rm eV^{2}}{\rm s}^{2}}X{\rm eV}\\
+ & = & \frac{10^{32}}{(6.582119514)^{2}}\frac{10^{-20}{\rm m}^{2}}{{\rm eV}{\rm s}^{2}}X\\
+ & = & \frac{10^{32}\times10^{-20}10^{-31}}{(6.582119514)^{2}}\frac{{\rm m}^{2}}{{\rm eV}{\rm s}^{2}}\frac{9.10938356{\rm kg}}{{\rm m}_{0}^{{\rm e}}}X\\
+ & = & \frac{10^{32}\times10^{-20}10^{-31}}{(6.582119514)^{2}}9.10938356\times6.2415093433\times10^{18}\frac{1}{{\rm m}_{0}^{{\rm e}}}X\\
+ & = & \frac{10^{-1}}{(6.582119514)^{2}}9.10938356\times6.2415093433\frac{1}{{\rm m}_{0}^{{\rm e}}}X\\
+ & \approx & 0.1312342176\frac{1}{{\rm m}_{0}^{{\rm e}}}X
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $X$
+\end_inset
+
+ is the numerical value of 
+\begin_inset Formula $\partial_{k_{l}}\partial_{k_{l^{\prime}}}\varepsilon_{\boldsymbol{k}i}$
+\end_inset
+
+.
+ Thus to get the mass tensor, we need to invert the matrix 
+\begin_inset Formula $\partial_{k_{l}}\partial_{k_{l^{\prime}}}\varepsilon_{\boldsymbol{k}i}$
+\end_inset
+
+ and scale by the above numerical unit inverse 
+\begin_inset Formula 
+\begin{equation}
+\frac{M_{ll^{\prime}}^{\ast}}{{\rm m}_{0}^{{\rm e}}}=7.61996389393771\times[\partial_{k}\partial_{k}\varepsilon_{\boldsymbol{k}i}]_{ll^{\prime}}^{-1}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
 Lattice basis
 \end_layout
 

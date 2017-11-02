@@ -195,6 +195,18 @@ public:
 
 	std::vector<double> setup_frequency_grid(std::vector<double> range, int numpts) const;
 
+	/**
+	 * Mechanism to convert the input option 'range' into an actual energy range.
+	 *
+	 * Since one possible "default" is to use all the range that is there, this
+	 * input parameter interpretation must be closely tied to the data, thus it
+	 * is implemented here
+	 *
+	 * @param range	vector of no more than 2 elements according to the specifications in
+	 * 				IOMethods::InputOptions for the input parameter 'ewinbnd' and 'phrange'
+	 * @return	pair with the first being the minium and the second the maxium of the range.
+	 */
+	std::pair<T,T> interpret_range(std::vector<double> range) const;
 
 	void compute_DOS(
 			std::vector<double> const & energies,
@@ -210,6 +222,13 @@ public:
 			F const & functor,
 			std::vector<double> const & energies,
 			std::vector<T> & dos) const;
+
+	void compute_bands_along_path(
+			std::vector<double> const & nonGridPoints,
+			std::vector<T> energyRange,
+			std::vector<T> & bands,
+			int &numBands,
+			std::shared_ptr<const LatticeStructure::RegularBareGrid> interpolMesh = nullptr) const;
 private:
 
 	int nDGP_ = 0;

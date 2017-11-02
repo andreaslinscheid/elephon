@@ -127,6 +127,42 @@ Input::Input( int argc, char* argv[] )
 			phdos_p = elphd_p / opts_.get_f_phdos();
 		opts_.set_f_phdos(phdos_p.string());
 	}
+
+	if ( not opts_.get_f_kpath().empty() )
+	{
+		boost::filesystem::path kpath_p(opts_.get_f_kpath());
+		if ( check_is_relative_path_unix(opts_.get_f_kpath()) )
+			kpath_p = rootdir / opts_.get_f_kpath();
+		opts_.set_f_kpath(kpath_p.string());
+	}
+
+	if ( not opts_.get_f_bands().empty() )
+	{
+		if ( not boost::filesystem::exists(opts_.get_f_kpath()))
+		{
+			std::cout << "Must set f_kpath to valid k path file when"
+					" bands calculations are requested!" <<std::endl;
+			std::exit(0);
+		}
+		boost::filesystem::path bands_p(opts_.get_f_bands());
+		if ( check_is_relative_path_unix(opts_.get_f_bands()) )
+			bands_p = rootdir / opts_.get_f_bands();
+		opts_.set_f_bands(bands_p.string());
+	}
+
+	if ( not opts_.get_f_ph_bands().empty() )
+	{
+		if ( not boost::filesystem::exists(opts_.get_f_kpath()))
+		{
+			std::cout << "Must set f_kpath to valid k path file when"
+					" bands calculations are requested!" <<std::endl;
+			std::exit(0);
+		}
+		boost::filesystem::path bands_p(opts_.get_f_ph_bands());
+		if ( check_is_relative_path_unix(opts_.get_f_ph_bands()) )
+			bands_p = elphd_p / opts_.get_f_ph_bands();
+		opts_.set_f_ph_bands(bands_p.string());
+	}
 }
 
 InputOptions const & Input::get_opts() const

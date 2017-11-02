@@ -21,6 +21,7 @@
 #define ELEPHON_ALGORITHMS_HELPERFUNCTIONS_HPP_
 
 #include <complex>
+#include <vector>
 
 namespace elephon
 {
