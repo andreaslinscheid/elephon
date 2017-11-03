@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_interpol_star )
 //							float(rand()) / float(RAND_MAX) };
 	// Since we do not have an upper bound for the allowed symmetry deviation testing a random k vector
 	// is not sensible ... unfortunately.
-	std::vector<double> kb{0.0967329, -0.212773, 0.274938};
+	std::vector<double> kb{0.222673, 0.348566, 0.47219};
 	for ( auto & kxi : kb )
 		kxi -= std::floor(kxi+0.5);
 	auto genStar = kg.get_symmetry().star_operations( kb );
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_interpol_star )
 	write_Al_vasp_chg(chargeDim, chggam);
 	auto r = comp_symm_distortion(chggam, chargeDim, rsSym);
 	// Strictly speaking this method can slightly break the symmetry.
-	// This is because the corner points of a cube are the symmetric wavefunctions. If, e.g., a point
+	// This is because the corner points of a tetrahedron are the symmetric wavefunctions. If, e.g., a point
 	// is rotated to the same cube, the two wavefunctions are not correctly symmetry related.
 	// Since, it is not obvious (to me) if or how one can establish an upper bound,
 	// I am putting 5%, but actually this test is questionable since it may fail even

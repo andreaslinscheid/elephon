@@ -20,9 +20,9 @@
 #ifndef ELEPHON_ALGORITHMS_TRILINEARINTERPOLATION_H_
 #define ELEPHON_ALGORITHMS_TRILINEARINTERPOLATION_H_
 
+#include "LatticeStructure/TetrahedraGrid.h"
 #include <vector>
 #include <cstdlib>
-#include "LatticeStructure/RegularBareGrid.h"
 
 namespace elephon
 {
@@ -33,7 +33,7 @@ class TrilinearInterpolation
 {
 public:
 	TrilinearInterpolation(
-			LatticeStructure::RegularBareGrid grid);
+			std::shared_ptr<const LatticeStructure::TetrahedraGrid> tetraGrid);
 
 	/**
 	 * requiredGridIndices will be given in a consecutively ordered grid index
@@ -50,25 +50,17 @@ public:
 			std::vector<double> const& gridDataForRequiredIndices,
 			std::vector<double> & pointsData) const;
 
-	template<typename T>
-	void interpolate_within_single_cube(
-			std::vector<double> const & ptsInCube,
-			std::vector<std::vector<T>> const & cornerData,
-			std::vector<T> & interpolData) const;
-
 private:
 
-	LatticeStructure::RegularBareGrid  grid_;
+	std::shared_ptr<const LatticeStructure::TetrahedraGrid>  tetraGrid_;
 
 	std::vector<double> listOfPoints_;
 
-	std::vector<LatticeStructure::RegularBareGrid::GridCube> usedGridCubes_;
+	std::vector<std::pair<LatticeStructure::Tetrahedron, std::vector<int>>> tetraContainedIndicesList_;
 
 	std::vector<int> conseqPtsRegularGrid_;
 
-	void get_cell_vectors( std::vector<double> const& k,
-			std::vector<double> & lowerCorner,
-			std::vector<double> & upperCorner ) const;
+	std::vector<int> tetraIndexToDataPoints_;
 
 	template<typename T>
 	void interpolate(

@@ -99,11 +99,18 @@ public:
 	std::shared_ptr<const ElectronicStructure::Wavefunctions> get_wfct_obj();
 
 	/**
-	 * obtain a reciprocal mesh according to the input fft dimension.
+	 * obtain a reciprocal bare mesh according to the input fft dimension.
 	 *
 	 * @return shared pointer, initialized with a regular bare grid describing the fft mesh.
 	 */
 	std::shared_ptr<const LatticeStructure::RegularBareGrid> get_interpol_reci_mesh_obj();
+
+	/**
+	 * obtain a reciprocal symmetric mesh of tetrahedra according to the input fft dimension.
+	 *
+	 * @return shared pointer, initialized with a TetrahedraGrid grid describing the fft mesh.
+	 */
+	std::shared_ptr<const LatticeStructure::TetrahedraGrid> get_interpol_reci_tetra_mesh_obj();
 
 	/**
 	 * obtain the tetrahedra mesh of the dense electronic band structure.
@@ -157,6 +164,8 @@ private:
 
 	std::shared_ptr<LatticeStructure::RegularBareGrid> interpolKGrid_;
 
+	std::shared_ptr<LatticeStructure::TetrahedraGrid> interpolTetraKGrid_;
+
 	std::shared_ptr<LatticeStructure::TetrahedraGrid> tetraGrid_;
 
 	std::shared_ptr<ElectronicStructure::TetrahedraIsosurface> tetraIso_;
@@ -186,6 +195,8 @@ private:
 	void initialize_wfct_obj();
 
 	void initialize_interpol_reci_mesh_obj();
+
+	void initialize_interpol_reci_tetra_mesh_obj();
 
 	void initialize_tetrahedra_grid();
 

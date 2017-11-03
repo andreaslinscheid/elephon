@@ -46,17 +46,20 @@ compute_derivatives_sqr_polynom(
 	elephon::Algorithms::LinearAlgebraInterface linalg;
 
 	// construct the cubic model pseudo inverse matrix for least square fit
-	int nKn = 19;
+	int nKn = 26;
 	std::vector<double> k(3);
 	int nCoeff = 19;
+//	int nCoeff = 9;
 	std::vector<double> A(nCoeff*nKn, 1);
 	int n = 0;
 	for ( int ipz = -1; ipz <= 1; ++ipz)
 		for ( int ipy = -1; ipy <= 1; ++ipy)
 			for ( int ipx = -1; ipx <= 1; ++ipx)
 			{
-				if ( abs(ipx)+abs(ipy)+abs(ipz) == 3 )
+				if ( (ipx == 0) && (ipy == 0) && (ipz == 0) )
 					continue;
+//				if ( abs(ipx)+abs(ipy)+abs(ipz) == 3 )
+//					continue;
 				k[0] = ipx/double(d[0]);
 				k[1] = ipy/double(d[1]);
 				k[2] = ipz/double(d[2]);
@@ -114,8 +117,10 @@ compute_derivatives_sqr_polynom(
 				for ( int ipy = -1; ipy <= 1; ++ipy)
 					for ( int ipx = -1; ipx <= 1; ++ipx)
 					{
-						if ( abs(ipx)+abs(ipy)+abs(ipz) == 3 )
+						if ( (ipx == 0) && (ipy == 0) && (ipz == 0) )
 							continue;
+//						if ( abs(ipx)+abs(ipy)+abs(ipz) == 3 )
+//							continue;
 						xyzMod[0] = xyz[0] + ipx;
 						xyzMod[1] = xyz[1] + ipy;
 						xyzMod[2] = xyz[2] + ipz;

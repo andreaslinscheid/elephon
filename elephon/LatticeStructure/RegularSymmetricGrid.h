@@ -54,6 +54,10 @@ public:
 	RegularBareGrid view_bare_grid() const;
 
 	void initialize(
+			RegularBareGrid const & baregrid,
+			Symmetry const & sym);
+
+	void initialize(
 			std::vector<int> dim,
 			double gridPrec = 1e-6,
 			std::vector<double> shift = {0.0,0.0,0.0},

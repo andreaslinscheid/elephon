@@ -30,84 +30,89 @@ namespace Algorithms
 {
 
 TrilinearInterpolation::TrilinearInterpolation(
-		LatticeStructure::RegularBareGrid grid)
-				: grid_(std::move(grid))
+		std::shared_ptr<const LatticeStructure::TetrahedraGrid> grid)
+				: tetraGrid_(grid)
 {
 
 }
 
-void TrilinearInterpolation::data_query(
+void
+TrilinearInterpolation::data_query(
 		std::vector<double> listOfPoints,
 		std::vector<int> & requiredGridIndices)
 {
 	listOfPoints_ = std::move(listOfPoints);
-	//Map back to the periodic cell!
+	//Map back to the periodic cell [0,1[ this is done, because the tetrahedra are defined in this cell.
 	for ( auto & xi : listOfPoints_ )
 		xi -= std::floor(xi);
 	int nPts = listOfPoints_.size()/3;
 
-	std::vector<int> dummy;
-	grid_.compute_grid_cubes_surrounding_nongrid_points(
-			listOfPoints_,dummy,usedGridCubes_);
+	std::map<LatticeStructure::Tetrahedron, std::vector<int>> tetraContainedIndicesListMap;
+	tetraGrid_->compute_grid_tetrahedra_surrounding_nongrid_points(
+			listOfPoints_,
+			tetraContainedIndicesListMap);
+
+	tetraContainedIndicesList_.clear();
+	tetraContainedIndicesList_.reserve(tetraContainedIndicesListMap.size());
+	for ( auto const &tm : tetraContainedIndicesListMap)
+		tetraContainedIndicesList_.push_back(tm);
 
 	//Now we determine all appearing regular grid indices
 	std::set<int> conseqRegularGridIndices;
-	for ( auto cube : usedGridCubes_)
-		conseqRegularGridIndices.insert( cube.cornerIndices_.begin(), cube.cornerIndices_.end() );
+	for ( auto tetra : tetraContainedIndicesList_)
+		conseqRegularGridIndices.insert(tetra.first.get_corner_indices().begin(),
+										tetra.first.get_corner_indices().end() );
 
-	requiredGridIndices =  std::vector<int>(
-			conseqRegularGridIndices.begin(),
-			conseqRegularGridIndices.end());
+	requiredGridIndices =  std::vector<int>(conseqRegularGridIndices.begin(),
+											conseqRegularGridIndices.end());
+	conseqRegularGridIndices.clear();
 
 	//If data interpolation is called, we need
 	//	1) to associate with each data index a given regular grid index
 	//	2) store for each cell index, the data index of each corner point
 
 	//	1) Enumerate points (data layout) and map each data index 'data_i' to a regular grid index
-	conseqPtsRegularGrid_.resize( conseqRegularGridIndices.size() );
+	conseqPtsRegularGrid_.resize( requiredGridIndices.size() );
 	//The following variable is used to reset the regular grid index in the cubes to the data layout
 	std::map<int,int> invConseqPtsRegularGrid;
 	int i = 0;
 	for ( auto ig : requiredGridIndices )
 	{
-		invConseqPtsRegularGrid[ig] = i; // guaranteed to be unique by set
+		invConseqPtsRegularGrid[ig] = i; // guaranteed to be unique by map
 		conseqPtsRegularGrid_[i++]= ig;
 	}
 
-	//	2) Reset for each cube in usedGridCubes_ the corner index to the index
-	//		in the data array. Also cross check that we have mapped all points.
+	//	2) Set for each tetrahedron in tetraContainedIndicesList_ the corner indices to the ones
+	//		in the data array. The result is stored in  tetraIndexToDataPoints_.
+	// 		Also cross check that we have mapped all points.
+	tetraIndexToDataPoints_.resize(4*tetraContainedIndicesList_.size());
 	int nPtsCheck = 0;
-	for ( auto & cube : usedGridCubes_)
+	int itetra = 0;
+	for ( auto & tetra : tetraContainedIndicesList_)
 	{
-		for ( auto & coi : cube.cornerIndices_ )
+		std::copy(tetra.first.get_corner_indices().begin(),
+				  tetra.first.get_corner_indices().end(),
+				  &tetraIndexToDataPoints_[itetra*4]);
+		for ( auto i : tetra.second)
 		{
-			auto it = invConseqPtsRegularGrid.find( coi );
+			auto ret = conseqRegularGridIndices.insert(i);
+			if( not ret.second )
+				throw std::logic_error(std::string("Index of the non-grid points #")
+					+std::to_string(i)+" appears multiple times. Internal logic error!");
+		}
+		nPtsCheck += tetra.second.size();
+		for (int i = 0 ; i < 4 ; ++i)
+		{
+			auto it = invConseqPtsRegularGrid.find( tetraIndexToDataPoints_[itetra*4+i] );
 			if ( it == invConseqPtsRegularGrid.end() )
 				throw std::logic_error ("Internal programming error, !");
-			coi = it->second;
+			tetraIndexToDataPoints_[itetra*4+i] = it->second;
 		}
-		nPtsCheck += cube.containedIrregularPts_.size();
+		itetra++;
 	}
 
 	if ( nPts != nPtsCheck)
-		throw std::logic_error ("We have lost some grid points. Internal programming error!");
-}
-
-void
-TrilinearInterpolation::get_cell_vectors( std::vector<double> const& k,
-		std::vector<double> & lowerCorner,
-		std::vector<double> & upperCorner ) const
-{
-	//Grid logic to give the vector made of just the largest and smallest values in every dimension for a cube
-	assert( (upperCorner.size() == lowerCorner.size()) && (lowerCorner.size() == 3) );
-	for ( size_t i = 0 ; i < 3; i++ )
-	{
-		double vfbz = k[i]-std::floor(k[i]);
-		double vcellmin = std::floor(vfbz*grid_.get_grid_dim()[i])/grid_.get_grid_dim()[i];
-		double vcellmax = (std::floor(vfbz*grid_.get_grid_dim()[i])+1.0)/grid_.get_grid_dim()[i];
-		lowerCorner[i]=vcellmin;
-		upperCorner[i]=vcellmax;
-	}
+		throw std::logic_error ("We have lost or gained some grid points. Internal programming error!");
 }
 
 void TrilinearInterpolation::interpolate(

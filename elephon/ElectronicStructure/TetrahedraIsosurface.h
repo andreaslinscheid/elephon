@@ -21,6 +21,7 @@
 #define ELEPHON_ELECTRONICSTRUCTURE_TETRAHEDRAISOSURFACE_H_
 
 #include "LatticeStructure/TetrahedraGrid.h"
+#include "LatticeStructure/Tetrahedron.h"
 #include "LatticeStructure/DataRegularGrid.h"
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
@@ -121,7 +122,7 @@ private:
 	std::shared_ptr<const LatticeStructure::TetrahedraGrid> tetra_;
 
 	void compute_iso_vectors(
-			LatticeStructure::TetrahedraGrid::Tetrahedra const & t,
+			LatticeStructure::Tetrahedron const & t,
 			std::multimap<double,int> const & ecorner,
 			double e,
 			std::vector<double> & kIso) const;

@@ -22,6 +22,7 @@
 
 #include "ElectronicStructure/ElectronicBands.h"
 #include "IOMethods/ResourceHandler.h"
+#include <boost/filesystem.hpp>
 #include <string>
 #include <vector>
 #include <memory>
@@ -50,7 +51,15 @@ void write_mass_tensor_file(
 		std::vector<double> const & energyWindow,
 		int method);
 
-void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> loader);
+
+std::vector<double>
+read_mass_tens_file(boost::filesystem::path massTens);
+
+void
+output_valenceBandMaxima_conductionBandMinima(boost::filesystem::path massTens);
+
+void
+do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> loader);
 
 } /* namespace BandStructureAnalysis */
 } /* namespace ElectronicStructure */

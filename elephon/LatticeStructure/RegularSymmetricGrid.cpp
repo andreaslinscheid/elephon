@@ -37,6 +37,19 @@ RegularSymmetricGrid::view_bare_grid() const
 
 void
 RegularSymmetricGrid::initialize(
+		RegularBareGrid const & baregrid,
+		Symmetry const & sym)
+{
+	this->initialize(
+			baregrid.get_grid_dim(),
+			baregrid.get_grid_prec(),
+			baregrid.get_grid_shift(),
+			sym,
+			baregrid.get_lattice());
+}
+
+void
+RegularSymmetricGrid::initialize(
 		std::vector<int> dim,
 		double gridPrec,
 		std::vector<double> shift,

@@ -228,7 +228,7 @@ public:
 			std::vector<T> energyRange,
 			std::vector<T> & bands,
 			int &numBands,
-			std::shared_ptr<const LatticeStructure::RegularBareGrid> interpolMesh = nullptr) const;
+			std::shared_ptr<const LatticeStructure::TetrahedraGrid> interpolMesh = nullptr) const;
 private:
 
 	int nDGP_ = 0;
@@ -236,6 +236,8 @@ private:
 	std::vector<T> dataIrred_;
 
 	LatticeStructure::RegularSymmetricGrid grid_;
+
+	mutable std::shared_ptr<LatticeStructure::TetrahedraGrid> tetraGrid_;
 
 	template<class F>
 	void compute_DOS_general(

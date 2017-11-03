@@ -21,7 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_TETRAHEDRAGRID_H_
 
 #include "LatticeStructure/RegularSymmetricGrid.h"
-#include "LatticeStructure/ExtendedSymmetricGrid.h"
+#include "LatticeStructure/Tetrahedron.h"
 #include <vector>
 #include <memory>
 
@@ -29,13 +29,10 @@ namespace elephon
 {
 namespace LatticeStructure
 {
-// forward declare
-namespace detail{ class Tetrahedra;};
 
 class TetrahedraGrid
 {
 public:
-	typedef detail::Tetrahedra Tetrahedra;
 
 	void initialize(std::shared_ptr<const RegularSymmetricGrid> grid);
 
@@ -47,9 +44,9 @@ public:
 
 	int get_n_reducible_tetra() const;
 
-	std::vector<Tetrahedra> const get_tetra_list() const;
+	std::vector<Tetrahedron> const get_tetra_list() const;
 
-	std::vector<Tetrahedra> const get_reducible_tetra_list() const;
+	std::vector<Tetrahedron> const get_reducible_tetra_list() const;
 
 	std::shared_ptr<const RegularSymmetricGrid> get_grid() const;
 
@@ -57,13 +54,20 @@ public:
 
 	std::vector<int> const & get_irreducible_to_reducible(int iirred) const;
 
+	void compute_grid_tetrahedra_surrounding_nongrid_points(
+			std::vector<double> const & nonGridPoints,
+			std::map<Tetrahedron,std::vector<int>> & tetras) const;
 private:
+
+	bool mainDiagon_0_6_ = false;
 
 	std::shared_ptr<const RegularSymmetricGrid> grid_;
 
-	std::vector<Tetrahedra> tetras_;
+	std::shared_ptr<ExtendedSymmetricGrid> extendedGrid_;
 
-	std::vector<Tetrahedra> reducibleTetras_;
+	std::vector<Tetrahedron> tetras_;
+
+	std::vector<Tetrahedron> reducibleTetras_;
 
 	std::vector<std::int32_t> reducibleToIrreducible_;
 
@@ -71,52 +75,9 @@ private:
 
 	void split_cube_insert_tetra(
 			RegularSymmetricGrid::GridCube const & cube,
-			std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid,
-			bool diagonal1,
-			std::vector<Tetrahedra> & reducibleTetra,
-			std::map<Tetrahedra,std::vector<std::int32_t>> & tetraSet);
+			std::vector<Tetrahedron> & reducibleTetra,
+			std::map<Tetrahedron,std::vector<std::int32_t>> & tetraSet) const;
 };
-
-namespace detail
-{
-class Tetrahedra
-{
-public:
-	Tetrahedra(
-			std::vector<int> cornerIndicesData,
-			std::vector<int> cornerIndicesExtended,
-			std::vector<int> cornerIndicesExtendedReducible,
-			std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid);
-
-	int get_multiplicity() const;
-
-	void set_multiplicity(int m);
-
-	std::vector<int> const & get_corner_indices() const;
-
-	void compute_corner_vectors(
-			std::vector<double> & p0,
-			std::vector<double> & v123 ) const;
-
-	void compute_corner_points(
-			std::vector<double> & p0123 ) const;
-
-	friend bool operator< (Tetrahedra const & t1, Tetrahedra const & t2);
-
-private:
-
-	int multiplicity_ = 1;
-
-	std::vector<int> cornerIndicesData_;
-
-	std::vector<int> cornerIndicesExtended_;
-
-	std::vector<int> cornerIndicesExtendedReducible_;
-
-	std::shared_ptr<const ExtendedSymmetricGrid> extendedGrid_;
-};
-
-} /* namespace detail */
 
 } /* namespace LatticeStructure */
 } /* namespace elephon */

@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE( Si_vasp_electron_bands )
 
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n"
-			"fftd = 128 128 128\n"
+			"fftd = 0 0 0\n"
 			"ewinbnd = -5.0 5.0\n"
 			"f_kpath = "+fkpath.string()+"\n"
 			"f_bands = "+fbands.string()+"\n";
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE( Si_vasp_electron_bands )
 			resource->get_optns().get_ewinbnd(),
 			bandsAlongPath,
 			numBandsInWindow,
-			resource->get_interpol_reci_mesh_obj());
+			resource->get_interpol_reci_tetra_mesh_obj());
 
 	auto gnuplotFile = fbands.string()+".gp";
 	kpath->produce_gnuplot_script_stable_particle(

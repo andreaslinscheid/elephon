@@ -20,6 +20,7 @@
 #ifndef ELEPHON_ALGORITHMS_HELPERFUNCTIONS_HPP_
 #define ELEPHON_ALGORITHMS_HELPERFUNCTIONS_HPP_
 
+#include "LatticeStructure/Tetrahedron.h"
 #include <complex>
 #include <vector>
 
@@ -124,6 +125,41 @@ triangle_area(std::vector<T> const & p1,
 		       p1[1]*p3[2] + p2[1]*p3[2],2));
 }
 
+template<typename T>
+void
+interpolate_within_single_tetrahedron(
+		std::vector<double> const & ptsInTetra,
+		LatticeStructure::Tetrahedron const & tetra,
+		std::vector<std::vector<T>> const & cornerData,
+		std::vector<T> & interpolData)
+{
+	typedef typename cmplxTypeTrait<T>::realT realT;
+	assert(ptsInTetra.size()%3 == 0);
+	assert( cornerData.size() == 4 );
+	int nD = cornerData[0].size();
+	assert( (nD == cornerData[1].size()) && (nD == cornerData[2].size()) &&
+			(nD == cornerData[3].size()) );
+
+	const int nVThisTetra = ptsInTetra.size()/3;
+	std::vector<bool> isInTetra;
+	std::vector<double> vectorsBarycentric;
+	tetra.check_vectors_inside( ptsInTetra,
+								isInTetra,
+								vectorsBarycentric);
+	assert(std::all_of(isInTetra.begin(), isInTetra.end(), [] (bool a){return a;}));
+
+	interpolData.resize(nD);
+	for (int ip = 0 ; ip < nVThisTetra ; ++ip)
+		for ( int id = 0 ; id < nD ; ++id )
+		{
+			interpolData[id] =	cornerData[0][id]*realT(vectorsBarycentric[ip*4+0]) +
+								cornerData[1][id]*realT(vectorsBarycentric[ip*4+1]) +
+								cornerData[2][id]*realT(vectorsBarycentric[ip*4+2]) +
+								cornerData[3][id]*realT(vectorsBarycentric[ip*4+3]) ;
+			//check for NaN in debug mode
+			assert( interpolData[id] == interpolData[id]);
+		}
+}
 
 } /* namespace helperfunctions */
 } /* namespace Algorithms */

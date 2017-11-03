@@ -32,6 +32,7 @@
 #include <exception>
 #include <algorithm>
 #include <iostream>
+#include <memory>
 
 /**
  * This test checks if the surface area of a sphere is correctly approximated
@@ -88,7 +89,7 @@ BOOST_AUTO_TEST_CASE( free_electron_gas )
 
 	double const Ef = 1.0/(2.0*meStar)*std::pow(3*M_PI*M_PI*Ne,2.0/3.0);
 	elephon::LatticeStructure::RegularBareGrid grid;
-	grid.initialize( {100,100,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	grid.initialize( {20,20,20}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
 	std::vector<int> d = grid.get_grid_dim();
 	std::vector<double> data(d[0]*d[1]*d[2]);
 	for (int k = 0 ; k < d[2]; ++k)
@@ -108,7 +109,12 @@ BOOST_AUTO_TEST_CASE( free_electron_gas )
 			1,
 			data);
 
-	elephon::Algorithms::TrilinearInterpolation triLin(grid);
+	elephon::LatticeStructure::Symmetry idsym;
+	auto symGrid = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
+	symGrid->initialize(grid, idsym);
+	auto tetraGrid = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();
+	tetraGrid->initialize(symGrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(tetraGrid);
 
 	//Here we compute if the DOS is computed correctly for the analytically solvable model
 	const int numESteps = 20;
@@ -174,7 +180,7 @@ BOOST_AUTO_TEST_CASE( Check_surface_sphere_plus_spheroid )
 	double const c = 0.35;
 	const int nBnd = 2;
 	elephon::LatticeStructure::RegularBareGrid grid;
-	grid.initialize( {100,100,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	grid.initialize( {20,20,20}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
 	std::vector<int> d = grid.get_grid_dim();
 	std::vector<double> data(d[0]*d[1]*d[2]*nBnd);
 	for (int k = 0 ; k < d[2]; ++k)
@@ -211,7 +217,7 @@ BOOST_AUTO_TEST_CASE( Check_surface_sphere_plus_spheroid )
 	const double e = std::sqrt(1-a*a/(c*c));
 	const double spheroidArea = 2*M_PI*a*a*(1+c/(e*a)*std::asin(e));
 
-	BOOST_REQUIRE( std::fabs(surfaceArea-spheroidArea-sphereArea) < 2e-3);
+	BOOST_REQUIRE( std::fabs(surfaceArea-spheroidArea-sphereArea) < 2e-1);
 }
 
 /**
@@ -230,7 +236,7 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 	int nBnd = 2;
 
 	elephon::LatticeStructure::RegularBareGrid grid;
-	grid.initialize(  {99,101,100}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
+	grid.initialize(  {19,21,20}, true, 1e-6, {0.0, 0.0, 0.0}, elephon::LatticeStructure::LatticeModule() );
 	std::vector<int> d = grid.get_grid_dim();
 	std::vector<double> data(d[0]*d[1]*d[2]*nBnd);
 	for (int k = 0 ; k < d[2]; ++k)
@@ -271,7 +277,12 @@ BOOST_AUTO_TEST_CASE( Check_DOS_2BdndCos )
 			nBnd,
 			data);
 
-	elephon::Algorithms::TrilinearInterpolation triLin(grid);
+	elephon::LatticeStructure::Symmetry idsym;
+	auto symGrid = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
+	symGrid->initialize(grid, idsym);
+	auto tetraGrid = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();
+	tetraGrid->initialize(symGrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(tetraGrid);
 
 	double Nelec = 0;
 
@@ -406,7 +417,12 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 				dos_ref[i] += 1.0/de/double(d[0]*d[1]*d[2]);
 	}
 
-	elephon::Algorithms::TrilinearInterpolation triLin(grid);
+	elephon::LatticeStructure::Symmetry idsym;
+	auto symGrid = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
+	symGrid->initialize(grid, idsym);
+	auto tetraGrid = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();
+	tetraGrid->initialize(symGrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(tetraGrid);
 
 	for ( int ie = 0 ; ie < numESteps; ++ie)
 	{

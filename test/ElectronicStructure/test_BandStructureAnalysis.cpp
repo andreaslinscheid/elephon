@@ -29,27 +29,6 @@
 #include <fstream>
 #include <limits>
 
-std::vector<double>
-read_mass_tens_file(boost::filesystem::path massTens)
-{
-	std::ifstream file(massTens.c_str(), std::ios::binary);
-	if ( ! file.good() )
-		throw std::runtime_error("cannot open mass tensor file");
-
-	file.seekg(0, std::ios::beg);
-	int size = file.tellg();
-	file.seekg(0, std::ios::end);
-	size = int(file.tellg()) - size;
-	std::vector<char> buf(size);
-	file.seekg(0, std::ios::beg);
-	file.read(&buf[0], size);
-
-	int numElem = size/sizeof(float);
-
-	auto ptr = reinterpret_cast<float*>(buf.data());
-	return std::vector<double>(ptr, ptr+numElem);
-}
-
 BOOST_AUTO_TEST_CASE( write_mass_tensor )
 {
 	using namespace elephon;
@@ -197,11 +176,11 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // ky = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kz = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++], 3.0); // energy maxium
-	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 2e-2); // eigenvalues, eigenvectors are degenerate and arbitrary
+	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 3e-2); // eigenvalues, eigenvectors are degenerate and arbitrary
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 2e-2); //
+	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 3e-2); //
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 2e-2); //
+	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 3e-2); //
 	c += 3;
 
 	BOOST_CHECK_EQUAL(ptr[c++], 1); // maximum
@@ -210,11 +189,11 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // ky =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // kz = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++], 3.0); // energy maxium
-	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 3e-2);
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 3e-2);
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-(-unity), 3e-2);
 	c += 3;
 
 	BOOST_CHECK_EQUAL(ptr[c++],-1); // minimum
@@ -223,11 +202,11 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++], 0.0); // ky = 0.0
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kz =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++],-3.0); // energy maxium
-	BOOST_CHECK_SMALL(ptr[c++]-unity, 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-unity, 3e-2);
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-unity, 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-unity, 3e-2);
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-unity, 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-unity, 3e-2);
 	c += 3;
 
 	BOOST_CHECK_EQUAL(ptr[c++],-1); // minimum
@@ -236,11 +215,11 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // ky =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++],-0.5); // kz =-0.5
 	BOOST_CHECK_EQUAL(ptr[c++],-3.0); // energy maxium
-	BOOST_CHECK_SMALL(ptr[c++]-unity, 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-unity, 3e-2);
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-unity, 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-unity, 3e-2);
 	c += 3;
-	BOOST_CHECK_SMALL(ptr[c++]-unity, 2e-2);
+	BOOST_CHECK_SMALL(ptr[c++]-unity, 3e-2);
 	c += 3;
 	boost::filesystem::remove(massTens);
 }
@@ -282,7 +261,7 @@ BOOST_AUTO_TEST_CASE( Si_vasp_mass_tensor )
 	std::string input = std::string()+
 			"root_dir = "+testd.string()+"\n"
 			"ewinbnd = -4.0 4.0\n"
-			"fftd = 64 64 64\n"
+			"fftd = 0 0 0\n"
 			"f_mtens = "+massTens.string()+"\n";
 	elephon::IOMethods::InputOptions opts;
 	ms.simulate_elephon_input(
@@ -297,91 +276,7 @@ BOOST_AUTO_TEST_CASE( Si_vasp_mass_tensor )
 
 	BOOST_REQUIRE(boost::filesystem::exists(massTens));
 
-	auto massTensorData = read_mass_tens_file(massTens);
-	int numExtrema = massTensorData.size() / 18 ;
-	std::vector< std::vector<double> > kPoints(numExtrema);
-	std::vector< std::vector<double> > eigenvalues(numExtrema);
-
-	// use a compare function that treats close doubles as equal
-	auto cmp = [] (double a, double b) {
-		if ( std::abs(a-b)>1e-3 )
-			return a < b;
-		return false;
-		};
-	std::multimap<double,int,decltype(cmp)> sortMinima(cmp);
-	std::multimap<double,int,decltype(cmp)> sortMax(cmp);
-	for (int ie = 0 ; ie < numExtrema ; ++ie )
-	{
-		kPoints[ie] = std::vector<double>(&massTensorData[18*ie+2], &massTensorData[18*ie+2]+3);
-		eigenvalues[ie] = std::vector<double>{ massTensorData[18*ie+ 6],
-											   massTensorData[18*ie+10],
-											   massTensorData[18*ie+14] };
-		double energy = massTensorData[18*ie+5];
-		if ( massTensorData[18*ie+0] >= 0 )
-		{
-			sortMax.insert(std::make_pair(-energy, ie));
-		}
-		else
-		{
-			sortMinima.insert(std::make_pair(energy, ie));
-		}
-	}
-
-	// find the valence band maxima and the conduction band minima
-	std::vector<int> cbmin;
-	double last = std::numeric_limits<double>::min();
-	for ( auto min : sortMinima)
-	{
-		if ( min.first < 0 )
-			continue;
-
-		// min.first == last.first according to cmp
-		if ( (!(cmp(last, min.first)) and (!cmp(min.first ,last))) or cbmin.empty() )
-		{
-			cbmin.push_back(min.second);
-		}
-		else
-		{
-			break;
-		}
-		last = min.first;
-	}
-	std::vector<int> vbmax;
-	for ( auto max : sortMax)
-	{
-		if ( max.first < 0 ) // conduction bands; note negative energy convention
-			continue;
-
-		double energy = -max.first; // revert negative energy convention.
-
-		// min.first == last.first according to cmp
-		if ( (!(cmp(last, energy)) and (!cmp(energy, last))) or vbmax.empty() )
-		{
-			vbmax.push_back(max.second);
-		}
-		else
-		{
-			break;
-		}
-		last = energy;
-	}
-
-	for ( auto i : vbmax )
-	{
-		std::cout << "\nValence band max at k="<<
-				kPoints[i][0] << ","<< kPoints[i][1] << ","<< kPoints[i][2] << " energy " << massTensorData[18*i+5]<<"\n";
-		std::cout << "Mass tensor eigenvalues: "<<
-				eigenvalues[i][0] << ","<< eigenvalues[i][1] << ","<< eigenvalues[i][2] <<"\n";
-	}
-
-	for ( auto i : cbmin )
-	{
-		std::cout << "\nConduction band min at k="<<
-				kPoints[i][0] << ","<< kPoints[i][1] << ","<< kPoints[i][2] << " energy " << massTensorData[18*i+5]<<"\n";
-		std::cout << "Mass tensor eigenvalues: "<<
-				eigenvalues[i][0] << ","<< eigenvalues[i][1] << ","<< eigenvalues[i][2] <<"\n";
-	}
-
+	ElectronicStructure::BandStructureAnalysis::output_valenceBandMaxima_conductionBandMinima(massTens);
 
 	boost::filesystem::remove(massTens);
 }

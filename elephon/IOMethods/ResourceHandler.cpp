@@ -151,6 +151,14 @@ ResourceHandler::get_interpol_reci_mesh_obj()
 	return interpolKGrid_;
 }
 
+std::shared_ptr<const LatticeStructure::TetrahedraGrid>
+ResourceHandler::get_interpol_reci_tetra_mesh_obj()
+{
+	if ( ! interpolTetraKGrid_ )
+		this->initialize_interpol_reci_tetra_mesh_obj();
+	assert(interpolTetraKGrid_);
+	return interpolTetraKGrid_;
+}
 
 std::shared_ptr<const LatticeStructure::TetrahedraGrid>
 ResourceHandler::get_tetrahedra_grid()
@@ -400,6 +408,23 @@ ResourceHandler::initialize_interpol_reci_mesh_obj()
 			bands->get_grid().get_grid_prec(),
 			dataLoader_->get_optns().get_ffts(),
 			bands->get_grid().get_lattice());
+}
+
+void
+ResourceHandler::initialize_interpol_reci_tetra_mesh_obj()
+{
+	auto symmetry = this->get_primitive_unitcell_obj()->get_symmetry();
+	symmetry.set_reciprocal_space_sym(true);
+	auto bareGrid = this->get_interpol_reci_mesh_obj();
+	LatticeStructure::RegularSymmetricGrid symmetricGrid;
+	symmetricGrid.initialize( 	bareGrid->get_grid_dim(),
+								bareGrid->get_grid_prec(),
+								bareGrid->get_grid_shift(),
+								symmetry,
+								bareGrid->get_lattice());
+
+	interpolTetraKGrid_ = std::make_shared<LatticeStructure::TetrahedraGrid>();
+	interpolTetraKGrid_->initialize(std::make_shared<LatticeStructure::RegularSymmetricGrid>(std::move(symmetricGrid)));
 }
 
 void

@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE( Tetrahedra_partitioning_no_sym )
 	BOOST_CHECK_EQUAL( tetra.get_n_tetra() , g.get_grid_dim()[0]*g.get_grid_dim()[1]*g.get_grid_dim()[2]*6 );
 
 	// cross check volume and stuff
-	auto vol = [&g] (elephon::LatticeStructure::TetrahedraGrid::Tetrahedra const & t) {
+	auto vol = [&g] (elephon::LatticeStructure::Tetrahedron const & t) {
 		std::vector<double> p0;
 		std::vector<double> v123;
 		t.compute_corner_vectors(p0, v123);

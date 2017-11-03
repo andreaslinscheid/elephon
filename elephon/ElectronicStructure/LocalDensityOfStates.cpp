@@ -19,7 +19,6 @@
 
 #include "ElectronicStructure/LocalDensityOfStates.h"
 #include "ElectronicStructure/FermiSurface.h"
-#include "Algorithms/TrilinearInterpolation.h"
 #include "LatticeStructure/UnitCell.h"
 #include "Algorithms/FFTInterface.h"
 #include "Algorithms/GridRotationMap.h"
@@ -44,7 +43,6 @@ LocalDensityOfStates::compute_ldos(
 	uc_ = unitcell;
 	isoEnergies_ = std::move(energies);
 	rsDims_ = realSpaceRes;
-	Algorithms::TrilinearInterpolation triLin( wfcts->get_k_grid().view_bare_grid() );
 	Algorithms::FFTInterface fft;
 
 	std::vector< std::vector< std::complex<float> > > wfctsFs;

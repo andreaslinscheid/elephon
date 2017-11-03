@@ -56,6 +56,10 @@ public:
 
 	int get_num_bands() const;
 
+	/**
+	 * @todo change structure to shared pointers
+	 * @return
+	 */
 	LatticeStructure::RegularSymmetricGrid const & get_k_grid() const;
 
 	void compute_Fourier_maps(std::vector<double> const & kvectors,
@@ -98,7 +102,7 @@ private:
 
 	std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface_;
 
-	LatticeStructure::RegularSymmetricGrid grid_;
+	std::shared_ptr<LatticeStructure::TetrahedraGrid> tetraGrid_;
 
 	mutable std::vector< std::vector<int> > gSymBuffer_;
 

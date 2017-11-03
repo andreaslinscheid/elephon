@@ -478,7 +478,12 @@ DataRegularGrid<T>::compute_DOS_general(
 		return;
 
 	dos.assign(energies.size(), T(0));
-	Algorithms::TrilinearInterpolation trilin(grid_.view_bare_grid());
+	if ( not tetraGrid_)
+	{
+		tetraGrid_ = std::make_shared<LatticeStructure::TetrahedraGrid>();
+		tetraGrid_->initialize(std::make_shared<RegularSymmetricGrid>(grid_));
+	}
+	Algorithms::TrilinearInterpolation trilin(tetraGrid_);
 
 	std::vector<T> bndData;
 	std::vector<int> reqGridIndices;
@@ -524,26 +529,33 @@ DataRegularGrid<T>::compute_bands_along_path(
 		std::vector<T> energyRange,
 		std::vector<T> & bands,
 		int &numBands,
-		std::shared_ptr<const LatticeStructure::RegularBareGrid> interpolMesh) const
+		std::shared_ptr<const LatticeStructure::TetrahedraGrid> interpolMesh) const
 {
 	auto bandIndices = this->get_bands_crossing_energy_window(energyRange);
 	numBands = bandIndices.size();
 
-	std::shared_ptr<const LatticeStructure::RegularBareGrid> fineRegularMesh = interpolMesh;
-	if ( not fineRegularMesh )
-		fineRegularMesh = std::make_shared<const LatticeStructure::RegularBareGrid>(grid_.view_bare_grid());
+	std::shared_ptr<const LatticeStructure::TetrahedraGrid> fineTetraMesh = interpolMesh;
+	if ( not fineTetraMesh )
+	{
+		LatticeStructure::TetrahedraGrid tg;
+		tg.initialize(std::make_shared<LatticeStructure::RegularSymmetricGrid>(grid_));
+		fineTetraMesh = std::make_shared<const LatticeStructure::TetrahedraGrid>(std::move(tg));
+	}
 
 	const int numKptsPath = nonGridPoints.size()/3;
 	bands.resize(numKptsPath*numBands);
 
 	std::vector<int> queriedGridIndices;
-	Algorithms::TrilinearInterpolation trilin(*fineRegularMesh);
+	Algorithms::TrilinearInterpolation trilin(fineTetraMesh);
 	trilin.data_query(nonGridPoints, queriedGridIndices);
 
 	std::vector<T> interpolBndsRegularGrid, dataQueried, thisBandData;
 	for ( auto ibnd : bandIndices)
 	{
-		this->generate_interpolated_reducible_data({ibnd}, *fineRegularMesh, interpolBndsRegularGrid);
+		this->generate_interpolated_reducible_data(
+				{ibnd},
+				fineTetraMesh->get_grid()->view_bare_grid(),
+				interpolBndsRegularGrid);
 
 		dataQueried.resize(queriedGridIndices.size());
 		for ( int i = 0 ; i < queriedGridIndices.size(); ++i)

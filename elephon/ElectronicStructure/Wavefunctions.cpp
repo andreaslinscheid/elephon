@@ -18,7 +18,7 @@
  */
 
 #include "Wavefunctions.h"
-#include "Algorithms/TrilinearInterpolation.h"
+#include "Algorithms/helperfunctions.hpp"
 #include "Algorithms/FFTInterface.h"
 #include <complex>
 #include <iostream>
@@ -33,10 +33,10 @@ void
 Wavefunctions::initialize( LatticeStructure::RegularSymmetricGrid kgrid,
 		std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface)
 {
-	wfctInterface_ = wfctInterface;
-	rootDir_ = wfctInterface_->get_optns().get_root_dir();
-	grid_ = std::move(kgrid);
-	wfctInterface_->read_nBnd(rootDir_, nBnd_);
+	auto rootDir = wfctInterface->get_optns().get_root_dir();
+	int numBands;
+	wfctInterface->read_nBnd(rootDir, numBands);
+	this->initialize(rootDir, std::move(kgrid), numBands, wfctInterface);
 }
 
 void
@@ -44,10 +44,15 @@ Wavefunctions::initialize(
 		std::string rootDir,
 		std::shared_ptr<IOMethods::ElectronicStructureCodeInterface> wfctInterface)
 {
-	wfctInterface_ = wfctInterface;
-	rootDir_ = rootDir;
-	wfctInterface_->read_reciprocal_symmetric_grid(rootDir_, grid_);
-	wfctInterface_->read_nBnd(rootDir_, nBnd_);
+	LatticeStructure::RegularSymmetricGrid grid;
+	wfctInterface->read_reciprocal_symmetric_grid(rootDir, grid);
+	int numBands;
+	wfctInterface->read_nBnd(rootDir, numBands);
+	this->initialize(
+			std::move(rootDir),
+			std::move(grid),
+			numBands,
+			wfctInterface);
 }
 
 void
@@ -59,8 +64,9 @@ Wavefunctions::initialize(
 {
 	wfctInterface_ = wfctInterface;
 	rootDir_ = std::move(rootDir);
-	grid_ = std::move(kgrid);
 	nBnd_ = numBands;
+	tetraGrid_ = std::make_shared<LatticeStructure::TetrahedraGrid>();
+	tetraGrid_->initialize(std::make_shared<LatticeStructure::RegularSymmetricGrid>(std::move(kgrid)));
 }
 
 void
@@ -75,7 +81,8 @@ Wavefunctions::generate_reducible_grid_wfcts(
 
 	//First we make the connection reducible -> irreducible
 	std::vector<int> irredKptIndices;
-	grid_.convert_reducible_irreducible(redKptIndices, irredKptIndices);
+	auto grid = tetraGrid_->get_grid();
+	grid->convert_reducible_irreducible(redKptIndices, irredKptIndices);
 
 	//Find the unique irreducible indices and create a map that allows us to retrieve
 	//the connection of input to these unique indices
@@ -115,20 +122,20 @@ Wavefunctions::generate_reducible_grid_wfcts(
 	for (int ik = 0 ; ik < uniqIrrKpt.size(); ++ik)
 	{
 		int ikIrred = uniqIrrKpt[ik];
-		int isymId =  grid_.get_maps_sym_irred_to_reducible()[ikIrred][ 0 ];
-		assert( isymId == grid_.get_symmetry().get_identity_index() );
-		int ikRed = grid_.get_maps_irreducible_to_reducible()[ikIrred][ isymId ];
-		auto kIrred = grid_.get_vector_direct(ikRed);
+		int isymId =  grid->get_maps_sym_irred_to_reducible()[ikIrred][ 0 ];
+		assert( isymId == grid->get_symmetry().get_identity_index() );
+		int ikRed = grid->get_maps_irreducible_to_reducible()[ikIrred][ isymId ];
+		auto kIrred = grid->get_vector_direct(ikRed);
 		std::copy(&kIrred[0],&kIrred[0]+3,&irredkpoints[ik*3]);
 	}
 
 	std::vector< std::vector<int> > irredFFTMap;
-	wfctInterface_->compute_fourier_map( irredkpoints, irredFFTMap, grid_.get_grid_prec());
+	wfctInterface_->compute_fourier_map( irredkpoints, irredFFTMap, grid->get_grid_prec());
 	auto fftMaxDims = wfctInterface_->get_max_fft_dims();
 
 	//And finally, we reconstruct the wavefunctions at reducible k points
-	std::vector< std::vector<int> > irredToRed = grid_.get_maps_irreducible_to_reducible();
-	std::vector< std::vector<int> > symIrredToRed = grid_.get_maps_sym_irred_to_reducible();
+	std::vector< std::vector<int> > irredToRed = grid->get_maps_irreducible_to_reducible();
+	std::vector< std::vector<int> > symIrredToRed = grid->get_maps_sym_irred_to_reducible();
 	for (int ik = 0 ; ik < uniqIrrKpt.size(); ++ik)
 	{
 		//ik enumerates the irreducible requested k points, ikir the corresponding irreducible index
@@ -160,26 +167,26 @@ Wavefunctions::generate_reducible_grid_wfcts(
 			//construct a look up map to convert the rotated 3D vector index
 			//back into a plane wave index
 			int ikRed = irredToRed[ikir][ is ];
-			auto kRed = grid_.get_vector_direct(ikRed);
+			auto kRed = grid->get_vector_direct(ikRed);
 			std::vector< std::vector<int> > RedFFTMap;
-			wfctInterface_->compute_fourier_map( kRed, RedFFTMap, grid_.get_grid_prec());
+			wfctInterface_->compute_fourier_map( kRed, RedFFTMap, grid->get_grid_prec());
 			assert( npw == RedFFTMap[0].size()/3 );
 
 			// Determine if there was a reciprocal lattice shift involved
 			// This umklapp vector has to be added to the plane wave vector
 			int isym = symIrredToRed[ikir][is];
-			auto kIrred = grid_.get_vector_direct(irredToRed[ikir][ grid_.get_symmetry().get_identity_index() ]);
+			auto kIrred = grid->get_vector_direct(irredToRed[ikir][ grid->get_symmetry().get_identity_index() ]);
 			auto ktransformNoPeriodic = kIrred;
-			grid_.get_symmetry().apply(isym, ktransformNoPeriodic, false);
+			grid->get_symmetry().apply(isym, ktransformNoPeriodic, false);
 			std::vector<int> umklappShift(3,0);
 			for ( int i = 0 ; i < 3 ; ++i)
 			{
 				umklappShift[i] = std::floor(ktransformNoPeriodic[i] - kRed[i] + 0.5);
-				assert( std::abs(umklappShift[i] - (ktransformNoPeriodic[i] - kRed[i])) < grid_.get_grid_prec());
+				assert( std::abs(umklappShift[i] - (ktransformNoPeriodic[i] - kRed[i])) < grid->get_grid_prec());
 			}
 
 			int inputLocation = it->second;
-			if ( isym == grid_.get_symmetry().get_identity_index() )
+			if ( isym == grid->get_symmetry().get_identity_index() )
 			{
 				for ( int i = 0; i < int(bndIndices.size()); ++i)
 					for ( int ipw = 0; ipw < npw; ++ipw)
@@ -189,8 +196,8 @@ Wavefunctions::generate_reducible_grid_wfcts(
 			else//If this is not the identity symmetry we need to possibly
 				// conjugate and/or multiply a phase and reorder the FFT mapping
 			{
-				bool inv = grid_.get_symmetry().is_inversion( isym );
-				bool symmorphic = grid_.get_symmetry().is_symmorphic( isym );
+				bool inv = grid->get_symmetry().is_inversion( isym );
+				bool symmorphic = grid->get_symmetry().is_symmorphic( isym );
 
 				std::map<int,int> rotLookupMap;
 				std::map<int,int>::const_iterator hint = rotLookupMap.end();
@@ -283,10 +290,11 @@ Wavefunctions::generate_reducible_grid_wfcts(
 void
 Wavefunctions::fill_G_symmetry_buffer(int isym) const
 {
+	auto symmetry = tetraGrid_->get_grid()->get_symmetry();
 	auto fftDims = wfctInterface_->get_max_fft_dims();
 	//Set the rotation buffer to the right size
-	if ( int(gSymBuffer_.size()) != grid_.get_symmetry().get_num_symmetries() )
-		gSymBuffer_ = std::vector<std::vector<int>>( grid_.get_symmetry().get_num_symmetries() );
+	if ( int(gSymBuffer_.size()) != symmetry.get_num_symmetries() )
+		gSymBuffer_ = std::vector<std::vector<int>>( symmetry.get_num_symmetries() );
 
 	if ( int(gSymBuffer_[isym].size()) != fftDims[0]*fftDims[1]*fftDims[2] )
 	{
@@ -299,7 +307,7 @@ Wavefunctions::fill_G_symmetry_buffer(int isym) const
 					int cnsq = (k*fftDims[1]+j)*fftDims[0]+i;
 					std::vector<int> GRot = {i, j, k};
 					Algorithms::FFTInterface::inplace_to_freq(GRot, fftDims);
-					grid_.get_symmetry().rotate<int>(isym, GRot.begin(), GRot.end(), false);
+					symmetry.rotate<int>(isym, GRot.begin(), GRot.end(), false);
 					// We allow aliasing, because for uneven grids, rotated G vectors can exceed the fftDims.
 					// These will not be referenced by plane waves anyhow.
 					for ( int l = 0 ; l < 3 ; ++l)
@@ -314,15 +322,15 @@ Wavefunctions::fill_G_symmetry_buffer(int isym) const
 				}
 	}
 
-	if ( not grid_.get_symmetry().is_symmorphic(isym) )
+	if ( not symmetry.is_symmorphic(isym) )
 	{
 		//Set the phase buffer to the right size
-		if ( int(phaseBuffer_.size()) != grid_.get_symmetry().get_num_symmetries() )
-			phaseBuffer_.resize( grid_.get_symmetry().get_num_symmetries() );
+		if ( int(phaseBuffer_.size()) != symmetry.get_num_symmetries() )
+			phaseBuffer_.resize( symmetry.get_num_symmetries() );
 
 		if ( int(phaseBuffer_[isym].size()) != fftDims[0]*fftDims[1]*fftDims[2] )
 		{
-			std::vector<double> tau = grid_.get_symmetry().get_fractional_translation(isym);
+			std::vector<double> tau = symmetry.get_fractional_translation(isym);
 			phaseBuffer_[isym].resize( fftDims[0]*fftDims[1]*fftDims[2] );
 			for ( int k = 0 ; k < fftDims[2]; ++k )
 				for ( int j = 0 ; j < fftDims[1]; ++j )
@@ -347,14 +355,14 @@ Wavefunctions::get_num_bands() const
 LatticeStructure::RegularSymmetricGrid const &
 Wavefunctions::get_k_grid() const
 {
-	return grid_;
+	return *tetraGrid_->get_grid();
 }
 
 void
 Wavefunctions::compute_Fourier_maps(std::vector<double> const & kvectors,
 		std::vector<std::vector<int>> & fftMapsPerK) const
 {
-	wfctInterface_->compute_fourier_map( kvectors, fftMapsPerK, grid_.get_grid_prec());
+	wfctInterface_->compute_fourier_map( kvectors, fftMapsPerK, tetraGrid_->get_grid()->get_grid_prec());
 }
 
 
@@ -365,24 +373,36 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 		std::vector< std::vector< std::complex<float> > > & wfctsArbitrayKp,
 		std::vector<std::vector<int>> & fftMapsArbitrayKp) const
 {
+	auto grid = tetraGrid_->get_grid();
 	int nkA = kList.size()/3; //In the following A is for arbitrary location
 
-	//Wave functions are on a regular grid and in G (reciprocal) space
-	//First, load the cubes of wave functions for linear interpolation
+	// Preparatory: Connect the input irregular grid points with the regular mesh.
+
+	// Wave functions are on a regular grid and in G (reciprocal) space
+	// First, find the tetrahedra where the k's are located and collect
+	// all grid indices needed.
 	std::vector<int> kAToCube;
-	std::vector<LatticeStructure::RegularSymmetricGrid::GridCube> gridCubes;
+	std::map<LatticeStructure::Tetrahedron, std::vector<int>> tetrasWithContainedKIndicesMap;
 	for ( auto &kxi : kList )
 		kxi -= std::floor(kxi+0.5);
-	grid_.compute_grid_cubes_surrounding_nongrid_points(
-				kList, kAToCube, gridCubes);
+	tetraGrid_->compute_grid_tetrahedra_surrounding_nongrid_points(
+				kList,
+				tetrasWithContainedKIndicesMap);
+	// copy to a vector of pairs, since we need random access
+	std::vector<std::pair<LatticeStructure::Tetrahedron, std::vector<int>>> tetrasWithContainedKIndices;
+	tetrasWithContainedKIndices.reserve(tetrasWithContainedKIndicesMap.size());
+	for (auto const & p : tetrasWithContainedKIndicesMap)
+		tetrasWithContainedKIndices.push_back(p);
 
-	//Generate a list of all occurring reducible grid vectors.
+	// here: generate a list of all occurring reducible grid vectors in redIndices
 	std::vector<int> npwPerKAllRedPts;
 	std::vector<std::vector< std::complex<float> > > wfctAllRedPts;
 	std::set<int> redIndicesSet;
-	for ( auto c : gridCubes )
-		redIndicesSet.insert( c.cornerIndices_.begin(),  c.cornerIndices_.end() );
+	for ( auto const & t : tetrasWithContainedKIndices )
+		redIndicesSet.insert(t.first.get_corner_indices().begin(), t.first.get_corner_indices().end());
 	std::vector<int> redIndices(redIndicesSet.begin(),redIndicesSet.end());
+
+	// load wavefunctions for this reducible indices.
 	this->generate_reducible_grid_wfcts(
 			bandList,
 			redIndices,
@@ -394,18 +414,18 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 	wfctsArbitrayKp.resize(nkA);
 	this->compute_Fourier_maps(kList, fftMapsArbitrayKp);
 
-	//Generate map from a corner point to the location in the array redIndices
-	std::vector<int> redIndicesTokptset( gridCubes.size()*8 );
-	for ( int ic = 0 ; ic < gridCubes.size(); ++ic )
-		for ( int iCorner = 0 ; iCorner < 8; ++iCorner )
+	// Generate map from a corner point to the location in the array redIndices
+	// and call it redIndicesTokptset
+	std::vector<int> redIndicesTokptset( tetrasWithContainedKIndices.size()*4 );
+	for ( int itetra = 0 ; itetra < tetrasWithContainedKIndices.size(); ++itetra )
+		for ( int iCorner = 0 ; iCorner < 4; ++iCorner )
 		{
-			auto it = redIndicesSet.find( gridCubes[ic].cornerIndices_[iCorner] );
+			auto it = redIndicesSet.find( tetrasWithContainedKIndices[itetra].first.get_corner_indices()[iCorner] );
 			assert( it != redIndicesSet.end() );
-			redIndicesTokptset[ic*8+iCorner] = std::distance(redIndicesSet.begin(),it);
-			assert(redIndices[redIndicesTokptset[ic*8+iCorner]] == *it);
+			redIndicesTokptset[itetra*4+iCorner] = std::distance(redIndicesSet.begin(),it);
+			assert(redIndices[redIndicesTokptset[itetra*4+iCorner]] == *it);
 		}
-
-	Algorithms::TrilinearInterpolation interpol( grid_.view_bare_grid() );
+	// Preparatory done.
 
 	// Step 1.: cast the wave functions at the corner points into a map for fast plane wave retrieval
 	// 			Helper ft G Vector struct
@@ -423,7 +443,7 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 	std::vector<double> redVectors(redIndices.size()*3);
 	for ( int ikr = 0 ; ikr < redIndices.size() ; ++ikr )
 	{
-		auto v = grid_.get_vector_direct( redIndices[ikr] );
+		auto v = grid->get_vector_direct( redIndices[ikr] );
 		std::copy( v.begin(), v.end(), &redVectors[ikr*3] );
 	}
 	std::vector< std::vector<int> > redVecFFTMaps;
@@ -440,19 +460,19 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 			cmaps[ikr].insert( std::make_pair(GVector(iGx, iGy, iGz), ipw) );
 		}
 
-	std::vector<int> npwPerK(8);
-	std::vector<std::vector< std::complex<float> > > wfctCornerPoints(8);
-	for ( int ic = 0 ; ic < gridCubes.size(); ++ic)
+	std::vector<int> npwPerK(4);
+	std::vector<std::vector< std::complex<float> > > wfctCornerPoints(4);
+	for ( int itetra = 0 ; itetra < tetrasWithContainedKIndices.size(); ++itetra)
 	{
 	// Step 2.: Fetch the coefficients needed at this very k point.
 	//			Coefficients that do not appear are set to zero.
-		for ( int ikAC = 0 ; ikAC < gridCubes[ic].containedIrregularPts_.size(); ++ikAC )
+		for ( int ikAC = 0 ; ikAC < tetrasWithContainedKIndices[itetra].second.size(); ++ikAC )
 		{
 			//ikA is the index of the k point in kList in this cube
-			int ikA = gridCubes[ic].containedIrregularPts_[ikAC];
-			for ( int iCorner = 0 ; iCorner < 8 ; ++iCorner )
+			int ikA = tetrasWithContainedKIndices[itetra].second[ikAC];
+			for ( int iCorner = 0 ; iCorner < 4 ; ++iCorner )
 			{
-				int ikr = redIndicesTokptset[ic*8+iCorner];
+				int ikr = redIndicesTokptset[itetra*4+iCorner];
 				if ( fftMapsArbitrayKp[ikA] == redVecFFTMaps[ikr] )
 				{
 					wfctCornerPoints[iCorner] = wfctAllRedPts[ikr];
@@ -479,27 +499,21 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 				}
 			}
 
-	// Step 3.: Perform a trilinear interpolation. While the wavefunction need the actual 1BZ
+	// Step 3.: Perform a linear interpolation. While the wavefunction need the actual 1BZ
 	//			k vectors, here we have to map to the zone [0, 1[
-			std::vector< std::complex<float> > buffer;
-			auto d = grid_.get_grid_dim();
-			double dxi[] = {1.0/double(d[0]), 1.0/double(d[1]), 1.0/double(d[2])};
-			double kB[] = {	redVectors[redIndicesTokptset[ic*8]*3 + 0],
-							redVectors[redIndicesTokptset[ic*8]*3 + 1],
-							redVectors[redIndicesTokptset[ic*8]*3 + 2]};
+			double kB[] = {	redVectors[redIndicesTokptset[itetra*4]*3 + 0],
+							redVectors[redIndicesTokptset[itetra*4]*3 + 1],
+							redVectors[redIndicesTokptset[itetra*4]*3 + 2]};
 			std::vector<double> kv = {kList[ikA*3+0], kList[ikA*3+1], kList[ikA*3+2]};
 			for ( int i = 0 ; i < 3 ; ++i )
 			{
 				kB[i] -= std::floor(kB[i]);
 				kv[i] -= std::floor(kv[i]);
-				kv[i] = (kv[i] - kB[i])/dxi[i];
-				// due to finite numerical accuracy we need to put these guards
-				assert( (kv[i] > -1e-8) and (kv[i] < 1.0+1e-8) );
-				kv[i] = kv[i] < 0.0 ? 0.0 : kv[i];
-				kv[i] = kv[i] > 1.0 ? 1.0 : kv[i];
 			}
-	 		interpol.interpolate_within_single_cube(
+
+	 		Algorithms::helperfunctions::interpolate_within_single_tetrahedron(
 	 				kv,
+					tetrasWithContainedKIndices[itetra].first,
 					wfctCornerPoints,
 					wfctsArbitrayKp[ikA]);
 		}

@@ -33,14 +33,14 @@ namespace LatticeStructure
 namespace detail
 {
 class GridPt;
-class GridCubeImpl;
+struct GridCubeImpl;
 }; /*namespace detail */
 
 class RegularBareGrid
 {
 public:
 
-	typedef class detail::GridCubeImpl GridCube;
+	typedef struct detail::GridCubeImpl GridCube;
 
 	typedef class detail::GridPt GridPoint;
 

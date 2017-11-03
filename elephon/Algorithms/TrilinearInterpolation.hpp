@@ -25,6 +25,7 @@
 #include <complex>
 #include <assert.h>
 #include <iostream>
+#include <algorithm>
 
 namespace elephon
 {
@@ -41,82 +42,47 @@ void TrilinearInterpolation::interpolate(
 	assert( gridDataForRequiredIndices.size() == nDataPtsPerPoint*conseqPtsRegularGrid_.size());
 	int nB = nDataPtsPerPoint;
 
-	typedef std::vector<double> kvect ;
-	auto k = kvect(3);
-	auto fill_k = [&] (size_t irredKIndex)
-	{
-		assert( irredKIndex < gridnum );
-		auto it = listOfPoints_.begin()+irredKIndex*3;
-		std::copy( it, it+3, k.begin() );
-	};
-
-	if ( pointsData.size() != gridnum*nB )
-		pointsData = std::vector<double>(gridnum*nB);
+	pointsData.resize(gridnum*nB);
 
 	std::vector<double> kcell1(3), kcell2(3);
-	for ( int icube = 0; icube < usedGridCubes_.size(); ++icube )
+	int const numTetras = tetraIndexToDataPoints_.size()/4;
+	for ( int itetra = 0; itetra < numTetras; ++itetra )
 	{
-		//use one representative k vector to compute the cell vectors
-		fill_k( usedGridCubes_[icube].containedIrregularPts_.front() );
-		this->get_cell_vectors(k, kcell1, kcell2);
+		const int nVThisTetra = tetraContainedIndicesList_[itetra].second.size();
 
-		auto g1it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[0]] );
-		auto g2it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[1]] );
-		auto g3it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[2]] );
-		auto g4it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[3]] );
-		auto g5it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[4]] );
-		auto g6it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[5]] );
-		auto g7it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[6]] );
-		auto g8it = &( gridDataForRequiredIndices[ nB*usedGridCubes_[icube].cornerIndices_[7]] );
+		auto g1it = &( gridDataForRequiredIndices[ nB*tetraIndexToDataPoints_[itetra*4+0]] );
+		auto g2it = &( gridDataForRequiredIndices[ nB*tetraIndexToDataPoints_[itetra*4+1]] );
+		auto g3it = &( gridDataForRequiredIndices[ nB*tetraIndexToDataPoints_[itetra*4+2]] );
+		auto g4it = &( gridDataForRequiredIndices[ nB*tetraIndexToDataPoints_[itetra*4+3]] );
 
-		for ( int ikirred : usedGridCubes_[icube].containedIrregularPts_ )
+		// construct all the Barycentric coordinates
+		std::vector<double> vectorsBarycentric(nVThisTetra*4);
+		std::vector<double> vectorsInTetra(nVThisTetra*3);
+		std::vector<bool> isInTetra;
+		for ( int ik = 0 ; ik < nVThisTetra; ++ik )
 		{
-			fill_k(ikirred);
-			double x = (k[0] - kcell1[0])/(kcell2[0] - kcell1[0]);
-			double y = (k[1] - kcell1[1])/(kcell2[1] - kcell1[1]);
-			double z = (k[2] - kcell1[2])/(kcell2[2] - kcell1[2]);
+			int ikirred = tetraContainedIndicesList_[itetra].second[ik];
+			std::copy(&listOfPoints_[ikirred*3], &listOfPoints_[ikirred*3]+3, &vectorsInTetra[ik*3]);
+		}
+		tetraContainedIndicesList_[itetra].first.check_vectors_inside(
+				vectorsInTetra,
+				isInTetra,
+				vectorsBarycentric);
+		assert(std::all_of(isInTetra.begin(), isInTetra.end(), [] (bool a){return a;}));
+
+		for ( int ik = 0 ; ik < nVThisTetra; ++ik )
+		{
+			int ikirred = tetraContainedIndicesList_[itetra].second[ik];
 			for ( int ib= 0 ; ib < nB; ++ib)
 			{
-				pointsData[ikirred*nB+ib] =
-					helperfunctions::interpolate_single_cube_realtive(
-						x , y, z,
-						g1it[ib], g2it[ib], g3it[ib], g4it[ib],
-						g5it[ib], g6it[ib], g7it[ib], g8it[ib] );
+				pointsData[ikirred*nB+ib] = vectorsBarycentric[ik*4+0]*g1it[ib] +
+											vectorsBarycentric[ik*4+1]*g2it[ib] +
+											vectorsBarycentric[ik*4+2]*g3it[ib] +
+											vectorsBarycentric[ik*4+3]*g4it[ib] ;
 				//check for NaN in debug mode
 				assert( pointsData[ikirred*nB+ib] == pointsData[ikirred*nB+ib]);
 			}
 		}
-	}
-}
-
-template<typename T>
-void
-TrilinearInterpolation::interpolate_within_single_cube(
-		std::vector<double> const & ptsInCube,
-		std::vector<std::vector<T>> const & cornerData,
-		std::vector<T> & interpolData) const
-{
-	assert(ptsInCube.size()%3 == 0);
-	assert( cornerData.size() == 8 );
-	int nD = cornerData[0].size();
-	assert( (nD == cornerData[1].size()) && (nD == cornerData[2].size()) &&
-			(nD == cornerData[3].size()) && (nD == cornerData[4].size()) &&
-			(nD == cornerData[5].size()) && (nD == cornerData[6].size()) && (nD == cornerData[7].size()) );
-
-	interpolData.resize(nD);
-	for (int ip = 0 ; ip < ptsInCube.size()/3 ; ++ip)
-	{
-		double x = ptsInCube[ip*3+0];
-		double y = ptsInCube[ip*3+1];
-		double z = ptsInCube[ip*3+2];
-		assert( (x >= 0.0) && (x < 1.0) );
-		assert( (y >= 0.0) && (y < 1.0) );
-		assert( (z >= 0.0) && (z < 1.0) );
-		for ( int id = 0 ; id < nD ; ++id )
-			interpolData[id] = helperfunctions::interpolate_single_cube_realtive(
-					x,y,z,
-					cornerData[0][id], cornerData[1][id], cornerData[2][id], cornerData[3][id],
-					cornerData[4][id], cornerData[5][id], cornerData[6][id], cornerData[7][id] );
 	}
 }
 

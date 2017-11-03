@@ -616,7 +616,7 @@ TetrahedraIsosurface::initialize(
 
 void
 TetrahedraIsosurface::compute_iso_vectors(
-		LatticeStructure::TetrahedraGrid::Tetrahedra const & t,
+		LatticeStructure::Tetrahedron const & t,
 		std::multimap<double,int> const & ecorner,
 		double e,
 		std::vector<double> & kIso) const

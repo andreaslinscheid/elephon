@@ -34,16 +34,26 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_Exact )
 	std::vector<int> testGrid = {2,2,2};
 
 	std::vector<double> testPoints = {  0.0,0.0,0.0 ,
-										0.1,0.05,0.025 };
+										0.1,0.05,0.125 };
 
 	elephon::LatticeStructure::RegularBareGrid regularGrid;
 	regularGrid.initialize( testGrid );
-	elephon::Algorithms::TrilinearInterpolation triLin(regularGrid);
+	elephon::LatticeStructure::Symmetry idsym;
+	auto symGrid = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
+	symGrid->initialize(regularGrid, idsym);
+	auto tetraGrid = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();
+	tetraGrid->initialize(symGrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(tetraGrid);
+
 	std::vector<int> indices;
 	triLin.data_query(testPoints,indices);
 
-	//Should be all in the first cell
-	BOOST_REQUIRE_EQUAL( indices.size() , 8 );
+	//Should be all in the first tetrahedron which ranges from
+	// p1 = 0.0 0.0 0.0
+	// p2 = 0.0 0.0 0.5
+	// p3 = 0.5 0.0 0.5
+	// p4 = 0.5 0.5 0.5
+	BOOST_REQUIRE_EQUAL( indices.size() , 4 );
 
 	//generate linear data in x
 	std::vector<double> data(testGrid[0]*testGrid[1]*testGrid[2]);
@@ -59,8 +69,8 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_Exact )
 
 	triLin.interpolate(1,neededData,interpolatedData);
 	BOOST_REQUIRE_EQUAL( interpolatedData.size() , 2 );
-	BOOST_REQUIRE( std::fabs(interpolatedData[0] - 0.0) < accuracy );
-	BOOST_REQUIRE( std::fabs(interpolatedData[1] - 0.1) < accuracy );
+	BOOST_CHECK_CLOSE( std::fabs(interpolatedData[0]) , 0.0, accuracy );
+	BOOST_CHECK_CLOSE( std::fabs(interpolatedData[1]) , 0.1, accuracy );
 
 	//repeat for y - note the second point is also y=0.05
 	for ( int i = 0 ; i < testGrid[2]; ++i)
@@ -74,7 +84,7 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_Exact )
 	BOOST_REQUIRE( std::fabs(interpolatedData[0] - 0.0) < accuracy );
 	BOOST_REQUIRE( std::fabs(interpolatedData[1] - 0.05) < accuracy );
 
-	//repeat for z - note the second point is also z=0.025
+	//repeat for z - note the second point is also z=0.125
 	for ( int i = 0 ; i < testGrid[2]; ++i)
 		for ( int j = 0 ; j < testGrid[1]; ++j)
 			for ( int k = 0 ; k < testGrid[0]; ++k)
@@ -84,7 +94,7 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_Exact )
 		neededData.push_back(data[i]);
 	triLin.interpolate(1,neededData,interpolatedData);
 	BOOST_REQUIRE( std::fabs(interpolatedData[0] - 0.0) < accuracy );
-	BOOST_REQUIRE( std::fabs(interpolatedData[1] - 0.025) < accuracy );
+	BOOST_REQUIRE( std::fabs(interpolatedData[1] - 0.125) < accuracy );
 }
 
 BOOST_AUTO_TEST_CASE( Linear_Interpolation_Blockdata )
@@ -95,23 +105,37 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_Blockdata )
 	//Test that our linear interpolation interpolates
 	std::vector<int> testGrid = {7,5,2};
 
-	std::vector<double> testPoints = {   0.0, 0.0,  0.0 ,//p1
-										 0.1, 0.05, 0.025,//p2
-										-0.5,-0.49, 0.7}; //p3
+	std::vector<double> testPoints{0.0, 0.0,  0.0 ,//p1
+								   (1.0/7.0*0.5), 0.05, 0.375,//p2
+								   0.5,3.0/5.0+0.05, 1.0/2.0+0.375}; //p3
 
 	elephon::LatticeStructure::RegularBareGrid regularGrid;
 	regularGrid.initialize( testGrid );
-	elephon::Algorithms::TrilinearInterpolation triLin(regularGrid);
+	elephon::LatticeStructure::Symmetry idsym;
+	auto symGrid = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
+	symGrid->initialize(regularGrid, idsym);
+	auto tetraGrid = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();
+	tetraGrid->initialize(symGrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(tetraGrid);
+
 	std::vector<int> indices;
 	triLin.data_query( testPoints,indices);
 
-	//p1 and p2 be all in the cell starting with the vector having the indices (0,0,0)
-	// and p3 ~= 0.5,0.51,0.7 should be in the cell starting with the vector having indices (3,2,1)
-	// thus, they share no points. The total number of points should be thus 8*2=16
-	BOOST_REQUIRE_EQUAL( indices.size() , 16 );
+	//p1 and p2 are in the tetrahedron with the corner points
+	// p1 = 0.0 0.0 0.0			0	0	0
+	// p2 = 0.0 0.0 0.5			0	0	1
+	// p3 = 1/7 0.0 0.5			1	0	1
+	// p4 = 1/7 1/5 0.5			1	1	1
+	// and p3 should be in the cell starting with the vector having indices (3,3,1)
+	// p5 = 3/7 0.6 0.5			3	3	1
+	// p6 = 3/7 0.6 1.0			3	3	0
+	// p7 = 4/7 0.6 1.0			4	3	0
+	// p8 = 4/7 0.8 1.0			4	4	0
+	// thus, they share no points. The total number of points should be thus 4*2=8
+	BOOST_REQUIRE_EQUAL( indices.size() , 8 );
 
 	int nBlock = 2;
-	//generate linear data in x,y,z
+	//generate linear data in x
 	std::vector<double> data(testGrid[0]*testGrid[1]*testGrid[2]*nBlock);
 	for ( int i = 0 ; i < testGrid[2]; ++i)
 		for ( int j = 0 ; j < testGrid[1]; ++j)
@@ -129,8 +153,8 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_Blockdata )
 	triLin.interpolate(nBlock,neededData,interpolatedData);
 	BOOST_REQUIRE( std::fabs(interpolatedData[0] - 0.0) < accuracy );
 	BOOST_REQUIRE( std::fabs(interpolatedData[1] - 1.0) < accuracy );
-	BOOST_REQUIRE( std::fabs(interpolatedData[2] - 0.1) < accuracy );
-	BOOST_REQUIRE( std::fabs(interpolatedData[3] - 1.1) < accuracy );
+	BOOST_REQUIRE( std::fabs(interpolatedData[2] - (1.0/7.0*0.5)) < accuracy );
+	BOOST_REQUIRE( std::fabs(interpolatedData[3] - (1.0+(1.0/7.0*0.5))) < accuracy );
 	BOOST_REQUIRE( std::fabs(interpolatedData[4] - 0.5) < accuracy );
 	BOOST_REQUIRE( std::fabs(interpolatedData[5] - 1.5) < accuracy );
 }
@@ -195,7 +219,14 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_IntegralTest )
 
 	elephon::LatticeStructure::RegularBareGrid regularGrid;
 	regularGrid.initialize( testGrid );
-	elephon::Algorithms::TrilinearInterpolation triLin(regularGrid);
+
+	elephon::LatticeStructure::Symmetry idsym;
+	auto symGrid = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
+	symGrid->initialize(regularGrid, idsym);
+	auto tetraGrid = std::make_shared<elephon::LatticeStructure::TetrahedraGrid>();
+	tetraGrid->initialize(symGrid);
+	elephon::Algorithms::TrilinearInterpolation triLin(tetraGrid);
+
 	std::vector<int> indices;
 	triLin.data_query(testPoints,indices);
 

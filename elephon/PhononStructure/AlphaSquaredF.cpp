@@ -53,9 +53,9 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 	a2F_.assign(freqNPts_ , 0.0);
 
 	auto dvscf = resourceHandler->get_displacement_potential_obj();
-	auto interpolationKMesh = resourceHandler->get_interpol_reci_mesh_obj();
+	auto interpolationKMesh = resourceHandler->get_interpol_reci_tetra_mesh_obj();
 
-	Algorithms::TrilinearInterpolation trilin(*interpolationKMesh);
+	Algorithms::TrilinearInterpolation trilin(interpolationKMesh);
 
 	// obtain a Fermi surface (set of constant energy surfaces) as a list of k point and weights
 	int nSamples = resourceHandler->get_optns().get_numFS();

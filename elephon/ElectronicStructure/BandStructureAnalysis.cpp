@@ -34,6 +34,27 @@ namespace ElectronicStructure
 namespace BandStructureAnalysis
 {
 
+std::vector<double>
+read_mass_tens_file(boost::filesystem::path massTens)
+{
+	std::ifstream file(massTens.c_str(), std::ios::binary);
+	if ( ! file.good() )
+		throw std::runtime_error("cannot open mass tensor file");
+
+	file.seekg(0, std::ios::beg);
+	int size = file.tellg();
+	file.seekg(0, std::ios::end);
+	size = int(file.tellg()) - size;
+	std::vector<char> buf(size);
+	file.seekg(0, std::ios::beg);
+	file.read(&buf[0], size);
+
+	int numElem = size/sizeof(float);
+
+	auto ptr = reinterpret_cast<float*>(buf.data());
+	return std::vector<double>(ptr, ptr+numElem);
+}
+
 void find_band_extrema(
 		ElectronicBands const & bands,
 		std::vector<b_extrema> & extrema,
@@ -216,6 +237,95 @@ void compute_mass_tensor_at_extrema_fft(
 	}
 }
 
+void
+output_valenceBandMaxima_conductionBandMinima(boost::filesystem::path massTens)
+{
+	auto massTensorData = ElectronicStructure::BandStructureAnalysis::read_mass_tens_file(massTens);
+	int numExtrema = massTensorData.size() / 18 ;
+	std::vector< std::vector<double> > kPoints(numExtrema);
+	std::vector< std::vector<double> > eigenvalues(numExtrema);
+
+	// use a compare function that treats close doubles as equal
+	auto cmp = [] (double a, double b) {
+		if ( std::abs(a-b)>1e-3 )
+			return a < b;
+		return false;
+		};
+	std::multimap<double,int,decltype(cmp)> sortMinima(cmp);
+	std::multimap<double,int,decltype(cmp)> sortMax(cmp);
+	for (int ie = 0 ; ie < numExtrema ; ++ie )
+	{
+		kPoints[ie] = std::vector<double>(&massTensorData[18*ie+2], &massTensorData[18*ie+2]+3);
+		eigenvalues[ie] = std::vector<double>{ massTensorData[18*ie+ 6],
+											   massTensorData[18*ie+10],
+											   massTensorData[18*ie+14] };
+		double energy = massTensorData[18*ie+5];
+		if ( massTensorData[18*ie+0] >= 0 )
+		{
+			sortMax.insert(std::make_pair(-energy, ie));
+		}
+		else
+		{
+			sortMinima.insert(std::make_pair(energy, ie));
+		}
+	}
+
+	// find the valence band maxima and the conduction band minima
+	std::vector<int> cbmin;
+	double last = std::numeric_limits<double>::min();
+	for ( auto min : sortMinima)
+	{
+		if ( min.first < 0 )
+			continue;
+
+		// min.first == last.first according to cmp
+		if ( (!(cmp(last, min.first)) and (!cmp(min.first ,last))) or cbmin.empty() )
+		{
+			cbmin.push_back(min.second);
+		}
+		else
+		{
+			break;
+		}
+		last = min.first;
+	}
+	std::vector<int> vbmax;
+	for ( auto max : sortMax)
+	{
+		if ( max.first < 0 ) // conduction bands; note negative energy convention
+			continue;
+
+		double energy = -max.first; // revert negative energy convention.
+
+		// min.first == last.first according to cmp
+		if ( (!(cmp(last, energy)) and (!cmp(energy, last))) or vbmax.empty() )
+		{
+			vbmax.push_back(max.second);
+		}
+		else
+		{
+			break;
+		}
+		last = energy;
+	}
+
+	for ( auto i : vbmax )
+	{
+		std::cout << "\nValence band max at k="<<
+				kPoints[i][0] << ","<< kPoints[i][1] << ","<< kPoints[i][2] << " energy " << massTensorData[18*i+5]<<"\n";
+		std::cout << "Mass tensor eigenvalues: "<<
+				eigenvalues[i][0] << ","<< eigenvalues[i][1] << ","<< eigenvalues[i][2] <<"\n";
+	}
+
+	for ( auto i : cbmin )
+	{
+		std::cout << "\nConduction band min at k="<<
+				kPoints[i][0] << ","<< kPoints[i][1] << ","<< kPoints[i][2] << " energy " << massTensorData[18*i+5]<<"\n";
+		std::cout << "Mass tensor eigenvalues: "<<
+				eigenvalues[i][0] << ","<< eigenvalues[i][1] << ","<< eigenvalues[i][2] <<"\n";
+	}
+}
+
 void write_mass_tensor_file(
 		std::string const & filename,
 		ElectronicBands const & bands,
@@ -286,63 +396,85 @@ void write_mass_tensor_file(
 void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> resource)
 {
 	auto const & opt = resource->get_optns();
-	// Find the locations of extrema and print the mass tensor if desired ...
-	if ( not opt.get_f_mtens().empty()
-		or not opt.get_f_dos().empty() )
-	{
-		auto bands = resource->get_electronic_bands_obj();
-
+	std::shared_ptr<ElectronicBands> interpolSubsetBands;
+	// load interpolated bands only if needed.
+	auto load_interpol_subset_bands = [&] (
+			std::shared_ptr<const ElectronicBands> bands,
+			std::vector<int> & bandIndicesInWindow,
+			int &firstBandInWindow,
+			int &FirstBandNotInWindow) {
+		if (interpolSubsetBands)
+			return;
 		std::vector<double> eneWin = opt.get_ewinbnd();
 		if ( eneWin.empty() )
 		{
 			auto mm = bands->get_min_max();
 			eneWin = std::vector<double>{mm.first, mm.second};
 		}
-		auto bandIndicesInWindow = bands->get_bands_crossing_energy_window( eneWin );
+		bandIndicesInWindow = bands->get_bands_crossing_energy_window( eneWin );
 		auto mm = std::minmax_element(bandIndicesInWindow.begin(), bandIndicesInWindow.end() );
-		int beginBand = *(mm.first);
-		int endBand = *(mm.second) + 1;
-		auto subsetBands = bands->fft_interpolate_part(beginBand, endBand, opt.get_fftd(), opt.get_ffts());
+		firstBandInWindow = *(mm.first);
+		FirstBandNotInWindow = *(mm.second) + 1;
+		auto subsetBands = bands->fft_interpolate_part(
+				firstBandInWindow, FirstBandNotInWindow,
+				opt.get_fftd(), opt.get_ffts());
+		interpolSubsetBands = std::make_shared<ElectronicBands>(std::move(subsetBands));
+		};
 
-		if (not opt.get_f_mtens().empty())
+	int firstBandIn, firstBandNotIn;
+	std::vector<int> bandIndicesInEnergyWindow;
+	if ( not opt.get_f_mtens().empty() )
+	{
+		// Find the locations of extrema and print the mass tensor if desired ...
+		auto bands = resource->get_electronic_bands_obj();
+		load_interpol_subset_bands(bands, bandIndicesInEnergyWindow, firstBandIn, firstBandNotIn);
+
+		int dmeth = 0;
+		if ( opt.get_dmeth().compare("fft") == 0 )
+			dmeth = 1;
+		else if ( opt.get_dmeth().compare("pol") != 0 )
+			throw std::runtime_error("unrecognized derivative method");
+		write_mass_tensor_file(opt.get_f_mtens(), *interpolSubsetBands, firstBandIn, opt.get_ewinbnd(), dmeth);
+
+		if ( bands->get_bands_crossing_energy_lvls({0.0}).empty() )
 		{
-			int dmeth = 0;
-			if ( opt.get_dmeth().compare("fft") == 0 )
-				dmeth = 1;
-			else if ( opt.get_dmeth().compare("pol") != 0 )
-				throw std::runtime_error("unrecognized derivative method");
-			write_mass_tensor_file(opt.get_f_mtens(), subsetBands, *(mm.first), eneWin, dmeth);
+			// insulator report vb min and cb max
+			output_valenceBandMaxima_conductionBandMinima(boost::filesystem::path(opt.get_f_mtens()));
 		}
+	}
 
-		if ( not opt.get_f_dos().empty() )
-		{
-			auto energySamples = subsetBands.setup_frequency_grid(eneWin, opt.get_edosnpts());
-			subsetBands.write_tetrahedra_dos_file(opt.get_f_dos(), energySamples);
-			bands->write_tetrahedra_dos_file(opt.get_f_dos()+"_2", energySamples);
-		}
+	if ( not opt.get_f_dos().empty() )
+	{
+		auto bands = resource->get_dense_electronic_bands_obj();
+		load_interpol_subset_bands(bands, bandIndicesInEnergyWindow, firstBandIn, firstBandNotIn);
+		auto energySamples = interpolSubsetBands->setup_frequency_grid(
+				opt.get_ewinbnd(),
+				opt.get_edosnpts());
+		interpolSubsetBands->write_tetrahedra_dos_file(opt.get_f_dos(), energySamples);
+	}
 
-		if ( not opt.get_f_bands().empty() )
-		{
-			auto bandsObj = resource->get_dense_electronic_bands_obj();
-			auto kpath = resource->get_k_path();
+	if ( not opt.get_f_bands().empty() )
+	{
+		auto bandsObj = resource->get_dense_electronic_bands_obj();
+		auto kpath = resource->get_k_path();
 
-			std::vector<double> bandsAlongPath;
-			int numBandsInWindow;
-			bands->compute_bands_along_path( kpath->get_k_points(),
-					resource->get_optns().get_ewinbnd(),
-					bandsAlongPath,
-					numBandsInWindow,
-					resource->get_interpol_reci_mesh_obj());
+		std::vector<double> bandsAlongPath;
+		int numBandsInWindow;
+		bandsObj->compute_bands_along_path(
+				kpath->get_k_points(),
+				resource->get_optns().get_ewinbnd(),
+				bandsAlongPath,
+				numBandsInWindow,
+				resource->get_interpol_reci_tetra_mesh_obj());
 
-			auto gnuplotFile = opt.get_f_bands()+".gp";
-			kpath->produce_gnuplot_script_stable_particle(
-					gnuplotFile,
-					opt.get_f_bands(),
-					"\\varepsilon(\\bf{k})",
-					bandsAlongPath,
-					numBandsInWindow,
-					bands->interpret_range(resource->get_optns().get_ewinbnd()));
-		}
+		auto gnuplotFile = opt.get_f_bands()+".gp";
+		kpath->produce_gnuplot_script_stable_particle(
+				gnuplotFile,
+				opt.get_f_bands(),
+				"\\varepsilon(\\bf{k})",
+				bandsAlongPath,
+				numBandsInWindow,
+				bandsObj->interpret_range(resource->get_optns().get_ewinbnd()));
 	}
 }
 
