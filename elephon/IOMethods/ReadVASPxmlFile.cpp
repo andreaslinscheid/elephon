@@ -19,6 +19,7 @@
 
 #include "ReadVASPxmlFile.h"
 #include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/optional/optional.hpp>
@@ -145,7 +146,11 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						BOOST_FOREACH( ptree::value_type const& val3, val2.second )
 						{
 							if ( val3.first == "c" )
-								typeInfo[c].push_back(val3.second.data());
+							{
+								std::string atomName = val3.second.data();
+								boost::algorithm::trim(atomName);
+								typeInfo[c].push_back(atomName);
+							}
 						}
 						if ( typeInfo[c].size() < 3 )
 							throw std::runtime_error("Problem parsing atom info");
@@ -167,7 +172,11 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						BOOST_FOREACH( ptree::value_type const& val3, val2.second )
 						{
 							if ( val3.first == "c" )
-								atomInfo.push_back(val3.second.data());
+							{
+								std::string atomName = val3.second.data();
+								boost::algorithm::trim(atomName);
+								atomInfo.push_back(atomName);
+							}
 						}
 						if (atomInfo.size() != 2)
 							throw std::runtime_error("Problem parsing atominfo from vasprun.xml");

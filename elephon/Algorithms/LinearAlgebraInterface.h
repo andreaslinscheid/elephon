@@ -61,6 +61,12 @@ struct ComplexTypeTrait< std::complex<T> >
 };
 }
 
+/**
+ * This linear algebra interface is a total mess. Passes tests and all but is really not in a good shape ...
+ * TODO replace it with some usable library.
+ *	Candidates for a replacement: FLENS, The Armadillo C++ linear algebra library
+ *
+ */
 class LinearAlgebraInterface
 {
 public:
