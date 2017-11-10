@@ -32,11 +32,24 @@ namespace units
  * in units of the bare electron rest mass.
  *
  * Internal units of the code are eV for energy and Angstroems for length leading to
- * a band structure hessian in units of [ d^2 E / dki dkj ] =  eV / A^2.
+ * a band structure hessian in units of [ d^2 E / dki dkj ] =  eV * A^2.
  * The mass tensor is M^-1 = 1 / hbar^2 [ d^2 E / dki dkj ] leading to the conversion
  * below to obtain M from [ d^2 E / dki dkj ]^-1 in units of me, the electron rest mass.
  */
 const double INVERSE_EV_TIMES_A2_TO_ME = 7.61996389393771;
+
+/**
+ * Convert the matrix of force constants to THz
+ *
+ * Internal units of the code are eV for energy and Angstroems for length leading to
+ * a matrix of force constants in eV / A^2 / u where u is the unit atomic mass.
+ * The frequency is sqrt(UnitForceConstant) so that we arrive at
+ */
+const double SQRT_EV_BY_A2_U_TO_THZ = 15.633304300669519191;
+
+const double EV_TO_THZ_CONVERSION_FACTOR = 241.7990504024;
+
+const double SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM = 0.71090013980905870172;
 
 } /* namespace units */
 } /* namespace Auxillary */

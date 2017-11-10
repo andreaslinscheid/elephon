@@ -169,16 +169,14 @@ Tetrahedron::check_vectors_inside(
 		// We allow a numerical grace zone what we consider "on" the border.
 		// the value below is effectively a threshold on the volume fraction
 		double signd0 = d0/std::abs(d0);
-		const double borderThr = -1e-6/std::abs(d0);
-		if ((signd0*d1 < borderThr) or (signd0*d2 < borderThr) or (signd0*d3 < borderThr) or (signd0*d4 < borderThr))
-			inside[ip] = false;
-		else
-			inside[ip] = true;
+		const double borderThr = 1e-6;
 
 		barycentricCoordinates[ip*4+0] = d1/d0;
 		barycentricCoordinates[ip*4+1] = d2/d0;
 		barycentricCoordinates[ip*4+2] = d3/d0;
 		barycentricCoordinates[ip*4+3] = d4/d0;
+		inside[ip] = std::all_of(&barycentricCoordinates[ip*4+0], &barycentricCoordinates[ip*4+0]+4,
+				[&borderThr](double b){return (b > -borderThr) and (b < 1.0+borderThr); });
 	}
 }
 

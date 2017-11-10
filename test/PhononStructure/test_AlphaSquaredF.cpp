@@ -37,5 +37,5 @@ BOOST_AUTO_TEST_CASE( a2F_write_file_vasp_fcc_primitive )
 //	auto a2FFilename = boost::filesystem::path(resourceHandler->get_optns().get_f_a2F());
 //	boost::filesystem::remove(a2FFilename);
 //	a2F.write_a2F_file( a2FFilename.string() );
-	//boost::filesystem::remove(a2FFilename);
+//	boost::filesystem::remove(a2FFilename);
 }

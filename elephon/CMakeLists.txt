@@ -25,6 +25,8 @@ ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 include(../cmake/dependencies.cmake)
 
+list(REMOVE_ITEM VTK_LIBRARIES "vtkproj4")
+
 #Break up the test sources from test fixtures
 set(sources_test)
 set(fixtures_test)

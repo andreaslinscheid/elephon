@@ -466,10 +466,13 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 	{
 	// Step 2.: Fetch the coefficients needed at this very k point.
 	//			Coefficients that do not appear are set to zero.
+	// TODO: look into possibilit
 		for ( int ikAC = 0 ; ikAC < tetrasWithContainedKIndices[itetra].second.size(); ++ikAC )
 		{
-			//ikA is the index of the k point in kList in this cube
+			//ikA is the index of the k point in kList in this tetrahedron
 			int ikA = tetrasWithContainedKIndices[itetra].second[ikAC];
+			const  int npw = fftMapsArbitrayKp[ikA].size()/3;
+
 			for ( int iCorner = 0 ; iCorner < 4 ; ++iCorner )
 			{
 				int ikr = redIndicesTokptset[itetra*4+iCorner];
@@ -479,7 +482,6 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 				}
 				else
 				{
-					int npw = fftMapsArbitrayKp[ikA].size()/3;
 					int npwC = redVecFFTMaps[ikr].size()/3;
 					wfctCornerPoints[iCorner].resize( npw*bandList.size() );
 					for ( int ib = 0 ; ib < bandList.size() ; ++ib )
@@ -499,7 +501,41 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 				}
 			}
 
-	// Step 3.: Perform a linear interpolation. While the wavefunction need the actual 1BZ
+	// Step 3.: Ensure a phase convention among the corner points to minimize interference.
+	//			The convention is that we choose the largest element of the first corner and
+	//			and make sure the equivalent plane wave coefficients of other corners have the
+	//			the same complex phase
+			for ( int ib = 0 ; ib < bandList.size() ; ++ib )
+			{
+				auto ptr = &wfctCornerPoints[0][ib*npw];
+				auto maxAbsValIt =
+						std::max_element(ptr,ptr+npw, [](std::complex<float> const & a, std::complex<float> const & b) {
+									return std::abs(a)<std::abs(b);} );
+				const int igMax = std::distance(ptr, maxAbsValIt);
+				// Note: In principle this should not happen since wavefunctions are normalized.
+				//		 We keep it as a safety measure ... after all phase convention is not a must.
+				if ( std::abs(wfctCornerPoints[0][ib*npw+igMax]) < 1e-6 )
+					continue;
+
+				std::complex<float> phi = wfctCornerPoints[0][ib*npw+igMax]
+											/std::abs(wfctCornerPoints[0][ib*npw+igMax]);
+
+				for ( int iCorner = 1 ; iCorner < 4 ; ++iCorner )
+				{
+					if ( std::abs(wfctCornerPoints[iCorner][ib*npw+igMax]) < 1e-6 )
+						continue;
+					std::complex<float> phiPrime = wfctCornerPoints[iCorner][ib*npw+igMax]
+													/std::abs(wfctCornerPoints[iCorner][ib*npw+igMax]);
+					for ( int ipw = 0 ; ipw < npw ; ++ipw )
+					{
+						wfctCornerPoints[iCorner][ib*npw+ipw] *= phi * std::conj(phiPrime);
+						assert(wfctCornerPoints[iCorner][ib*npw+ipw] == wfctCornerPoints[iCorner][ib*npw+ipw]);
+					}
+				}
+			}
+
+
+	// Step 4.: Perform a linear interpolation. While the wavefunction need the actual 1BZ
 	//			k vectors, here we have to map to the zone [0, 1[
 			double kB[] = {	redVectors[redIndicesTokptset[itetra*4]*3 + 0],
 							redVectors[redIndicesTokptset[itetra*4]*3 + 1],
@@ -516,6 +552,20 @@ Wavefunctions::generate_wfcts_at_arbitray_kp(
 					tetrasWithContainedKIndices[itetra].first,
 					wfctCornerPoints,
 					wfctsArbitrayKp[ikA]);
+
+	// Step 5.: Normalization. There is no guarantee that the wavefunctions are still
+	//			normalized so this must be ensured by hand.
+	 		for (int ib = 0 ; ib < bandList.size() ; ++ib)
+	 		{
+				double integral = 0.0;
+				for (int ig = 0 ; ig < npw; ++ig)
+				{
+					std::complex<double> cg = wfctsArbitrayKp[ikA][ib*npw+ig];
+					integral += std::real(cg*std::conj(cg));
+				}
+				for (int ig = 0 ; ig < npw; ++ig)
+					wfctsArbitrayKp[ikA][ib*npw+ig] /= std::sqrt(integral);
+	 		}
 		}
 	}
 }

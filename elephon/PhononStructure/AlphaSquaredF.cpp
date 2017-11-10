@@ -23,6 +23,7 @@
 #include "Algorithms/FFTInterface.h"
 #include "Algorithms/TrilinearInterpolation.h"
 #include "Algorithms/LocalDerivatives.h"
+#include "Auxillary/UnitConversion.h"
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
@@ -69,7 +70,6 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 
 	// load the isosurface
 	auto tetraIso = resourceHandler->get_tetrahedra_isosurface();
-	const float eVToTHz = 241.79893;
 
 	for ( int iE = 0 ; iE < equalEnergySurfaces.size() ; ++iE )
 	{
@@ -110,8 +110,10 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 						auto phononFreqIt = phitB;
 						std::vector<float> gkkpModSqr(nModes);
 						for ( int inu = 0; gkkpitB != gkkpitE; ++gkkpitB, ++inu, ++phononFreqIt )
-							gkkpModSqr[inu] = isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB))
-												/ 2.0f /(*phononFreqIt) / DOS[iE] * eVToTHz;
+							gkkpModSqr[inu] = 	std::abs((*phononFreqIt) < 1e-1) ?
+													0.0 :
+													isoWeights[ikf1]*isoWeightsP[ikf2]*std::real((*gkkpitB)*std::conj(*gkkpitB))
+													 / DOS[iE];
 
 						this->map_freq_grid_slot(gkkpModSqr.begin(), phitB, phitE);
 					}
@@ -119,9 +121,10 @@ AlphaSquaredF::compute_a2F( std::shared_ptr<IOMethods::ResourceHandler> resource
 		}
 	}
 
+	// Note: the factor of 2pi is because THz is rad / s
 	auto DeltaOmega = (freqMax_ - freqMin_)/freqNPts_;
 	for ( auto &w : a2F_)
-		w /= DeltaOmega;
+		w *= Auxillary::units::EV_TO_THZ_CONVERSION_FACTOR / DeltaOmega;
 }
 
 void

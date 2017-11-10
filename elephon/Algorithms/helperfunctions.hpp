@@ -23,6 +23,7 @@
 #include "LatticeStructure/Tetrahedron.h"
 #include <complex>
 #include <vector>
+#include <algorithm>
 
 namespace elephon
 {
@@ -148,16 +149,16 @@ interpolate_within_single_tetrahedron(
 								vectorsBarycentric);
 	assert(std::all_of(isInTetra.begin(), isInTetra.end(), [] (bool a){return a;}));
 
-	interpolData.resize(nD);
+	interpolData.resize(nD*nVThisTetra);
 	for (int ip = 0 ; ip < nVThisTetra ; ++ip)
 		for ( int id = 0 ; id < nD ; ++id )
 		{
-			interpolData[id] =	cornerData[0][id]*realT(vectorsBarycentric[ip*4+0]) +
-								cornerData[1][id]*realT(vectorsBarycentric[ip*4+1]) +
-								cornerData[2][id]*realT(vectorsBarycentric[ip*4+2]) +
-								cornerData[3][id]*realT(vectorsBarycentric[ip*4+3]) ;
+			interpolData[ip*nD+id] =	cornerData[0][id]*realT(vectorsBarycentric[ip*4+0]) +
+										cornerData[1][id]*realT(vectorsBarycentric[ip*4+1]) +
+										cornerData[2][id]*realT(vectorsBarycentric[ip*4+2]) +
+										cornerData[3][id]*realT(vectorsBarycentric[ip*4+3]) ;
 			//check for NaN in debug mode
-			assert( interpolData[id] == interpolData[id]);
+			assert( interpolData[ip*nD+id] == interpolData[ip*nD+id]);
 		}
 }
 

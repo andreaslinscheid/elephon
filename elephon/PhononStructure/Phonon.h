@@ -35,6 +35,15 @@ public:
 	void initialize(std::shared_ptr<const ForceConstantMatrix> fc,
 			std::vector<double> masses);
 
+	/**
+	 * Diagonalize the Fourier transformed matrix of force constants at a list of q vectors.
+	 *
+	 * @param q				List of q vectors in the layout q1x, q1y, q1z, q2x ...
+	 * @param w2			A vector that will be resized to fit the phonon frequencies in units of THz.
+	 * 						Layout is q1 mode 0, mod 1 ... mode nM, q2 ...
+	 * @param eigenModes	A vector that will be resized to fit the dynamical matrices.
+	 * 						Layout is (q, mode mu, mode nu) such that nu is fastest and q is slowest running.
+	 */
 	void compute_at_q(std::vector<double> const & q,
 			std::vector<double> & w2,
 			std::vector< std::complex<double> > & eigenModes) const;
@@ -43,6 +52,9 @@ public:
 			std::vector<double> const & q,
 			std::vector<double> & dwdq) const;
 
+	/**
+	 * Other name for compute_at_q to conform with templated band structure calculations.
+	 */
 	void evaluate(std::vector<double> const & q,
 			std::vector<double> & w2,
 			std::vector< std::complex<double> > & eigenModes) const;
@@ -55,8 +67,6 @@ private:
 	std::shared_ptr<const ForceConstantMatrix> fc_;
 
 	std::vector<double> masses_;
-
-	const double eVToTHzConversionFactor_ = 241.79905040241630075812;
 };
 
 } /* namespace PhononStructure */

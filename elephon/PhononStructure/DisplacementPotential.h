@@ -97,6 +97,8 @@ private:
 			LatticeStructure::RegularBareGrid const & primitiveCellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const;
+
+	void clean_displacement_potential();
 };
 
 } /* namespace PhononStructure */

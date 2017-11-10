@@ -200,8 +200,9 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 	std::vector<double> linDVscfTransform(3*nRSC);
 	for ( int irA = 0; irA < irredToRedAtoms.size(); ++irA )
 	{
-		for ( int i = 0 ; i < 3*nRSC; ++i)
-			linDVscf[i] = irreducibleDisplPot[irA*3*nRSC+i];
+		std::copy( &irreducibleDisplPot[irA*3*nRSC],
+				   &irreducibleDisplPot[irA*3*nRSC]+3*nRSC,
+				   linDVscf.data());
 
 		std::vector<double> gridThisAtom(3*nRSC);
 		for ( int ir = 0 ; ir < nRSC; ++ir)
@@ -240,9 +241,12 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 				}
 				int cnsq = supercellGrid.get_xyz_to_reducible(xyz);
 				assert( (cnsq >= 0) && (cnsq < nRSC) );
+
+				// re-shuffel the vector field to the right location in the grid without transforming it yet.
 				for (int xi = 0 ; xi < 3 ; ++xi)
 					linDVscfTransform[cnsq*3+xi]=linDVscf[ir*3+xi];
 			}
+			// transform the vector field.
 			superCell->get_symmetry().rotate_cartesian(
 					isym,
 					linDVscfTransform.begin(),
@@ -269,6 +273,8 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 	//keep a copy for lattice information, symmetry ect ...
 	unitCell_ = unitCell;
 	unitCellGrid_ = std::move(unitcellGrid);
+
+	this->clean_displacement_potential();
 }
 
 void
@@ -350,7 +356,7 @@ DisplacementPotential::mem_layout(int ir, int mu, int iR ) const
 	assert(ir < this->nptsRealSpace_ );
 	assert(mu < this->numModes_);
 	assert(iR < this->get_num_R());
-	return ir+nptsRealSpace_*(mu+numModes_+iR);
+	return ir+nptsRealSpace_*(mu+numModes_*iR);
 }
 
 int
@@ -438,7 +444,7 @@ DisplacementPotential::write_dvscf_q(
 			assert( (mu >= 0) && (mu < numModes_) );
 			std::string comment = "Displacement potential dvscf(r)/du(q,mu); q = ("
 					+std::to_string(qVect[iq*3+0])+" , "+std::to_string(qVect[iq*3+1])+" , "+std::to_string(qVect[iq*3+2])
-					+") module # "+ std::to_string(mu) +"\n";
+					+") mode # "+ std::to_string(mu) +"\n";
 			std::vector<double> data(nr);
 			for ( int ir = 0 ; ir < nr ; ++ir )
 				data[ir] = std::real(qDataPlus[(iq*numModes_+mu)*nr+ir]);
@@ -454,7 +460,7 @@ DisplacementPotential::build_supercell_to_primite(
 		LatticeStructure::RegularBareGrid const & supercellGrid,
 		std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const
 {
-	int nRSC = supercellGrid.get_num_points();
+	const int nRSC = supercellGrid.get_num_points();
 
 	//Create a table which maps a point in real space in the supercell
 	// into a point in the primitive cell plus a lattice vector
@@ -485,6 +491,30 @@ DisplacementPotential::build_supercell_to_primite(
 		int cnsq = primitiveCellGrid.get_xyz_to_reducible(xyz);
 		assert( (cnsq >= 0) and ( cnsq < primitiveCellGrid.get_num_points() ) );
 		rSuperCellToPrimitve[irSC] = std::move(std::make_pair(cnsq, std::move(R) ) );
+	}
+}
+
+void
+DisplacementPotential::clean_displacement_potential()
+{
+	const int numAtoms = this->get_num_modes()/3;
+	const int nr = unitCellGrid_.get_num_points();
+	const int nR = this->get_num_R();
+
+	// apply the sum rule
+	for ( int xi = 0 ; xi < 3 ; ++xi)
+	{
+		double integral = 0.0;
+		for (int iR = 0; iR < nR ; ++iR)
+			for (int ia = 0 ; ia < numAtoms; ++ia)
+				for (int ir = 0; ir < nr ; ++ir)
+					integral += data_[this->mem_layout( ir , ia*3+xi, iR)];
+		integral /= static_cast<double>(nr*nR*numAtoms);
+
+		for (int iR = 0; iR < nR ; ++iR)
+			for (int ia = 0 ; ia < numAtoms; ++ia)
+				for (int ir = 0; ir < nr ; ++ir)
+					data_[this->mem_layout( ir , ia*3+xi, iR)] -= integral;
 	}
 }
 

@@ -36,6 +36,24 @@ class ElectronPhononCoupling
 {
 public:
 
+	/**
+	 * Compute all electron-phonon matrix elements between all combination of vectors/band pairs k,i and k',i' for all modes.
+	 *
+	 * After this method was called, the internal storage is set to the complex gkkp matrix elements. For efficiency these are single
+	 * precision complex.
+	 * The units of the internal object set are eV/A.
+	 *
+	 * @param kList			List of k1x,k1y,k1z , k2x ... coordinates of the k vectors in units of the reciprocal lattice
+	 * @param kpList		List of k1x,k1y,k1z , k2x ... coordinates of the k' vectors in units of the reciprocal lattice
+	 * @param bandList		List of bands i
+	 * @param bandpList		List of bands i'
+	 * @param ph			Pointer to the phonon module that allows to diagonalize the Fourier transformed matrix of force constants
+	 * 						at every q = k'-k also yielding the dynamical matrix. Must be initialized.
+	 * @param dvscf			Pointer to the displacement potential in real space that allows to compute the overlap
+	 * 						created by the Fourier transformed displacement potential at q = k' - k between states |k,i> and |k',i'>
+	 * @param wfcts			Pointer to the wave function module that allows to load and interpolate the wavefunction from a regular grid
+	 * 						to a given non-grid point k for a band i.
+	 */
 	void generate_gkkp_and_phonon(
 			std::vector<double> kList,
 			std::vector<double> kpList,
@@ -44,6 +62,35 @@ public:
 			std::shared_ptr<const Phonon> ph,
 			std::shared_ptr<const DisplacementPotential> dvscf,
 			std::shared_ptr<const ElectronicStructure::Wavefunctions> wfcts );
+
+	/**
+	 * Compute selected electron-phonon matrix elements between the vectors and bands specified for all modes.
+	 *
+	 * This variant only computes <k1|dvscf|k1'>, <k2|dvscf|k2'>, ... so not all combinations of k and k' vectors.
+	 *
+	 * @param kList			List of k1x,k1y,k1z , k2x ... coordinates of the k vectors in units of the reciprocal lattice
+	 * @param kpList		List of k1x,k1y,k1z , k2x ... coordinates of the k' vectors in units of the reciprocal lattice.
+	 * 						Since exactly <ki|dvscf(mu)|k'i'> is computed, kpList must have the same length as \p kList.
+	 * @param bandList		List of bands i
+	 * @param bandpList		List of bands i'
+	 * @param ph			Pointer to the phonon module that allows to diagonalize the Fourier transformed matrix of force constants
+	 * 						at every q = k'-k also yielding the dynamical matrix. Must be initialized.
+	 * @param dvscf			Pointer to the displacement potential in real space that allows to compute the overlap
+	 * 						created by the Fourier transformed displacement potential at q = k' - k between states |k,i> and |k',i'>
+	 * @param wfcts			Pointer to the wave function module that allows to load and interpolate the wavefunction from a regular grid
+	 * 						to a given non-grid point k for a band i.
+	 * @param gkkp			resized and set to the electron phonon matrix elements <ki|dvscf(mu)|k'i'> for each with a layout
+	 * 						where k is running slowest, then for each k the request band matrix elements and finally the modes.
+	 */
+	void generate_gkkp_energy_units(
+			std::vector<double> const & kList,
+			std::vector<double> const & kpList,
+			std::vector<int> bandList,
+			std::vector<int> bandpList,
+			std::shared_ptr<const Phonon> ph,
+			std::shared_ptr<const DisplacementPotential> dvscf,
+			std::shared_ptr<const ElectronicStructure::Wavefunctions> wfcts,
+			std::vector<std::complex<float>> & gkkp) const;
 
 	void write_gkkp_file(
 			std::string const & filename,
@@ -77,6 +124,20 @@ private:
 	std::vector<float> phononFrequencies_;
 
 	int tensor_layout(int ik, int ikp, int ib, int ibp, int imu) const;
+
+	int local_tensor_layout( int ib, int ibp, int imu, int nB, int nBp, int nM) const;
+
+	void compute_gkkp_local(
+			int nr,
+			int nB,
+			int nBp,
+			int nM,
+			std::vector<double> const & modes,
+			std::vector<std::complex<float>> const & dvscfData,
+			std::vector<std::complex<float>> const & wfctBufferk,
+			std::vector<std::complex<float>> const & wfctBufferkp,
+			std::vector<std::complex<float>> const & phases,
+			std::vector<std::complex<float>> & localGkkp) const;
 };
 
 } /* namespace PhononStructure */

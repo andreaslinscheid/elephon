@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 
 	//Outcomment the following for manual inspection of the files generated
 	BOOST_REQUIRE( boost::filesystem::is_regular_file( dvscfFile ) );
-	boost::filesystem::remove( dvscfFile );
+//	boost::filesystem::remove( dvscfFile );
 
 	for ( auto mu : modes )
 	{
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 		{
 			std::string filename = std::string("dvscf_q_")+std::to_string(iq)+"_"+std::to_string(mu)+".dat" ;
 			BOOST_REQUIRE( boost::filesystem::is_regular_file( rootDir / filename ) );
-			boost::filesystem::remove( rootDir / filename );
+//			boost::filesystem::remove( rootDir / filename );
 		}
 	}
 }

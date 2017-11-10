@@ -1,5 +1,5 @@
-#LyX 2.0 created this file. For more info see http://www.lyx.org/
-\lyxformat 413
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
 \begin_document
 \begin_header
 \textclass revtex4-1
@@ -13,13 +13,13 @@
 \font_roman default
 \font_sans default
 \font_typewriter default
+\font_math auto
 \font_default_family default
 \use_non_tex_fonts false
 \font_sc false
 \font_osf false
 \font_sf_scale 100
 \font_tt_scale 100
-
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -30,15 +30,24 @@
 \use_hyperref false
 \papersize default
 \use_geometry false
-\use_amsmath 1
-\use_esint 1
-\use_mhchem 1
-\use_mathdots 1
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
 \cite_engine basic
+\cite_engine_type default
+\biblio_style plain
 \use_bibtopic false
 \use_indices false
 \paperorientation portrait
 \suppress_date false
+\justification true
 \use_refstyle 1
 \index Index
 \shortcut idx
@@ -604,8 +613,8 @@ In order to make it approximately equivalent to the results for the infinite
 \begin_inset Formula 
 \begin{equation}
 R_{x_{i}}\in M_{x_{i}}=\begin{cases}
-[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm even}\\
-{}[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\; L_{x_{i}}\;{\rm odd}
+[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\;L_{x_{i}}\;{\rm even}\\
+{}[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\;L_{x_{i}}\;{\rm odd}
 \end{cases}
 \end{equation}
 
@@ -1381,7 +1390,7 @@ In the above equation,
 \end_inset
 
 where each displacement has cartesian components 
-\begin_inset Formula $\boldsymbol{u}_{\alpha,j\boldsymbol{0}}=(u_{\alpha,j\boldsymbol{0}}^{x}\; u_{\alpha,j\boldsymbol{0}}^{y}\; u_{\alpha,j\boldsymbol{0}}^{z})^{{\rm T}}$
+\begin_inset Formula $\boldsymbol{u}_{\alpha,j\boldsymbol{0}}=(u_{\alpha,j\boldsymbol{0}}^{x}\;u_{\alpha,j\boldsymbol{0}}^{y}\;u_{\alpha,j\boldsymbol{0}}^{z})^{{\rm T}}$
 \end_inset
 
  and 
@@ -1672,12 +1681,16 @@ Now, let us compute the overlap among Bloch states
  created by the transformed
 \begin_inset Formula 
 \begin{equation}
-\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
+\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
 \end{equation}
 
 \end_inset
 
-which leads to
+where 
+\begin_inset Formula ${\rm u}$
+\end_inset
+
+ is the atomic unit mass which leads to
 \begin_inset ERT
 status open
 
@@ -1694,17 +1707,43 @@ begin{widetext}
 \begin_inset Formula 
 \begin{eqnarray}
 g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q}) & = & \frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})=\nonumber \\
- & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x}+\boldsymbol{R}^{\prime}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}\\
- & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R}-\boldsymbol{R}^{\prime})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x})u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{x}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}\\
- & = & \frac{1}{N_{\boldsymbol{q}}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x})u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot(\boldsymbol{R}+\boldsymbol{R}^{\prime})}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}\\
- & = & \frac{1}{N_{\boldsymbol{q}}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}(\boldsymbol{k}+\boldsymbol{q}-\boldsymbol{k}^{\prime})\cdot\boldsymbol{R}^{\prime}}\\
- & = & \int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\sum_{\boldsymbol{R}\mu}\frac{1}{\sqrt{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}){\rm e}^{-{\rm i}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\cdot\boldsymbol{R}}\delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\\
+ & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x}+\boldsymbol{R}^{\prime}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}\\
+ & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R}-\boldsymbol{R}^{\prime})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x})u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{x}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}\\
+ & = & \frac{1}{N_{\boldsymbol{q}}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x})u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot(\boldsymbol{R}+\boldsymbol{R}^{\prime})}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}\\
+ & = & \frac{1}{N_{\boldsymbol{q}}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}(\boldsymbol{k}+\boldsymbol{q}-\boldsymbol{k}^{\prime})\cdot\boldsymbol{R}^{\prime}}\\
+ & = & \int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}){\rm e}^{-{\rm i}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\cdot\boldsymbol{R}}\delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\\
  & = & \delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\label{eq:BlochElphCoupling}
 \end{eqnarray}
 
 \end_inset
 
+In a numerical evaluation 
+\begin_inset Formula $\int_{{\rm UC}}{\rm d}\boldsymbol{r}\ldots\approx\sum_{j}\frac{{\rm \Omega_{{\rm UC}}}}{N_{j}}\ldots$
+\end_inset
 
+ and so 
+\begin_inset Formula 
+\begin{equation}
+g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q})\approx\sum_{j}\frac{{\rm \Omega_{{\rm UC}}}}{N_{j}}\tilde{\psi}_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r}_{j})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}_{j})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\tilde{\psi}_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}_{j})
+\end{equation}
+
+\end_inset
+
+Note that the normalization of the wavefunctions in the code is chosen as
+ 
+\begin_inset Formula 
+\begin{equation}
+\sum_{j}\vert\psi_{\boldsymbol{k}i}(\boldsymbol{r}_{j})\vert^{2}=1
+\end{equation}
+
+\end_inset
+
+and thus already includes the volume factor 
+\begin_inset Formula ${\rm \Omega_{{\rm UC}}}/N_{j}$
+\end_inset
+
+.
+ 
 \begin_inset ERT
 status open
 
@@ -1839,7 +1878,7 @@ begin{widetext}
 
 \begin_inset Formula 
 \begin{equation}
-\alpha^{2}\, F(\omega)=\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int{\rm d}\boldsymbol{k}\int{\rm d}\boldsymbol{k}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\delta(\varepsilon_{\boldsymbol{k}i}-E_{{\rm F}})\delta(\varepsilon_{\boldsymbol{k}^{\prime}i^{\prime}}-E_{{\rm F}})\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)
+\alpha^{2}\,F(\omega)=\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int{\rm d}\boldsymbol{k}\int{\rm d}\boldsymbol{k}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{2\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\delta(\varepsilon_{\boldsymbol{k}i}-E_{{\rm F}})\delta(\varepsilon_{\boldsymbol{k}^{\prime}i^{\prime}}-E_{{\rm F}})\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)
 \end{equation}
 
 \end_inset
@@ -1870,7 +1909,7 @@ which transform the
  With our triangulations, the surface integral is readily computed as
 \begin_inset Formula 
 \begin{eqnarray}
-\alpha^{2}\, F(\omega) & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)\label{eq:AlphaSquaredF}\\
+\alpha^{2}\,F(\omega) & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}\int_{{\rm FS}}{\rm d}\boldsymbol{k}_{f}^{\prime}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)\label{eq:AlphaSquaredF}\\
  & \approx & \frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}\nu}\sum_{\boldsymbol{k}_{f}}\sum_{\boldsymbol{k}_{f}^{\prime}}\frac{\vert g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\vert^{2}}{\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}\vert\nabla\varepsilon_{\boldsymbol{k}_{f}i}\vert\vert\nabla\varepsilon_{\boldsymbol{k}_{f}^{\prime}i^{\prime}}\vert}\delta(\varOmega_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}-\omega)w_{\boldsymbol{k}_{f}}w_{\boldsymbol{k}_{f}^{\prime}}
 \end{eqnarray}
 
@@ -1923,7 +1962,7 @@ where, thus,
  This allows us to find an efficient approximation
 \begin_inset Formula 
 \begin{equation}
-\alpha^{2}\, F(\omega)\approx\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}ll^{\prime}\nu}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{\varOmega_{\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}
+\alpha^{2}\,F(\omega)\approx\frac{1}{\rho(E_{{\rm F}})}\sum_{ii^{\prime}ll^{\prime}\nu}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{\varOmega_{\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}
 \end{equation}
 
 \end_inset
@@ -2004,7 +2043,7 @@ thus, we can write
 
 \begin_inset Formula 
 \begin{eqnarray}
-\alpha^{2}\, F(\omega) & = & \frac{1}{2\omega\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+\alpha^{2}\,F(\omega) & = & \frac{1}{2\omega\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
  & = & \frac{1}{2\omega\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{S_{l}}\sum_{ii^{\prime}l^{\prime}\nu}\vert g_{S_{l}\boldsymbol{k}_{li},S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}-S_{l}\boldsymbol{k}_{li})\vert^{2}\delta(\varOmega_{S_{l}\boldsymbol{k}_{li}-S_{l}\tilde{\boldsymbol{k}}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
  & = & \frac{1}{\rho(E_{{\rm F}})}\sum_{l\in{\rm Irred}}\sum_{ii^{\prime}l^{\prime}\nu}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\sum_{S_{l}}1\label{eq:a2FSymmetricTetra}
 \end{eqnarray}
@@ -2216,36 +2255,7 @@ reference "eq:DisplacementPotentialLinear"
 \end_inset
 
  has units eV per angstrom.
- Furthermore, because 
-\begin_inset Formula $\hbar=1$
-\end_inset
-
- and we measure energies in 
-\begin_inset Formula ${\rm eV}$
-\end_inset
-
- and length in 
-\begin_inset Formula ${\rm \AA}$
-\end_inset
-
-, 
-\begin_inset Formula $\sqrt{m_{\mu}}$
-\end_inset
-
- has units 
-\begin_inset Formula ${\rm \AA}/\sqrt{{\rm eV}}$
-\end_inset
-
-.
- 
-\begin_inset Formula 
-\begin{equation}
-[\sqrt{\frac{\hbar}{m_{\mu}}}]=\sqrt{\frac{{\rm kg}{\rm m}^{2}}{{\rm kg}{\rm s}}}=\frac{{\rm \AA}}{\sqrt{{\rm s}}}
-\end{equation}
-
-\end_inset
-
-Consquently, its Fourier transform Eq.
+ Consquently, its Fourier transform Eq.
 \begin_inset space ~
 \end_inset
 
@@ -2259,44 +2269,36 @@ reference "eq:ModeDisplacementPotential"
  has units
 \begin_inset Formula 
 \begin{equation}
-[\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}]=[\sqrt{\frac{\hbar}{m_{\mu}}}][\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]=\frac{{\rm eV}}{\sqrt{{\rm s}}}\equiv\frac{{\rm eV}}{{\rm \AA}\sqrt{{\rm u}}}
+[\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}]=[\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]=\frac{{\rm eV}}{{\rm \AA}}
 \end{equation}
 
 \end_inset
 
-where 
-\family roman
-\series medium
-\shape up
-\size normal
-\emph off
-\bar no
-\strikeout off
-\uuline off
-\uwave off
-\noun off
-\color none
-
-\begin_inset Formula ${\rm u}$
-\end_inset
-
-
-\family default
-\series default
-\shape default
-\size default
-\emph default
-\bar default
-\strikeout default
-\uuline default
-\uwave default
-\noun default
-\color inherit
- is the unit of mass in atomic units.
- Thus
+Thus
 \begin_inset Formula 
 \begin{equation}
-\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\sim({\rm eV})^{2}
+\sqrt{\frac{\hbar}{2{\rm u}\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}}g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\sim{\rm eV}
+\end{equation}
+
+\end_inset
+
+where if the numerical value of 
+\begin_inset Formula $\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}$
+\end_inset
+
+ is 1, the prefactor is
+\begin_inset Formula 
+\begin{eqnarray}
+\sqrt{\frac{\hbar}{2{\rm u}{\rm THz}}} & = & \sqrt{\frac{\hbar\cdot{\rm s}}{2{\rm u}\cdot2\pi\times10^{12}}}=\sqrt{\frac{1.0545718\times10^{-34}{\rm m}^{2}{\rm kg}}{4\pi\times1.660539040\times10^{-27}{\rm kg}10^{12}}}\\
+ &  & =\sqrt{\frac{1.0545718\times10^{-34}\times10^{20}{\rm \AA}^{2}}{4\pi\times1.660539040\times10^{-27}\times10^{12}}}=\sqrt{\frac{10.545718}{4\pi\times1.660539040}}{\rm \AA}
+\end{eqnarray}
+
+\end_inset
+
+thus the numerical conversion factor is
+\begin_inset Formula 
+\begin{equation}
+\sqrt{\frac{\hbar}{2{\rm u}\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}}\approx\frac{0.71090013980905870172}{\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}/{\rm THz}}{\rm \AA}
 \end{equation}
 
 \end_inset
@@ -2306,31 +2308,27 @@ now, since we measure
 \end_inset
 
  and 
-\begin_inset Formula $\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\sim{\rm THz}^{-1}$
+\begin_inset Formula $\delta(\hbar\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\sim{\rm eV}^{-1}$
 \end_inset
 
- we need to convert THz to eV so that
+ we fortunately find the factor 
+\begin_inset Formula $1/\hbar$
+\end_inset
+
+ from the self-energy, so that 
 \begin_inset Formula 
 \begin{eqnarray}
-\alpha^{2}\, F(\omega) & \sim & \rho(E_{{\rm F}})^{-1}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\delta(\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
- & \sim & \frac{{\rm eV}}{{\rm THz}}
+\alpha^{2}\,F(\omega) & \sim & \rho(E_{{\rm F}})^{-1}\frac{\vert g_{\boldsymbol{k}_{li},\boldsymbol{k}_{i^{\prime}l^{\prime}}}^{i,i^{\prime}\nu}(\boldsymbol{k}_{i^{\prime}l^{\prime}}-\boldsymbol{k}_{li})\vert^{2}}{2\hbar\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}}\delta(\hbar\varOmega_{\boldsymbol{k}_{li}-\boldsymbol{k}_{i^{\prime}l^{\prime}}\nu}-\omega)\tilde{w}_{l}^{i}\tilde{w}_{l^{\prime}}^{i^{\prime}}\\
+ & \sim & 1
 \end{eqnarray}
 
 \end_inset
 
-In order to achieve that, we simply convert 
-\begin_inset Formula $\rho(E_{{\rm F}})^{-1}$
+so 
+\begin_inset Formula $\alpha^{2}\,F(\omega)$
 \end_inset
 
- from 
-\begin_inset Formula ${\rm eV}$
-\end_inset
-
- to 
-\begin_inset Formula ${\rm THz}$
-\end_inset
-
- using the numerical factor 241.79893
+ is dimensionless
 \end_layout
 
 \begin_layout Subsection
@@ -3015,6 +3013,27 @@ Note that the integral
 \sum_{nn^{\prime}}\int{\rm d}^{3}q\chi_{nn^{\prime}}(\boldsymbol{q}) & = & \sum_{nn^{\prime}}\int{\rm d}^{3}q\int_{{\rm BZ}}{\rm d}^{3}k\delta(\varepsilon_{\boldsymbol{k}n}-\varepsilon_{F})\delta(\varepsilon_{\boldsymbol{k}+\boldsymbol{q}n^{\prime}}-\varepsilon_{F})\\
  & = & \sum_{n}\int_{{\rm BZ}}{\rm d}^{3}k\delta(\varepsilon_{\boldsymbol{k}n}-\varepsilon_{F})\sum_{n^{\prime}}\int{\rm d}^{3}q\delta(\varepsilon_{\boldsymbol{q}n^{\prime}}-\varepsilon_{F})\\
  &  & \equiv\rho(\varepsilon_{F})^{2}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Sum rules
+\end_layout
+
+\begin_layout Standard
+If the entire lattice is shifted in a given direction, the potential is
+ the same as the unperturbed, except that the unit cell frame is shifted.
+ This implies
+\begin_inset Formula 
+\begin{eqnarray}
+\int{\rm d}\boldsymbol{r}\sum_{i}\nabla_{(\boldsymbol{0}ix_{i})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}) & = & \int{\rm d}\boldsymbol{r}\lim_{\Delta\rightarrow0}\frac{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-\sum_{i}v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\Delta\underbar{v}_{\boldsymbol{0}ix_{i}}](\boldsymbol{r})}{\Delta}\\
+ & = & \int{\rm d}\boldsymbol{r}\lim_{\Delta\rightarrow0}\frac{v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r})-v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}+\sum_{i}\Delta\underbar{v}_{\boldsymbol{0}ix_{i}}](\boldsymbol{r})}{\Delta}\\
+ & = & \lim_{\Delta\rightarrow0}\frac{1}{\Delta}\{\int v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r}){\rm d}\boldsymbol{r}-\int v_{{\rm {\scriptscriptstyle scf}}}[\underbar{R}](\boldsymbol{r}-\Delta\sum_{i}\underbar{v}_{\boldsymbol{0}ix_{i}}){\rm d}\boldsymbol{r}\}\\
+ & = & 0
 \end{eqnarray}
 
 \end_inset

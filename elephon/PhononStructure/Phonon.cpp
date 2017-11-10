@@ -19,6 +19,7 @@
 
 #include "PhononStructure/Phonon.h"
 #include "Algorithms/LinearAlgebraInterface.h"
+#include "Auxillary/UnitConversion.h"
 #include <stdexcept>
 
 namespace elephon
@@ -71,8 +72,8 @@ Phonon::compute_at_q(std::vector<double> const & q,
 
 		std::copy( qlocalModes.begin(), qlocalModes.end(), eigenModes.begin() + iq*nM*nM );
 		for ( int mu = 0 ; mu < nM ; ++mu)
-			w2[iq*nM+mu] = std::sqrt(eVToTHzConversionFactor_)*(
-					qlocalFreq[mu] >= 0 ? std::sqrt(qlocalFreq[mu]) : -std::sqrt(-qlocalFreq[mu]));
+			w2[iq*nM+mu] = Auxillary::units::SQRT_EV_BY_A2_U_TO_THZ*
+					( qlocalFreq[mu] >= 0 ? std::sqrt(qlocalFreq[mu]) : -std::sqrt(-qlocalFreq[mu]));
 	}
 }
 
@@ -101,7 +102,7 @@ Phonon::evaluate_derivative(
 			for ( int mu2 = 0 ; mu2 < nM ; ++mu2)
 				for ( int i = 0 ; i < 3 ; ++i)
 					ftderivative[((iq*3+i)*nM+mu1)*nM+mu2] *=
-							eVToTHzConversionFactor_/(sqrtMasses[mu1] * sqrtMasses[mu2]);
+							std::pow(Auxillary::units::SQRT_EV_BY_A2_U_TO_THZ,2)/(sqrtMasses[mu1] * sqrtMasses[mu2]);
 
 	Algorithms::LinearAlgebraInterface linalg;
 
