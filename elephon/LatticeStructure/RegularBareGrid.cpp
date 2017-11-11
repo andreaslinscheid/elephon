@@ -349,12 +349,16 @@ GridPt::initialize(std::vector<double> coords, double gridPrec)
 	assert( coords.size() == 3 );
 	coords_ = std::move(coords);
 	gridPrec_ = gridPrec;
+	this->map_back();
 }
 
 void
 GridPt::transform( Symmetry::Sop const & sop )
 {
+	for (auto &xi : coords_)
+		xi -= std::floor(xi+0.5);
 	sop.apply(coords_,true);
+	this->map_back();
 }
 
 bool
@@ -364,12 +368,20 @@ operator< (GridPt const& d1, GridPt const& d2)
 	assert( d1.gridPrec_ == d2.gridPrec_ );
 	for ( int i = 3 ; i--; )
 		if ( std::abs( d1.coords_[i] - d2.coords_[i]) > d1.gridPrec_ )
-		{
-			double range1 = (d1.coords_[i] < 0 ? d1.coords_[i] + 1.0 : d1.coords_[i]);
-			double range2 = (d2.coords_[i] < 0 ? d2.coords_[i] + 1.0 : d2.coords_[i]);
-			return range1 < range2;
-		}
+			return d1.coords_[i] < d2.coords_[i];
 	return false;
+}
+
+void
+GridPt::map_back()
+{
+	for (auto &xi : coords_)
+	{
+		xi -= std::floor(xi);
+		// handle the case where xi is almost equivalent to zero.
+		if ( (1.0-xi) < gridPrec_ )
+			xi = 0.0;
+	}
 }
 
 bool

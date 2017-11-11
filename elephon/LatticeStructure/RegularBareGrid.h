@@ -131,6 +131,8 @@ private:
 	double gridPrec_ = 0;
 
 	std::vector<double> coords_;
+
+	void map_back();
 };
 
 struct GridCubeImpl
