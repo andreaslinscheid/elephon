@@ -29,13 +29,13 @@
 
 BOOST_AUTO_TEST_CASE( a2F_write_file_vasp_fcc_primitive )
 {
-//	auto resourceHandler = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
-//
-//	elephon::PhononStructure::AlphaSquaredF a2F;
-//	a2F.compute_a2F(resourceHandler);
-//
-//	auto a2FFilename = boost::filesystem::path(resourceHandler->get_optns().get_f_a2F());
-//	boost::filesystem::remove(a2FFilename);
-//	a2F.write_a2F_file( a2FFilename.string() );
+	auto resourceHandler = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
+
+	elephon::PhononStructure::AlphaSquaredF a2F;
+	a2F.compute_a2F(resourceHandler);
+
+	auto a2FFilename = boost::filesystem::path(resourceHandler->get_optns().get_f_a2F());
+	boost::filesystem::remove(a2FFilename);
+	a2F.write_a2F_file( a2FFilename.string() );
 //	boost::filesystem::remove(a2FFilename);
 }

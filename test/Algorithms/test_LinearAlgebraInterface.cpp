@@ -23,6 +23,8 @@
 #include <iostream>
 #include <vector>
 #include <complex>
+#include <stdlib.h>
+#include <time.h>
 
 void print_mat( std::vector<double> const & v, int n , int m)
 {
@@ -172,4 +174,61 @@ BOOST_AUTO_TEST_CASE( Nullspace )
 	real_world_data(A,m,n);
 	linalg.null_space( A , m, n, kdim, result , 1e-5);
 	BOOST_CHECK_EQUAL( kdim , 0 );
+}
+
+template<typename T>
+struct ComplexTypeTrait
+{
+	typedef T type;
+};
+
+template<typename T>
+struct ComplexTypeTrait< std::complex<T> >
+{
+	typedef T type;
+};
+
+template<typename T>
+void
+check_mm(int n, int m, int k, std::vector<T> const & A, std::vector<T> const & B)
+{
+	elephon::Algorithms::LinearAlgebraInterface linalg;
+	std::vector<T> C(m*n);
+	linalg.call_gemm('n', 'n', n,m,k, T(1.0), A.data(), k, B.data(), m, T(0.0), C.data(), m );
+
+	std::vector<T> C_check(m*n, T(0.0));
+	for (int in = 0 ; in < n; ++in )
+		for (int im = 0 ; im < m; ++im )
+			for (int ik = 0 ; ik < k; ++ik )
+				C_check[in*m + im] += A[in*k+ik]*B[ik*m+im];
+
+
+	for (int in = 0 ; in < n; ++in )
+		for (int im = 0 ; im < m; ++im )
+			BOOST_CHECK_SMALL( std::abs(C_check[in*m + im] - C[in*m + im]),
+					typename ComplexTypeTrait<T>::type(0.0001) );
+};
+
+BOOST_AUTO_TEST_CASE( Matrix_Multiplication )
+{
+	int n = 2;
+	int m = 3;
+	int k = 4;
+	std::vector<double> A0{1, 2, 3, 4, 5, 6, 7, 8};
+	std::vector<double> B0{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+
+	check_mm<double>(n, m, k, A0, B0);
+
+	srand (time(NULL));
+	n = rand()%100;
+	m = rand()%100;
+	k = rand()%100;
+	std::vector<std::complex<float>> A(n*k), B(k*m);
+
+	for (auto &a : A)
+		a = std::complex<float>(rand()%10, rand()%10);
+	for (auto &b : B)
+		b = std::complex<float>(rand()%10, rand()%10);
+
+	check_mm<std::complex<float>>(n, m, k, A, B);
 }

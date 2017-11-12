@@ -23,6 +23,7 @@
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "IOMethods/WriteVASPRealSpaceData.h"
 #include "Algorithms/GridRotationMap.h"
+#include <iostream>
 
 namespace elephon
 {
@@ -48,35 +49,6 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 
 	std::vector< std::pair<int,std::vector<int> > > rSuperCellToPrimitve;
 	this->build_supercell_to_primite(unitcellGrid, supercellGrid, rSuperCellToPrimitve);
-	//Create a table which maps a point in real space in the supercell
-	// into a point in the primitive cell plus a lattice vector
-	for ( int irSC = 0 ; irSC < nRSC ; ++irSC )
-	{
-		auto rvec = supercellGrid.get_vector_direct(irSC);
-		std::vector<int> R(3);
-		std::vector<double> rvecUC(3);
-		std::vector<int> xyz(3);
-		for ( int i = 0 ; i < 3 ; ++i )
-		{
-			//scale to units of the primitive cell
-			rvec[i] *= superCellDim_[i];
-			//We add a tiny bit to the vector so that 1.9999999 will not (incorrectly) map
-			//to R = 1 and then 0.9999999 will (correctly) map to the lattice site at 0.
-			R[i] = std::floor(rvec[i]+0.5+2*unitCell->get_symmetry().get_symmetry_prec());
-			rvecUC[i] = rvec[i]-R[i];
-			assert( (rvecUC[i] >= -0.5) && (rvecUC[i] < 0.5));
-			//Convert to a coordinate index in the range [0,1[
-			rvecUC[i] -= std::floor(rvecUC[i]);
-			assert( (rvecUC[i] >= 0) && (rvecUC[i] < 1));
-			rvecUC[i] *= unitcellGrid.get_grid_dim()[i];
-			xyz[i] = std::floor(rvecUC[i]+0.5);
-			if ( std::abs(rvecUC[i]-xyz[i]) > 0.01 )
-				throw std::logic_error("Could not establish connection between grids of the primitive- and the supercell");
-		}
-		int cnsq = unitcellGrid.get_xyz_to_reducible(xyz);
-		assert( (cnsq >= 0) and ( cnsq < unitcellGrid.get_num_points() ) );
-		rSuperCellToPrimitve[irSC] = std::move(std::make_pair(cnsq, std::move(R) ) );
-	}
 
 	//From the potentials, construct the difference
 	std::vector< std::vector<double> > potentialVariation = potentialDispl;
@@ -275,6 +247,21 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 	unitCellGrid_ = std::move(unitcellGrid);
 
 	this->clean_displacement_potential();
+
+	if (RVectors_.size() != nR)
+	{
+		RVectors_.resize(3*nR);
+		for ( int iRz = 0 ; iRz < superCellDim_[2]; ++iRz )
+			for ( int iRy = 0 ; iRy < superCellDim_[1]; ++iRy )
+				for ( int iRx = 0 ; iRx < superCellDim_[0]; ++iRx )
+				{
+					int iR = this->RVectorLayout(iRx,iRy,iRz);
+					int R[] = {	iRx <= superCellDim_[0]/2 ? iRx : iRx - superCellDim_[0],
+									iRy <= superCellDim_[1]/2 ? iRy : iRy - superCellDim_[1],
+									iRz <= superCellDim_[2]/2 ? iRz : iRz - superCellDim_[2] };
+					std::copy(R, R+3, &RVectors_[iR*3]);
+				}
+	}
 }
 
 void
@@ -295,46 +282,105 @@ DisplacementPotential::compute_dvscf_q(
 		std::vector<std::complex<float>> & dvscf) const
 {
 	assert( qVect.size() % 3 == 0 );
-	int nq = qVect.size()/3;
-
-	Algorithms::LinearAlgebraInterface linAlg;
-
+	const int nq = qVect.size()/3;
+	const int nR = this->get_num_R();
 	assert( (dynamicalMatrices.size()/nq) / (numModes_*numModes_) == 1 );
 	assert( (masses.size()*3) / numModes_ == 1 );
 
-	dvscf.resize(nq*numModes_*nptsRealSpace_);
-	std::vector<std::complex<float>> ftDisplPot(nq*numModes_*nptsRealSpace_ , std::complex<float>(0) );
-	std::vector<std::complex<float> > dynmatMass(numModes_*numModes_);
+	// in case there are only few modes in the system, avoid the caling overhead of
+	// the blas package
+	if ( numModes_ < 12 )
+	{
+		this->compute_dvscf_q_optimized_low_num_modes( qVect, dynamicalMatrices, masses, dvscf);
+		return;
+	}
+
+	Algorithms::LinearAlgebraInterface linAlg;
+	// fill the buffers
+	if ( dvscfqBuffer_.empty() )
+		dvscfqBuffer_.assign(data_.begin(), data_.end());
+
+	if ( ftDisplPot_.size() != nq*numModes_*nptsRealSpace_ )
+		ftDisplPot_.resize(nq*numModes_*nptsRealSpace_);
+
+	if ( dynmatMassBuffer_.size() != numModes_*numModes_)
+		dynmatMassBuffer_.resize(numModes_*numModes_);
+
+	phaseBuffer_.resize(nq*nR);
 	for ( int iq = 0 ; iq < nq; ++iq)
 	{
-		for ( int iRz = 0 ; iRz < superCellDim_[2]; ++iRz )
-			for ( int iRy = 0 ; iRy < superCellDim_[1]; ++iRy )
-				for ( int iRx = 0 ; iRx < superCellDim_[0]; ++iRx )
-				{
-					int R[] = {	iRx <= superCellDim_[0]/2 ? iRx : iRx - superCellDim_[0],
-									iRy <= superCellDim_[1]/2 ? iRy : iRy - superCellDim_[1],
-									iRz <= superCellDim_[2]/2 ? iRz : iRz - superCellDim_[2] };
-					std::complex<float> phase = std::complex<float>(std::exp( std::complex<double>(0,
-							2.0*M_PI*(qVect[iq*3+0]*R[0]+qVect[iq*3+1]*R[1]+qVect[iq*3+2]*R[2]) )));
+		for ( int iR = 0 ; iR < nR; ++iR)
+		{
+			float dprod = 2.0*M_PI*(qVect[iq*3+0]*RVectors_[3*iR+0]
+									+qVect[iq*3+1]*RVectors_[3*iR+1]
+									+qVect[iq*3+2]*RVectors_[3*iR+2]);
+			phaseBuffer_[iq*nR+iR] = std::exp( std::complex<float>(0,dprod));
+		}
+	}
 
-					for ( int mu = 0 ; mu < numModes_; ++mu)
-						for ( int ir = 0 ; ir < nptsRealSpace_; ++ir)
-							ftDisplPot[(iq*numModes_+mu)*nptsRealSpace_+ir]
-									   += phase*data_[this->mem_layout(ir,mu,this->RVectorLayout(iRx,iRy,iRz))];
-				}
+	dvscf.resize(nq*numModes_*nptsRealSpace_);
 
+	// this formulates the Fourier transform as a matrix multiplication (sum convention)
+	// dvscf(iq,[ir,imu]) = phase(iq,iR)*dvscf(iR,[ir,imu])
+	// where the brackets are in column major format.
+
+	linAlg.call_gemm( 'n', 'n',
+			nq, nptsRealSpace_*numModes_, nR,
+			std::complex<float>(1.0f), phaseBuffer_.data(), nR,
+			dvscfqBuffer_.data(), numModes_*nptsRealSpace_,
+			std::complex<float>(0.0f), ftDisplPot_.data(), nptsRealSpace_*numModes_);
+
+	for ( int iq = 0 ; iq < nq; ++iq)
+	{
 		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
 			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
-				dynmatMass[mu1*numModes_+mu2] = dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2] / masses[mu2/3];
+				dynmatMassBuffer_[mu1*numModes_+mu2] = dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2] / masses[mu2/3];
 
 		auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
-		auto dmat_ptr = &dynmatMass[0];
-		auto ftdp_ptr = &ftDisplPot[iq*numModes_*nptsRealSpace_];
+		auto dmat_ptr = &dynmatMassBuffer_[0];
+		auto ftdp_ptr = &ftDisplPot_[iq*numModes_*nptsRealSpace_];
 		linAlg.call_gemm( 'n', 'n',
 				numModes_, nptsRealSpace_ , numModes_,
 				std::complex<float>(1.0f), dmat_ptr, numModes_,
 				ftdp_ptr, nptsRealSpace_,
 				std::complex<float>(0.0f), r_ptr, nptsRealSpace_);
+	}
+}
+
+void
+DisplacementPotential::compute_dvscf_q_optimized_low_num_modes(
+		std::vector<double> const & qVect,
+		std::vector<std::complex<double>> const & dynamicalMatrices,
+		std::vector<double> const & masses,
+		std::vector<std::complex<float>> & dvscf) const
+{
+	const int nq = qVect.size()/3;
+	const int nR = this->get_num_R();
+
+	if ( ftDisplPot_.size() != numModes_*nptsRealSpace_ )
+		ftDisplPot_.resize(numModes_*nptsRealSpace_);
+
+	dvscf.assign(nq*numModes_*nptsRealSpace_, std::complex<float>(0));
+	for ( int iq = 0 ; iq < nq; ++iq)
+	{
+		std::fill(ftDisplPot_.begin(), ftDisplPot_.end(), std::complex<float>(0));
+		for ( int iR = 0 ; iR < nR; ++iR)
+		{
+			float dprod = 2.0*M_PI*(qVect[iq*3+0]*RVectors_[3*iR+0]
+												+qVect[iq*3+1]*RVectors_[3*iR+1]
+												+qVect[iq*3+2]*RVectors_[3*iR+2]);
+			std::complex<float> phase = std::exp( std::complex<float>(0,dprod));
+
+			for (int imr = 0 ; imr < nptsRealSpace_*numModes_; ++imr)
+				ftDisplPot_[imr] += phase*data_[imr+nptsRealSpace_*numModes_*iR];
+		}
+
+		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
+			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
+				for ( int ir = 0 ; ir < nptsRealSpace_; ++ir )
+					dvscf[(iq*numModes_+mu1)*nptsRealSpace_+ir] +=
+							std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3])
+									  *ftDisplPot_[mu2*nptsRealSpace_+ir];
 	}
 }
 
@@ -473,14 +519,19 @@ DisplacementPotential::build_supercell_to_primite(
 		std::vector<int> xyz(3);
 		for ( int i = 0 ; i < 3 ; ++i )
 		{
+			const double g = primitiveCellGrid.get_grid_prec();
 			//scale to units of the primitive cell
 			rvec[i] *= superCellDim_[i];
 			//We add a tiny bit to the vector so that 1.9999999 will not (incorrectly) map
 			//to R = 1 and then 0.9999999 will (correctly) map to the lattice site at 0.
-			R[i] = std::floor(rvec[i]+0.5+2*primitiveCellGrid.get_grid_prec());
+			R[i] = std::floor(rvec[i]+0.5+2*g);
 			rvecUC[i] = rvec[i]-R[i];
-			assert( (rvecUC[i] >= -0.5) && (rvecUC[i] < 0.5));
-			//Convert to a coordinate index in the range [0,1[
+			assert( (rvecUC[i] >= -0.5-g) && (rvecUC[i] < 0.5+g));
+			if ( rvecUC[i] < -0.5)
+				rvecUC[i] = -0.5;
+			if ( rvecUC[i] > 0.5 )
+				rvecUC[i] = 0.5;
+			//Convert to a coordinate index in the range [0,1[ and fetch the grid index
 			rvecUC[i] -= std::floor(rvecUC[i]);
 			assert( (rvecUC[i] >= 0) && (rvecUC[i] < 1));
 			rvecUC[i] *= primitiveCellGrid.get_grid_dim()[i];

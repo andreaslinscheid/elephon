@@ -81,6 +81,17 @@ private:
 
 	std::vector<int> superCellDim_;
 
+	/// A buffer for the R vectors. These are implicitly defined by superCellDim_
+	mutable std::vector<double> RVectors_;
+
+	mutable std::vector<std::complex<float>> phaseBuffer_;
+
+	mutable std::vector<std::complex<float>> dvscfqBuffer_;
+
+	mutable std::vector<std::complex<float>>  dynmatMassBuffer_;
+
+	mutable std::vector<std::complex<float>>  ftDisplPot_;
+
 	void set_R_vector_map(
 			LatticeStructure::UnitCell const & unitCell,
 			LatticeStructure::UnitCell const & superCell);
@@ -99,6 +110,12 @@ private:
 			std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const;
 
 	void clean_displacement_potential();
+
+	void compute_dvscf_q_optimized_low_num_modes(
+			std::vector<double> const & qVect,
+			std::vector<std::complex<double>> const & dynamicalMatrices,
+			std::vector<double> const & masses,
+			std::vector<std::complex<float>> & dvscf) const;
 };
 
 } /* namespace PhononStructure */

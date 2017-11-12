@@ -48,10 +48,31 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 		return;
 
 	bool report_timings = nKp_ > 100;
+//	bool report_timings = false;
+
+	// TODO a system-wide meaure of timings would be desirable
+	std::map<std::string,std::pair< decltype(std::chrono::system_clock::now()), std::chrono::duration<double> >> durations;
+	auto start_m_c = [&durations] (std::string const & tag) {
+		auto it = durations.find(tag) ;
+		if ( it == durations.end())
+			durations[tag] = std::make_pair(std::chrono::system_clock::now(),
+											std::chrono::duration<double>(0.0));
+		else
+			it->second.first = std::chrono::system_clock::now();
+	};
+	auto stop_m_c = [&durations] (std::string const & tag) {
+		auto it = durations.find(tag) ;
+		assert ( it != durations.end());
+		auto time_now = std::chrono::system_clock::now();
+		it->second.second += std::chrono::duration<double>(time_now - it->second.first);
+	};
 
 	std::vector<double> modes;
 	std::vector<std::complex<double> > dynmat;
 	std::vector<std::complex<float> > dvscfData;
+
+	if ( report_timings )
+		start_m_c("wfcts_gen");
 
 	//Wave functions are on a regular grid and in G (reciprocal) space
 	std::vector< std::vector<std::complex<float> > > wfcsk, wfcskp;
@@ -63,6 +84,13 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	for ( auto & wfk : wfcsk )
 		for ( auto & cg : wfk )
 			cg = std::conj(cg);
+
+	if ( report_timings )
+	{
+		stop_m_c("wfcts_gen");
+		std::cout << "Generating wavefunctions at "<<kList.size()/3+kpList.size()/3
+				<< " k points: "<<durations["wfcts_gen"].second.count()<<"s"<< std::endl;
+	}
 
 	std::vector<int> potentialFFTGrid = dvscf->get_real_space_grid().get_grid_dim();
 
@@ -81,7 +109,8 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	nB_ = bandList.size();
 	nBp_ = bandpList.size();
 
-	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr), phases(nr);
+	std::vector<float> dotProdQr(nr), phasesRe(nr), phasesIm(nr), buffer(nr);
+	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
 	std::vector<std::complex<float> > localGkkp;
 	Algorithms::LinearAlgebraInterface linalg;
 
@@ -91,6 +120,8 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	auto start_clock = std::chrono::system_clock::now();
 	for ( int ik = 0 ; ik < nK_; ++ik)
 	{
+		if ( report_timings )
+			start_m_c("sparse_fft");
 		fft.fft_sparse_data(
 				fftMapsK[ik],
 				wfcts->get_max_fft_dims(),
@@ -102,6 +133,9 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 				false,
 				nK_*nKp_);
 
+		if ( report_timings )
+			stop_m_c("sparse_fft");
+
 		for ( int ikp = 0 ; ikp < nKp_; ++ikp)
 		{
 			std::vector<double> q{	kList[ik*3+0]-kpList[ikp*3+0],
@@ -112,10 +146,20 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 			for ( auto &qi : q )
 				qi -= std::floor(qi+0.5);
 
+			if ( report_timings )
+				start_m_c("ph");
 			ph->compute_at_q( q, modes, dynmat );
+			if ( report_timings )
+				stop_m_c("ph");
+			if ( report_timings )
+				start_m_c("ph_dvscf");
 			dvscf->compute_dvscf_q( q, dynmat, ph->get_masses(), dvscfData);
 			phononFrequencies_.insert(std::end(phononFrequencies_), modes.begin(), modes.end() );
+			if ( report_timings )
+				stop_m_c("ph_dvscf");
 
+			if ( report_timings )
+				start_m_c("sparse_fft");
 			fft.fft_sparse_data(
 					fftMapsKp[ikp],
 					wfcts->get_max_fft_dims(),
@@ -126,13 +170,24 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 					potentialFFTGrid,
 					false,
 					nK_*nKp_);
+			if ( report_timings )
+				stop_m_c("sparse_fft");
 
 			// compute the phases from the Bloch phase factors of the two wave functions
-			for ( int ir = 0 ; ir < nr ; ++ir)
-				phases[ir] = std::exp( std::complex<float>(0, -2.0f*M_PI*(
-						rVectors[ir*3+0]*q[0]+rVectors[ir*3+1]*q[1]+rVectors[ir*3+2]*q[2]) ));
+			// NOTE: because this is the most performance critical part of the code, we
+			//			jump throw some hoops to get it faster ...
+			if ( report_timings )
+				start_m_c("phases");
+			this->compute_phases(nr, rVectors, q, buffer, phasesRe, phasesIm);
 
-			this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, phases, localGkkp);
+			if ( report_timings )
+				stop_m_c("phases");
+
+			if ( report_timings )
+				start_m_c("gkkp_local");
+			this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, localGkkp);
+			if ( report_timings )
+				stop_m_c("gkkp_local");
 
 			std::copy(localGkkp.begin(), localGkkp.end(), &data_[this->tensor_layout(ik,ikp,0,0,0)]);
 		}
@@ -143,12 +198,17 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 			std::chrono::duration<double> projectedRuntime_seconds = double(nK_) / double(ik+1) * elapsed_seconds;
 			std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
 
+			std::string timings;
+			for ( auto &c : durations)
+				timings += std::string(" ")+c.first + ": " + std::to_string(c.second.second.count()) + "; ";
 			std::cout << "\r\tPercentage done : " << std::floor(100.0 *double(ik+1) / double(nK_) + 0.5)
-					<< "; estimated time to finish: " << remainingRuntine.count() << "s"
+					<< "; estimated time to finish: " << remainingRuntine.count() << "s\t"
+					<< "timings: " << timings
 					<<  "                 ";
 			std::cout.flush();
 		}
 	}
+
 	if ( report_timings )
 		std::cout << std::endl;
 }
@@ -187,12 +247,21 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 	const int nBp = bandpList.size();
 	const int nM = dvscf->get_num_modes();
 
+	std::vector<double> rVectors(nr*3);
+	for (int ir = 0 ; ir < nr ; ++ir)
+	{
+		auto rVec = dvscf->get_real_space_grid().get_vector_direct(ir);
+		for (int i = 0 ; i < 3 ; ++i)
+			rVectors[ir*3+i] = rVec[i];
+	}
+
 	Algorithms::FFTInterface fft;
 
+	std::vector<float> phasesRe(nr), phasesIm(nr), buffer(nr);
 	std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
 	std::vector<double> modes;
 	std::vector<std::complex<double> > dynmat;
-	std::vector<std::complex<float> > dvscfData, localGkkp, phases(nr);
+	std::vector<std::complex<float> > dvscfData, localGkkp;
 	gkkp.reserve(nk*nB*nBp*nM);
 	for ( int ik = 0 ; ik < nk ; ++ik )
 	{
@@ -204,12 +273,7 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 			qi -= std::floor(qi+0.5);
 
 		// compute the phases from the Bloch phase factors of the two wave functions
-		for ( int ir = 0 ; ir < nr ; ++ir)
-		{
-			auto rVector = dvscf->get_real_space_grid().get_vector_direct(ir);
-			phases[ir] = std::exp( std::complex<float>(0, -2.0f*M_PI*(
-					rVector[0]*q[0]+rVector[1]*q[1]+rVector[2]*q[2]) ));
-		}
+		this->compute_phases(nr, rVectors, q, buffer, phasesRe, phasesIm);
 
 		// compute phonon modes and dynamical matrix
 		ph->compute_at_q( q, modes, dynmat );
@@ -240,9 +304,33 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 				/*dataLayoutRowMajor =*/false,
 				nk*2);
 
-		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, phases, localGkkp);
+		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, localGkkp);
 
 		gkkp.insert(std::end(gkkp), std::begin(localGkkp), std::end(localGkkp));
+	}
+}
+
+void
+ElectronPhononCoupling::compute_phases(
+		int nr,
+		std::vector<double> const & rVectors,
+		std::vector<double> const & q,
+		std::vector<float> & buffer,
+		std::vector<float> & phasesRe,
+		std::vector<float> & phasesIm) const
+{
+	assert(buffer.size() == nr);
+	assert(phasesRe.size() == nr);
+	assert(phasesIm.size() == nr);
+	assert(rVectors.size() == nr*3);
+	assert(q.size() == 3);
+	for ( int ir = 0 ; ir < nr ; ++ir)
+		buffer[ir] = -2.0f*M_PI*(rVectors[ir*3+0]*q[0]+rVectors[ir*3+1]*q[1]+rVectors[ir*3+2]*q[2]);
+
+	for ( int ir = 0 ; ir < nr ; ++ir)
+	{
+		phasesRe[ir] = std::cos(buffer[ir]);
+		phasesIm[ir] = std::sin(buffer[ir]);
 	}
 }
 
@@ -256,13 +344,15 @@ ElectronPhononCoupling::compute_gkkp_local(
 		std::vector<std::complex<float>> const & dvscfData,
 		std::vector<std::complex<float>> const & wfctBufferk,
 		std::vector<std::complex<float>> const & wfctBufferkp,
-		std::vector<std::complex<float>> const & phases,
+		std::vector<float> const & phasesRe,
+		std::vector<float> const & phasesIm,
 		std::vector<std::complex<float>> & localGkkp) const
 {
 	assert( wfctBufferk.size() == nr*nB );
 	assert( wfctBufferkp.size() == nr*nBp );
 	assert( dvscfData.size() == nr*nM );
-	assert(phases.size() == nr);
+	assert( phasesIm.size() == nr);
+	assert( phasesRe.size() == nr);
 
 	Algorithms::LinearAlgebraInterface linalg;
 	localGkkp.resize(nB*nBp*nM);
@@ -275,7 +365,7 @@ ElectronPhononCoupling::compute_gkkp_local(
 			auto ptr_wf2 = wfctBufferkp.data() + ibp*nr;
 
 			for (int ir = 0 ; ir < nr ; ++ir)
-				wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir]*phases[ir];
+				wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir]*std::complex<float>(phasesRe[ir], phasesIm[ir]);
 
 			linalg.call_gemv('n', nM, nr,
 					std::complex<float>(1.0f/nr),
