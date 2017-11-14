@@ -57,7 +57,8 @@ BOOST_AUTO_TEST_CASE( Cosine_tests_1D )
 
 	std::vector< std::complex<double> > result;
 	std::vector<int> dims{nGrid};
-	fft.fft_data( dims, data, result, nBands, -1, true, 10 );
+	fft.plan_fft( dims, nBands, -1, true, 10);
+	fft.fft_data(data, result, -1);
 
 	BOOST_REQUIRE_EQUAL( result.size() , nGrid*nBands);
 	double diff = 0;
@@ -83,7 +84,8 @@ BOOST_AUTO_TEST_CASE( Cosine_sine_2Band_tests_1D )
 
 	std::vector< std::complex<double> > result;
 	std::vector<int> dims{nGrid};
-	fft.fft_data( dims, data, result, nBands, -1, true, 10 );
+	fft.plan_fft(dims, nBands, -1, true, 10);
+	fft.fft_data(data, result, -1);
 	BOOST_REQUIRE_EQUAL( result.size() , nGrid*nBands);
 
 	double diff = 0;
@@ -115,7 +117,8 @@ BOOST_AUTO_TEST_CASE( Cosine_sine_2Band_tests_2D )
 		}
 
 	std::vector< std::complex<double> > result;
-	fft.fft_data( grid, data, result, nBands, -1, false, 10 );
+	fft.plan_fft(grid, nBands, -1, false, 10);
+	fft.fft_data(data, result, -1);
 
 	BOOST_REQUIRE_EQUAL( result.size() , nGrid*nBands);
 
@@ -150,7 +153,8 @@ BOOST_AUTO_TEST_CASE( sparse_data_test )
 	data[1] = 0.5;
 
 	std::vector< std::complex<double> > result;
-	fft.fft_sparse_data( fftmap, grid, data, nBands, -1, result, grid, false, 10 );
+	fft.plan_fft(grid, nBands, -1, false, 10);
+	fft.fft_sparse_data( fftmap, grid, data, -1, result);
 
 	int ngrid = grid[0]*grid[1]*grid[2];
 	BOOST_REQUIRE_EQUAL( result.size() , ngrid*nBands);
@@ -404,3 +408,47 @@ BOOST_AUTO_TEST_CASE( fft_hessian_3D_cos_non_cubic_cell )
 			}
 	BOOST_CHECK_SMALL( diff/nG/std::pow(D,2) , 1e-6);
 }
+
+BOOST_AUTO_TEST_CASE( sparse_data_parallel_test )
+{
+	elephon::Algorithms::FFTInterface fft;
+
+	int nBands = 1;
+	std::vector<double> data(2*nBands);
+
+	std::vector<int> grid({101,100,150});
+
+	//Create the Fourier transform of cos(x) in 3D
+	std::vector<int> fftmap = {
+			1			, 0,0,
+			grid[0]-1	, 0,0 };
+
+	data[0] = 0.5;
+	data[1] = 0.5;
+
+	fft.plan_fft(grid, nBands, -1, false, 10);
+
+	double diff = 0;
+	#pragma omp parallel
+	{
+		// thread private result
+		std::vector< std::complex<double> > result;
+		double diff_thread_local = 0;
+
+		fft.fft_sparse_data( fftmap, grid, data, -1, result);
+
+		int ngrid = grid[0]*grid[1]*grid[2];
+		BOOST_REQUIRE_EQUAL( result.size() , ngrid*nBands);
+
+		for ( int k = 0 ; k < grid[2]; ++k)
+			for ( int j = 0 ; j < grid[1]; ++j)
+				for ( int i = 0 ; i < grid[0]; ++i)
+					diff_thread_local += std::abs(result[((k*grid[1]+j)*grid[0]+i)*nBands + 0] - std::cos(2*M_PI*i/double(grid[0])));
+
+		#pragma omp atomic
+		diff += diff_thread_local;
+	}
+
+	BOOST_CHECK_SMALL( diff , 1e-6);
+}
+

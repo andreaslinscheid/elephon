@@ -343,6 +343,10 @@ ResourceHandler::initialize_displacement_potential_obj()
 	elephon::LatticeStructure::RegularBareGrid rsGridUC;
 	rsGridUC.initialize( dim, false, gPrec, {0.0, 0.0, 0.0}, unitCell->get_lattice());
 
+	std::vector<int> coarseGrainGrid = this->get_optns().get_dvscfc();
+	if ( coarseGrainGrid.size() == 1 )
+		coarseGrainGrid = this->get_electronic_bands_obj()->get_grid().get_grid_dim();
+
 	displPot_ = std::make_shared<PhononStructure::DisplacementPotential>();
 	displPot_->build(
 			this->get_primitive_unitcell_obj(),
@@ -351,7 +355,8 @@ ResourceHandler::initialize_displacement_potential_obj()
 			std::move(rsGridUC),
 			std::move(rsGridSC),
 			primitiveCellPotential,
-			displPot);
+			displPot,
+			coarseGrainGrid);
 }
 
 void

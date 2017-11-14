@@ -320,6 +320,16 @@ class InputOptions : public InputBase<InputOptions>
 			"",
 			"",
 			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			dvscfc,
+			"Defines the coarse gaining of q space on which the dvscf will be caluclated\n"
+			"Input mode 1 a single arbitrary negative number in which case the normal k grid will be used\n"
+			"Input mode 2 is empty or a single number that is zero where coarse graining is off.\n"
+			"Input mode 3 is the explicit grid with 3 integer numbers > 0.\n",
+			"( -1 <normal k grid> )",
+			{ -1 },
+			std::vector<int>);
 };
 
 } /* namespace IOMethods */

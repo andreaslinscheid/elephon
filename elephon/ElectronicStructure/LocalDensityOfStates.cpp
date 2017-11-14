@@ -44,6 +44,7 @@ LocalDensityOfStates::compute_ldos(
 	isoEnergies_ = std::move(energies);
 	rsDims_ = realSpaceRes;
 	Algorithms::FFTInterface fft;
+	fft.plan_fft(rsDims_->get_grid_dim(), 1, -1, false, nkpointsPerSurface);
 
 	std::vector< std::vector< std::complex<float> > > wfctsFs;
 	std::vector< std::complex<float> > wfctsRealSpace;
@@ -79,12 +80,8 @@ LocalDensityOfStates::compute_ldos(
 						fftMapsWfctsFs[ikf],
 						wfcts->get_max_fft_dims(),
 						wfctsFs[ikf],
-						1,
 						-1,
-						wfctsRealSpace,
-						rsDims_->get_grid_dim(),
-						false, //we want C data order
-						nkpointsPerSurface);
+						wfctsRealSpace);
 
 				double contrib = isoWeights[ikf]*uc_->get_lattice().get_volume()/std::pow(2*M_PI,3);
 				for ( int ir = 0 ; ir < nrs; ++ir )

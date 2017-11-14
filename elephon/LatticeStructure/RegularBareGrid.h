@@ -125,6 +125,8 @@ public:
 
 	void transform( Symmetry::Sop const & sop );
 
+	std::vector<double> const & get_coords() const;
+
 	friend bool operator< (GridPt const& d1, GridPt const& d2);
 private:
 

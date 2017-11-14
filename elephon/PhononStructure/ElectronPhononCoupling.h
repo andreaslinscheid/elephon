@@ -146,6 +146,7 @@ private:
 			std::vector<std::complex<float>> const & wfctBufferkp,
 			std::vector<float> const & phasesRe,
 			std::vector<float> const & phasesIm,
+			std::vector<std::complex<float>> & wfcProdBuffRealSpace,
 			std::vector<std::complex<float>> & localGkkp) const;
 };
 

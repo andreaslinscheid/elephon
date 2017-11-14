@@ -163,6 +163,22 @@ Input::Input( int argc, char* argv[] )
 			bands_p = elphd_p / opts_.get_f_ph_bands();
 		opts_.set_f_ph_bands(bands_p.string());
 	}
+
+	if ( not opts_.get_dvscfc().empty() )
+	{
+		bool off = ( opts_.get_dvscfc().size() == 1 ) and (opts_.get_dvscfc()[0] == 0 );
+		bool automatic = ( opts_.get_dvscfc().size() == 1 ) and (opts_.get_dvscfc()[0] < 0 );
+		bool setExplicit = ( opts_.get_dvscfc().size() == 3 )
+				and (std::all_of(opts_.get_dvscfc().begin(), opts_.get_dvscfc().end(), [](int di){return di > 0;}));
+		if (not (off or automatic or setExplicit) )
+		{
+			std::cout << "Incorrect format of the dvscfc input variable. Please see manual." <<std::endl;
+			std::exit(0);
+		}
+		// set empty for off
+		if (off)
+			opts_.set_dvscfc({});
+	}
 }
 
 InputOptions const & Input::get_opts() const

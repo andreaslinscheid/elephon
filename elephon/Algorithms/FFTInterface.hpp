@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
+#include <omp.h>
 
 namespace elephon
 {
@@ -83,56 +84,33 @@ struct MakeComplex<std::complex<T>>
 };
 } /* namespace detail */
 
-template< typename TR>
-void
-FFTInterface::allocate(
-		std::vector<int> const & gridDims,
-		int nDataPerGridPt,
-		std::vector< TR > & dataResult,
-		bool & re_plan)
-{
-	int ngrid = 1;
-	for ( auto di : gridDims )
-		ngrid *= di;
-	int nTotal = nDataPerGridPt*ngrid;
-
-	re_plan = false;
-
-	if ( nTotal > nBuff_ )
-	{
-		if (FFTBuffer_ != 0)
-		{
-			fftw_free( FFTBuffer_ );
-			FFTBuffer_ = nullptr;
-		}
-		FFTBuffer_ = fftw_alloc_complex( nTotal );
-		nBuff_ = nTotal;
-		re_plan = true;
-	}
-	dataResult.resize( nTotal );
-}
-
 template<typename TI, typename TR>
 void
 FFTInterface::fft_sparse_data(
 		std::vector<int> const & mapFFTCoeff,
 		std::vector<int> const & gridDimsInputData,
 		std::vector< TI > const & sparseInputData,
-		int nDataPerGridPt,
 		int exponentSign,
-		std::vector< TR > & dataResult,
-		std::vector<int> const & gridDimsOutputData,
-		bool dataLayoutRowMajor,
-		int hintHowOften )
+		std::vector< TR > & dataResult )
 {
+	assert(exponentSign != 0);
+	int threadID = omp_get_thread_num();
+	if ( threadID >= numThreadsMax_)
+		throw std::runtime_error("FFTInterface::fft_sparse_data: the number of threads is beyond what it was when initialized");
+
+	std::vector<int> gridDimsOutputData = exponentSign > 0 ? gridDimsBKWD_ : gridDimsFWD_;
+	if (gridDimsOutputData.size() == 0)
+		throw std::runtime_error("FFTInterface::fft_sparse_data need to plan direction first");
+
 	int spaceDim = gridDimsOutputData.size();
-	assert(mapFFTCoeff.size()/spaceDim == sparseInputData.size()/nDataPerGridPt);
+	assert(mapFFTCoeff.size()/spaceDim == sparseInputData.size()/nDataPerGridPt_);
 	int ngrid = 1;
 	for ( auto di : gridDimsOutputData )
 		ngrid *= di;
 
-	bool re_plan = false;;
-	this->allocate(gridDimsOutputData, nDataPerGridPt, dataResult, re_plan);
+	this->allocate_this_thread(gridDimsOutputData, nDataPerGridPt_);
+
+	dataResult.resize(ngrid*nDataPerGridPt_);
 
 	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
 
@@ -152,7 +130,7 @@ FFTInterface::fft_sparse_data(
 		assert( std::distance(toupleBegin,toupleEnd) == gridDimsOutputData.size() );
 		auto const & d = gridDimsOutputData;
 		int conseq = 0;
-		if ( dataLayoutRowMajor )
+		if ( dataLayoutRowMajor_ )
 		{
 			//e.g. for d == 3 : ix*d[1]+iy)*d[2]+iz
 			for ( int i = 0 ; i < int(d.size())-1; ++i)
@@ -177,16 +155,18 @@ FFTInterface::fft_sparse_data(
 	};
 
 	auto fillBuffer = [&] () {
+		assert(FFTBuffer_ != nullptr);
+
 		//Not all data may be accessed, so set it to zero explictely
-		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_);
-		std::fill(ptr,ptr+ngrid*nDataPerGridPt, std::complex<double>(0));
+		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_[threadID]);
+		std::fill(ptr,ptr+ngrid*nDataPerGridPt_, std::complex<double>(0));
 
 		int nGridPointsNonZero = mapFFTCoeff.size()/spaceDim;
 		for (int ig = 0 ; ig < nGridPointsNonZero; ++ig)
 		{
 			auto it = mapFFTCoeff.begin()+ig*spaceDim;
 			int conseq_index = xyz_to_cnsq(it,it+spaceDim);
-			for (int id = 0 ; id < nDataPerGridPt; ++id)
+			for (int id = 0 ; id < nDataPerGridPt_; ++id)
 			{
 				ptr[ id*ngrid + conseq_index ] = converterFwd.convert( sparseInputData [id*nGridPointsNonZero + ig] );
 				assert( ptr[ id*ngrid + conseq_index ] == ptr[ id*ngrid + conseq_index ] );
@@ -195,53 +175,42 @@ FFTInterface::fft_sparse_data(
 	};
 
 	auto fillResult = [&] () {
+		assert(FFTBuffer_ != nullptr);
+
 		detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
-		for (int id = 0 ; id < nDataPerGridPt; ++id)
+		for (int id = 0 ; id < nDataPerGridPt_; ++id)
 			for (int ig = 0 ; ig < ngrid; ++ig)
 			{
 				dataResult [ id*ngrid + ig] =
-						converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] );
+						converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_[threadID])[ id*ngrid + ig ] );
 				assert( dataResult [ id*ngrid + ig] == dataResult [ id*ngrid + ig] );
 			}
 
 		if ( converterBkwd.complex_to_real )
-			if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
+			if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt_ > 1e-6 )
 			{
 				auto realIne = decltype(converterBkwd.imagAccumalate)(0);
-				for (int id = 0 ; id < nDataPerGridPt; ++id)
+				for (int id = 0 ; id < nDataPerGridPt_; ++id)
 					for (int ig = 0 ; ig < ngrid; ++ig)
 						realIne += std::real(dataResult [ id*ngrid + ig]);
 				if ( std::abs(converterBkwd.imagAccumalate)/std::abs(realIne) > 1e-6 )
 					throw std::runtime_error(
 							std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
-							+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) +
+							+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt_) +
 							" on average per data point");
 			}
 	};
 
-	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
 	if ( exponentSign > 0 )
 	{
-		if ( (gridDimsOutputData != gridDimsBKWD_) or re_plan )
-		{
-			gridDimsBKWD_ = gridDimsOutputData;
-			this->plan_fft(gridDimsBKWD_, +1, nDataPerGridPt, hintHowOften, fftw3PlanBkwdKtoR_, dataLayoutRowMajor);
-		}
-
 		fillBuffer();
-		fftw_execute(fftw3PlanBkwdKtoR_);
+		fftw_execute_dft(fftw3PlanBkwdKtoR_, FFTBuffer_[threadID], FFTBuffer_[threadID]);
 		fillResult();
 	}
 	else
 	{
-		if ( (gridDimsOutputData != gridDimsFWD_) or re_plan )
-		{
-			gridDimsFWD_ = gridDimsOutputData;
-			this->plan_fft(gridDimsFWD_, -1, nDataPerGridPt, hintHowOften, fftw3PlanFowdRtoK_ , dataLayoutRowMajor);
-		}
-
 		fillBuffer();
-		fftw_execute(fftw3PlanFowdRtoK_);
+		fftw_execute_dft(fftw3PlanFowdRtoK_, FFTBuffer_[threadID], FFTBuffer_[threadID]);
 		fillResult();
 	}
 };
@@ -249,27 +218,29 @@ FFTInterface::fft_sparse_data(
 
 template< typename TR>
 void
-FFTInterface::fill_result(int ngrid, int nDataPerGridPt, std::vector<TR> & dataResult )
+FFTInterface::fill_result(int ngrid, std::vector<TR> & dataResult )
 {
+	int threadID = omp_get_thread_num();
+	dataResult.resize(ngrid*nDataPerGridPt_);
 	detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
 	for (int ig = 0 ; ig < ngrid; ++ig)
-		for (int id = 0 ; id < nDataPerGridPt; ++id)
+		for (int id = 0 ; id < nDataPerGridPt_; ++id)
 		{
-			dataResult [ ig * nDataPerGridPt + id ] =
-					converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_)[ id*ngrid + ig ] );
-			assert( dataResult [ ig * nDataPerGridPt + id ] == dataResult [ ig * nDataPerGridPt + id ]);
+			dataResult [ ig * nDataPerGridPt_ + id ] =
+					converterBkwd.convert( reinterpret_cast<std::complex<double> * >(FFTBuffer_[threadID])[ id*ngrid + ig ] );
+			assert( dataResult [ ig * nDataPerGridPt_ + id ] == dataResult [ ig * nDataPerGridPt_ + id ]);
 		}
 	if ( converterBkwd.complex_to_real )
-		if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt > 1e-6 )
+		if ( std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt_ > 1e-6 )
 		{
 			auto realIne = decltype(converterBkwd.imagAccumalate)(0);
-			for (int id = 0 ; id < nDataPerGridPt; ++id)
+			for (int id = 0 ; id < nDataPerGridPt_; ++id)
 				for (int ig = 0 ; ig < ngrid; ++ig)
 					realIne += std::real(dataResult [ id*ngrid + ig]);
 			if ( std::abs(converterBkwd.imagAccumalate)/std::abs(realIne) > 1e-6 )
 				throw std::runtime_error(
 						std::string("FFT from complex to real lost significant information by slicing an imaginary part of ")
-						+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt) +
+						+std::to_string(std::abs(converterBkwd.imagAccumalate)/ngrid/nDataPerGridPt_) +
 						" on average per data point");
 		}
 };
@@ -277,57 +248,43 @@ FFTInterface::fill_result(int ngrid, int nDataPerGridPt, std::vector<TR> & dataR
 template<typename TI, typename TR>
 void
 FFTInterface::fft_data(
-		std::vector<int> const & gridDims,
 		std::vector< TI > const & data,
 		std::vector< TR > & dataResult,
-		int nDataPerGridPt,
-		int exponentSign,
-		bool dataLayoutRowMajor,
-		int hintHowOften )
+		int exponentSign)
 {
+	std::vector<int> gridDims = exponentSign > 0 ? gridDimsBKWD_ : gridDimsFWD_;
 	int ngrid = 1;
 	for ( auto di : gridDims )
 		ngrid *= di;
+	assert(data.size() == nDataPerGridPt_*ngrid);
 
-	bool re_plan = false;;
-	this->allocate(gridDims, nDataPerGridPt, dataResult, re_plan);
+	int threadID = omp_get_thread_num();
+
+	this->allocate_this_thread(gridDims, nDataPerGridPt_);
 
 	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
 
 	auto fillBuffer = [&] () {
-		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_);
+		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_[threadID]);
 		for (int ig = 0 ; ig < ngrid; ++ig)
-			for (int id = 0 ; id < nDataPerGridPt; ++id)
+			for (int id = 0 ; id < nDataPerGridPt_; ++id)
 			{
-				ptr[ id*ngrid + ig ] = converterFwd.convert( data [ ig * nDataPerGridPt + id ] );
+				ptr[ id*ngrid + ig ] = converterFwd.convert( data [ ig * nDataPerGridPt_ + id ] );
 				assert( ptr[ id*ngrid + ig ] == ptr[ id*ngrid + ig ] );
 			}
 	};
 
-	//the grid dimension are the flag to recompute a plan, both in forward and backward direction
 	if ( exponentSign > 0 )
 	{
-		if ( (gridDims != gridDimsBKWD_) or re_plan )
-		{
-			gridDimsBKWD_ = gridDims;
-			this->plan_fft(gridDimsBKWD_, +1, nDataPerGridPt, hintHowOften, fftw3PlanBkwdKtoR_, dataLayoutRowMajor);
-		}
-
 		fillBuffer();
-		fftw_execute(fftw3PlanBkwdKtoR_);
-		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+		fftw_execute_dft(fftw3PlanBkwdKtoR_, FFTBuffer_[threadID], FFTBuffer_[threadID]);
+		this->fill_result(ngrid, dataResult);
 	}
 	else
 	{
-		if ( (gridDims != gridDimsFWD_) or re_plan )
-		{
-			gridDimsFWD_ = gridDims;
-			this->plan_fft(gridDimsFWD_, -1, nDataPerGridPt, hintHowOften, fftw3PlanFowdRtoK_ , dataLayoutRowMajor);
-		}
-
 		fillBuffer();
-		fftw_execute(fftw3PlanFowdRtoK_);
-		this->fill_result(ngrid,nDataPerGridPt,dataResult);
+		fftw_execute_dft(fftw3PlanFowdRtoK_, FFTBuffer_[threadID], FFTBuffer_[threadID]);
+		this->fill_result(ngrid, dataResult);
 	}
 }
 
@@ -357,7 +314,8 @@ FFTInterface::fft_interpolate(
 
 	// here we assume x major grid order
 	std::vector<CT> intermedOut;
-	this->fft_data(gridDimsIn, data, intermedOut, nDataPerGridPt, -1, false, 1);
+	this->plan_fft(gridDimsIn, nDataPerGridPt, -1, false, 1);
+	this->fft_data(data, intermedOut, -1);
 
 	for ( auto &d : intermedOut )
 		d /= T(ngridIn);
@@ -481,7 +439,8 @@ FFTInterface::fft_interpolate(
 						intermedIn[ic*nDataPerGridPt+ib] = 0.0;
 			}
 	}
-	this->fft_data(gridDimsOut, intermedIn, dataResult, nDataPerGridPt, 1, false, 1);
+	this->plan_fft(gridDimsOut, nDataPerGridPt, 1, false, 1);
+	this->fft_data(intermedIn, dataResult, 1);
 }
 
 template<typename T>
@@ -505,7 +464,8 @@ FFTInterface::fft_hessian(
 
 	// here we assume x major grid order
 	std::vector<CT> intermedOut;
-	this->fft_data(grid, data, intermedOut, nDataPerGridPt, -1, false, 1);
+	this->plan_fft(grid, nDataPerGridPt, -1, false, 1);
+	this->fft_data(data, intermedOut, -1);
 
 	std::vector<CT> fftHessian(nDataPerGridPt*nG*dim*dim, CT(0));
 	std::vector<int> xyz(dim);
@@ -527,7 +487,8 @@ FFTInterface::fft_hessian(
 					fftHessian[csq] = -intermedOut[ig*nDataPerGridPt+id]*rvec[i]*rvec[j]/CT(nG);
 				}
 	}
-	this->fft_data(grid, fftHessian, hessianOfData, nDataPerGridPt*dim*dim, 1, false, 1);
+	this->plan_fft(grid, nDataPerGridPt*dim*dim, 1, false, 1);
+	this->fft_data(fftHessian, hessianOfData, 1);
 }
 
 } /* namespace Algorithms */

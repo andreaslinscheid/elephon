@@ -30,11 +30,27 @@
 #include <mkl_lapacke.h>
 #include <mkl.h>
 
+#define CBLAS_CMPLDBL_PTR void
+#define CBLAS_CMPLFLT_PTR void
+
+#elif USE_ATLAS
+extern "C"
+{
+#define lapack_complex_float std::complex<float>
+#define lapack_complex_double std::complex<double>
+#include <cblas.h>
+#include <lapacke.h>
+
+#define CBLAS_CMPLDBL_PTR void
+#define CBLAS_CMPLFLT_PTR void
+}
 #else
 extern "C"
 {
 #define lapack_complex_float std::complex<float>
 #define lapack_complex_double std::complex<double>
+#define CBLAS_CMPLDBL_PTR double
+#define CBLAS_CMPLFLT_PTR float
 #include <cblas.h>
 #include <lapacke.h>
 }

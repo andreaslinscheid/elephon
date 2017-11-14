@@ -19,6 +19,7 @@
 
 #include "Algorithms/FFTInterface.h"
 #include <assert.h>
+#include <omp.h>
 
 namespace elephon
 {
@@ -31,7 +32,7 @@ FFTInterface::FFTInterface()
 }
 
 void
-FFTInterface::plan_fft(
+FFTInterface::plan_fft_local(
 		std::vector<int> const & gridDims,
 		int exponentSign,
 		int nDataPerGridPt,
@@ -39,6 +40,9 @@ FFTInterface::plan_fft(
 		fftw_plan_s * & toAlloc,
 		bool dataLayoutRowMajor)
 {
+	if ( omp_get_num_threads() != 1 )
+		throw std::runtime_error("Called FFTInterface::plan_fft in a parallel region: not thread safe");
+
 	int gridnum = 1;
 	for ( auto nd : gridDims )
 		gridnum *= nd;
@@ -61,10 +65,12 @@ FFTInterface::plan_fft(
 
 	auto plan_how_many = hintHowOften > 2 ? (hintHowOften > 10 ? FFTW_PATIENT : FFTW_MEASURE) : FFTW_ESTIMATE;
 
+	// please note: the planner takes always the first FFTBuffer. We call with different fftw_exectute
+	// as described at http://www.fftw.org/fftw3_doc/New_002darray-Execute-Functions.html#New_002darray-Execute-Functions
 	toAlloc = fftw_plan_many_dft(
 				dim,n,howmany,
-				FFTBuffer_, inembed,istride, idist,
-				FFTBuffer_, onembed,ostride, odist,
+				FFTBuffer_[0], inembed,istride, idist,
+				FFTBuffer_[0], onembed,ostride, odist,
 				exponentSign,plan_how_many);
 
 	delete [] n;
@@ -74,9 +80,69 @@ FFTInterface::plan_fft(
 
 FFTInterface::~FFTInterface()
 {
-	fftw_free( FFTBuffer_ );
-	fftw_destroy_plan( fftw3PlanFowdRtoK_ );
-	fftw_destroy_plan( fftw3PlanBkwdKtoR_ );
+	this->clear_storadge();
+}
+
+void
+FFTInterface::clear_storadge()
+{
+	dataLayoutRowMajor_ = false;
+	nDataPerGridPt_ = 1;
+	gridDimsBKWD_.clear();
+	gridDimsFWD_.clear();
+	nBuff_.clear();
+	if ( FFTBuffer_ != nullptr )
+	{
+		for (int it = 0 ; it < numThreadsMax_; ++it)
+			fftw_free( FFTBuffer_[it] );
+		delete [] FFTBuffer_;
+		FFTBuffer_ = nullptr;
+	}
+	if ( fftw3PlanFowdRtoK_ != nullptr )
+	{
+		fftw_destroy_plan( fftw3PlanFowdRtoK_ );
+		fftw3PlanFowdRtoK_ = nullptr;
+	}
+	if ( fftw3PlanBkwdKtoR_ != nullptr )
+	{
+		fftw_destroy_plan( fftw3PlanBkwdKtoR_ );
+		fftw3PlanBkwdKtoR_ = nullptr;
+	}
+}
+
+void
+FFTInterface::plan_fft(
+		std::vector<int> const & gridDimsData,
+		int nDataPerGridPt,
+		int exponentSign,
+		bool dataLayoutRowMajor,
+		int hintHowOften)
+{
+	if ( omp_get_num_threads() != 1 )
+		throw std::runtime_error("Error in FFTInterface::plan_fft: not thread safe but called with #threads != 1");
+	this->allocate_internal();
+
+	dataLayoutRowMajor_ = dataLayoutRowMajor;
+	nDataPerGridPt_ = nDataPerGridPt;
+
+	this->allocate_this_thread(gridDimsData, nDataPerGridPt_); // will allocate thread 0
+
+	if ( ! (exponentSign < 0) ) //  > 0 and 0
+	{
+		if (gridDimsData != gridDimsBKWD_)
+		{
+			gridDimsBKWD_ = gridDimsData;
+			this->plan_fft_local(gridDimsBKWD_, +1, nDataPerGridPt_, hintHowOften, fftw3PlanBkwdKtoR_, dataLayoutRowMajor);
+		}
+	}
+	if (  ! (exponentSign > 0) ) //  < 0 and 0
+	{
+		if (gridDimsData != gridDimsFWD_)
+		{
+			gridDimsFWD_ = gridDimsData;
+			this->plan_fft_local(gridDimsFWD_, -1, nDataPerGridPt_, hintHowOften, fftw3PlanFowdRtoK_ , dataLayoutRowMajor);
+		}
+	}
 }
 
 void
@@ -192,6 +258,53 @@ FFTInterface::xyz_to_cnsq(int &cnsq,
 		}
 		cnsq += xyz[0];
 	}
+}
+
+void
+FFTInterface::allocate_this_thread(
+		std::vector<int> const & gridDims,
+		int nDataPerGridPt)
+{
+	if (  FFTBuffer_ == nullptr  )
+		throw std::logic_error("FFTInterface::allocate_this_thread: must call allocate_internal before allocate this thread");
+	int threadID = omp_get_thread_num();
+	assert(threadID < numThreadsMax_);
+
+	int ngrid = 1;
+	for ( auto di : gridDims )
+		ngrid *= di;
+	int nTotal = nDataPerGridPt*ngrid;
+
+	assert(nBuff_.size() == numThreadsMax_);
+	if ( nTotal > nBuff_[threadID] )
+	{
+		if (FFTBuffer_[threadID] != nullptr)
+		{
+			fftw_free( FFTBuffer_[threadID] );
+			FFTBuffer_[threadID] = nullptr;
+		}
+		FFTBuffer_[threadID] = fftw_alloc_complex( nTotal );
+		nBuff_[threadID] = nTotal;
+	}
+}
+
+void
+FFTInterface::allocate_internal()
+{
+	numThreadsMax_ = omp_get_max_threads();
+	if ( omp_get_num_threads() != 1 )
+		throw std::runtime_error("Error in FFTInterface::allocate_internal: not thread safe but called with #threads != 1");
+
+	this->clear_storadge();
+
+	if ( FFTBuffer_ == nullptr )
+	{
+		FFTBuffer_ = new fftw_complex* [numThreadsMax_];
+		for (int it = 0 ; it < numThreadsMax_; ++it)
+			FFTBuffer_[it] = nullptr;
+	}
+
+	nBuff_.assign(numThreadsMax_, 0);
 }
 
 } /* namespace Algorithms */

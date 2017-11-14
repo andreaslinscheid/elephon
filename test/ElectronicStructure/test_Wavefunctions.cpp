@@ -181,6 +181,7 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_interpol_star )
 
 	std::vector<std::complex<float>> wfctsGammaFullGrid;
 	elephon::Algorithms::FFTInterface fft;
+	fft.plan_fft(chargeDim, bands.size(), -1, false, k.size()/3);
 
 	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2], 0.0);
 	for ( int ik = 0; ik < k.size()/3; ++ik)
@@ -189,12 +190,8 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_interpol_star )
 				fftMap[ik],
 				wfcts.get_max_fft_dims(),
 				wfctsArbK[ik],
-				bands.size(),
 				-1,
-				wfctsGammaFullGrid,
-				chargeDim,
-				false,
-				k.size()/3);
+				wfctsGammaFullGrid);
 
 		for ( int i = 0; i < chggam.size(); ++i )
 			chggam[i] += std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
@@ -234,17 +231,14 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_orho )
 	std::vector<int> chargeDim = {32, 32, 32};
 	const int nr = chargeDim[0]*chargeDim[1]*chargeDim[2];
 	elephon::Algorithms::FFTInterface fft;
+	fft.plan_fft(chargeDim, bands.size(), -1, false, 1);
 	std::vector<std::complex<float>> wfctsGammaFullGrid;
 	fft.fft_sparse_data(
 			fftMap[0],
 			wfcts.get_max_fft_dims(),
 			wfctsArbK[0],
-			bands.size(),
 			-1,
-			wfctsGammaFullGrid,
-			chargeDim,
-			false,
-			1);
+			wfctsGammaFullGrid);
 
 	std::complex<double> integral = 0.0;
 	for ( int i = 0; i < nr; ++i )
@@ -792,21 +786,17 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_arbitray_kpts )
 	std::vector<std::complex<float>> wfctsGammaFullGrid;
 	elephon::Algorithms::FFTInterface fft;
 	std::vector<int> chargeDim = {40,40,48};
+	fft.plan_fft(chargeDim, bands.size(), -1, false, starOps.size()+1);
 
 	std::vector<double> chggam(chargeDim[0]*chargeDim[1]*chargeDim[2], 0.0);
 	for ( int isym = 0; isym < (starOps.size()+1); ++isym)
 	{
-
 		fft.fft_sparse_data(
 				fftMap[isym],
 				wfcts.get_max_fft_dims(),
 				wfctsArbK[isym],
-				bands.size(),
 				-1,
-				wfctsGammaFullGrid,
-				chargeDim,
-				false,
-				starOps.size()+1);
+				wfctsGammaFullGrid);
 
 		for ( int i = 0; i < chggam.size(); ++i )
 			chggam[i] += std::pow(std::real(wfctsGammaFullGrid[i]),2)+std::pow(std::imag(wfctsGammaFullGrid[i]),2);
@@ -838,17 +828,14 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_Gamma )
 
 	std::vector<std::complex<float>> wfctsGammaFullGrid;
 	elephon::Algorithms::FFTInterface fft;
+	fft.plan_fft(chargeDim, 1, -1, false, 1);
 
 	fft.fft_sparse_data(
 			fftMap[0],
 			wfcts.get_max_fft_dims(),
 			wfctsGamma[0],
-			1,
 			-1,
-			wfctsGammaFullGrid,
-			chargeDim,
-			false,
-			1);
+			wfctsGammaFullGrid);
 
 	double norm2_1 = 0;
 	for ( auto a : wfctsGamma[0])
@@ -875,6 +862,7 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_star_k )
 
 	//We investigate band 3 + 4 because they are degenerate at the 1/3 1/3 x points
 	std::vector<int> chargeDim = {40,40,48};
+	fft.plan_fft(chargeDim, 2, -1, false, 1);
 	auto kg = wfcts.get_k_grid();
 	auto rsSym = kg.get_symmetry();
 	rsSym.set_reciprocal_space_sym(false);
@@ -905,12 +893,8 @@ BOOST_AUTO_TEST_CASE( MgB2_vasp_wfct_star_k )
 					fftMap[0],
 					wfcts.get_max_fft_dims(),
 					wfctsStar[is],
-					2,
 					-1,
-					wfctsRSStarFullGrid,
-					chargeDim,
-					false,
-					1);
+					wfctsRSStarFullGrid);
 
 			for ( int ib = 0; ib < 2; ++ib)
 				for ( int i = 0; i < chgStar.size(); ++i )
@@ -933,6 +917,7 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_star_k )
 
 	//We investigate band 3 + 4 because they are degenerate at the 1/3 1/3 x points
 	std::vector<int> chargeDim = {32,32,32};
+	fft.plan_fft(chargeDim, 1, -1, false, 1);
 	auto kg = wfcts.get_k_grid();
 	auto rsSym = kg.get_symmetry();
 	rsSym.set_reciprocal_space_sym(false);
@@ -973,12 +958,8 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_star_k )
 					fftMap[0],
 					wfcts.get_max_fft_dims(),
 					wfctsStar[is],
-					1,
 					-1,
-					wfctsRSStarFullGrid,
-					chargeDim,
-					false,
-					1);
+					wfctsRSStarFullGrid);
 
 			for ( int ib = 0; ib < 1; ++ib)
 				for ( int i = 0; i < chgStar.size(); ++i )

@@ -42,22 +42,32 @@ public:
 			std::vector<int> const & mapFFTCoeff,
 			std::vector<int> const & gridDimsInputData,
 			std::vector< TI > const & sparseInputData,
-			int nDataPerGridPt,
 			int exponentSign,
-			std::vector< TR > & dataResult,
-			std::vector<int> const & gridDimsOutputData,
+			std::vector< TR > & dataResult);
+
+	void plan_fft(
+			std::vector<int> const & gridDimsData,
+			int nDataPerGridPt = 1,
+			int exponentSign = 0,
 			bool dataLayoutRowMajor = false,
 			int hintHowOften = 1);
 
+	/**
+	 * Perform the Fourier transform of data.
+	 *
+	 * @param data				the data in the layout provided when plan_fft was called. For each
+	 * 							grid point, nDataPerGridPt are assumed to be in consecutive places.
+	 * 							If the grid is e.g. (x,y,z) the data layout is for column major
+	 * 								consq index = idata + nDataPerGridPt*(ix + x*(iy + y*(iz) ) )
+  	 *							nDataPerGridPt is set by the planner with a call to plan_fft
+	 * @param dataResult		vector that will be resized to fit the Fourier transformed data.
+	 * @param exponentSign		if the transformation is forward or backwards. Must not be zero.
+	 */
 	template<typename TI, typename TR>
 	void fft_data(
-			std::vector<int> const & gridDimsData,
 			std::vector< TI > const & data,
 			std::vector< TR > & dataResult,
-			int nDataPerGridPt,
-			int exponentSign,
-			bool dataLayoutRowMajor = false,
-			int hintHowOften = 1);
+			int exponentSign);
 
 	/**
 	 * Perform a band-limited Fourier interpolation of data and place it in dataResult.
@@ -105,6 +115,11 @@ public:
 			std::vector< T > & hessianOfData,
 			int nDataPerGridPt);
 
+	/**
+	 * Release internal stored objects, such that a new plan_fft is necessary.
+	 */
+	void clear_storadge();
+
 
 	static void inplace_to_freq(int &x, int &y, int &z, int dx, int dy, int dz);
 
@@ -129,29 +144,34 @@ private:
 	FFTInterface(FFTInterface const & );
 	FFTInterface * operator= (FFTInterface);
 
-	int nBuff_ = 0;
+	int numThreadsMax_ = 1;
+
+	std::vector<int> nBuff_;
 
 	std::vector<int> gridDimsFWD_;
 
 	std::vector<int> gridDimsBKWD_;
 
-	fftw_complex * FFTBuffer_ = nullptr;
+	bool dataLayoutRowMajor_ = false;
+
+	int nDataPerGridPt_ = 1;
+
+	fftw_complex ** FFTBuffer_ = nullptr;
 
 	fftw_plan_s * fftw3PlanFowdRtoK_ = nullptr;
 
 	fftw_plan_s * fftw3PlanBkwdKtoR_ = nullptr;
 
-	template< typename TR>
-	void allocate(
+	void allocate_internal();
+
+	void allocate_this_thread(
 			std::vector<int> const & gridDims,
-			int nDataPerGridPt,
-			std::vector< TR > & dataResult,
-			bool & re_plan);
+			int nDataPerGridPt);
 
 	template< typename TR>
-	void fill_result(int ngrid, int nDataPerGridPt, std::vector<TR> & dataResult );
+	void fill_result(int ngrid, std::vector<TR> & dataResult );
 
-	void plan_fft(
+	void plan_fft_local(
 			std::vector<int> const & gridDims,
 			int exponentSign,
 			int nDataPerGridPt,

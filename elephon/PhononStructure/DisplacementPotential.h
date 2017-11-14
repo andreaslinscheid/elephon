@@ -42,17 +42,33 @@ public:
 			LatticeStructure::RegularBareGrid unitcellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector<double> const & potentialUC,
-			std::vector< std::vector<double> > const & potentialDispl );
+			std::vector< std::vector<double> > const & potentialDispl,
+			std::vector<int> coarseGrainGrid);
 
 	void compute_dvscf_q(
 			std::vector<double> const & qVect,
 			std::vector<std::complex<double>> const & dynamicalMatrices,
 			std::vector<double> const & masses,
-			std::vector<std::complex<float>> & dvscf) const;
+			std::vector<std::complex<float>> & dvscf,
+			std::vector<std::vector<std::complex<float>>> & buffer) const;
 
 	int RVectorLayout(int iRz, int iRy, int iRx ) const;
 
 	LatticeStructure::RegularBareGrid const & get_real_space_grid() const;
+
+	/**
+	 * Request a connection of arbitrary q points to the closest point in the coarse grained q-grid.
+	 *
+	 * If coarse graining is inactive, the code will simply return a map with each q point associated
+	 * to its index in the array qVect.
+	 *
+	 * @param qVect						non-grid q vectors in the layout q0x, q0y, q0z, q1x ...
+	 * @param qGridCorseGainToQIndex	a map that tells for each coarse grid vectors the indices
+	 * 									in the list of q vectors qVect that are closest to it.
+	 */
+	void query_q(
+			std::vector<double> const & qVect,
+			std::map<LatticeStructure::RegularBareGrid::GridPoint, std::vector<int>> & qGridCorseGainToQIndex) const;
 
 	int get_num_R() const;
 
@@ -75,6 +91,8 @@ private:
 
 	std::shared_ptr<const LatticeStructure::UnitCell> unitCell_;
 
+	std::shared_ptr<LatticeStructure::RegularBareGrid> coarseGrainGrid_;
+
 	///For each lattice vector, the linear displacement potential sorted
 	///according 1) the mode index and 2) to the realspaceGrid_ in z-slowest-running order.
 	std::vector<float> data_;
@@ -82,15 +100,7 @@ private:
 	std::vector<int> superCellDim_;
 
 	/// A buffer for the R vectors. These are implicitly defined by superCellDim_
-	mutable std::vector<double> RVectors_;
-
-	mutable std::vector<std::complex<float>> phaseBuffer_;
-
-	mutable std::vector<std::complex<float>> dvscfqBuffer_;
-
-	mutable std::vector<std::complex<float>>  dynmatMassBuffer_;
-
-	mutable std::vector<std::complex<float>>  ftDisplPot_;
+	std::vector<double> RVectors_;
 
 	void set_R_vector_map(
 			LatticeStructure::UnitCell const & unitCell,
@@ -115,7 +125,8 @@ private:
 			std::vector<double> const & qVect,
 			std::vector<std::complex<double>> const & dynamicalMatrices,
 			std::vector<double> const & masses,
-			std::vector<std::complex<float>> & dvscf) const;
+			std::vector<std::complex<float>> & dvscf,
+			std::vector<std::complex<float>> & ftDisplPot) const;
 };
 
 } /* namespace PhononStructure */

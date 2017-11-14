@@ -55,10 +55,10 @@ LinearAlgebraInterface::call_gemv(
 	if ( (TRANS == 'C') or (TRANS == 'c') )
 		cblasTrans = CblasConjTrans;
 	cblas_cgemv(CblasColMajor, cblasTrans, M, N,
-			reinterpret_cast<const void*>(&ALPHA),
-			reinterpret_cast<const void*>(A), LDA,
-			reinterpret_cast<const void*>(X), INCX,
-			reinterpret_cast<const void*>(&BETA), reinterpret_cast<void *>(Y), INCY);
+			reinterpret_cast<CBLAS_CMPLFLT_PTR*>(&ALPHA),
+			reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(A), LDA,
+			reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(X), INCX,
+			reinterpret_cast<CBLAS_CMPLFLT_PTR*>(&BETA), reinterpret_cast<CBLAS_CMPLFLT_PTR *>(Y), INCY);
 }
 
 std::complex<float>
@@ -68,9 +68,15 @@ LinearAlgebraInterface::call_dotu(
 		std::complex<float> * dy, int incy) const
 {
 	std::complex<float> result;
+#if defined USE_MKL || defined USE_ATLAS
 	cblas_cdotu_sub(n, reinterpret_cast<const void*>(dx), incx,
 					   reinterpret_cast<const void*>(dy), incy,
 					   reinterpret_cast<void*>(&result));
+#else // openblas
+	cblas_cdotu_sub(n, reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(dx), incx,
+					   reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(dy), incy,
+					   reinterpret_cast<openblas_complex_float*>(&result));
+#endif
 	return result;
 }
 
@@ -81,9 +87,15 @@ LinearAlgebraInterface::call_dotu(
 		std::complex<double> * dy, int incy) const
 {
 	std::complex<double> result;
+#if defined USE_MKL || defined USE_ATLAS
 	cblas_zdotu_sub(n, reinterpret_cast<const void*>(dx), incx,
 					   reinterpret_cast<const void*>(dy), incy,
 					   reinterpret_cast<void*>(&result));
+#else// openblas
+	cblas_zdotu_sub(n, reinterpret_cast<const CBLAS_CMPLDBL_PTR*>(dx), incx,
+					   reinterpret_cast<const CBLAS_CMPLDBL_PTR*>(dy), incy,
+					   reinterpret_cast<openblas_complex_double*>(&result));
+#endif
 	return result;
 }
 
@@ -129,9 +141,9 @@ LinearAlgebraInterface::call_gemm(
 {
 	cblas_cgemm(CblasRowMajor, ctoen(transA), ctoen(transB),
 			m, n, k,
-			reinterpret_cast<void*>(&alpha), reinterpret_cast<const void*>(A), lda,
-			reinterpret_cast<const void*>(B), ldb,
-			reinterpret_cast<void*>(&beta), reinterpret_cast<void*>(C), ldc);
+			reinterpret_cast<CBLAS_CMPLFLT_PTR*>(&alpha), reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(A), lda,
+			reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(B), ldb,
+			reinterpret_cast<CBLAS_CMPLFLT_PTR*>(&beta), reinterpret_cast<CBLAS_CMPLFLT_PTR*>(C), ldc);
 	return 0;
 }
 
@@ -143,9 +155,9 @@ LinearAlgebraInterface::call_gemm(
 {
 	cblas_zgemm(CblasRowMajor, ctoen(transA), ctoen(transB),
 			m, n, k,
-			reinterpret_cast<void*>(&alpha), reinterpret_cast<const void*>(A), lda,
-			reinterpret_cast<const void*>(B), ldb,
-			reinterpret_cast<void*>(&beta), reinterpret_cast<void*>(C), ldc);
+			reinterpret_cast<CBLAS_CMPLDBL_PTR*>(&alpha), reinterpret_cast<const CBLAS_CMPLDBL_PTR*>(A), lda,
+			reinterpret_cast<const CBLAS_CMPLDBL_PTR*>(B), ldb,
+			reinterpret_cast<CBLAS_CMPLDBL_PTR*>(&beta), reinterpret_cast<CBLAS_CMPLDBL_PTR*>(C), ldc);
 	return 0;
 }
 

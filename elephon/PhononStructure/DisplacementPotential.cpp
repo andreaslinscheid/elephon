@@ -37,7 +37,8 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 		LatticeStructure::RegularBareGrid unitcellGrid,
 		LatticeStructure::RegularBareGrid const & supercellGrid,
 		std::vector<double> const & potentialUC,
-		std::vector< std::vector<double> > const & potentialDispl )
+		std::vector< std::vector<double> > const & potentialDispl,
+		std::vector<int> coarseGrainGrid )
 {
 	unitCell->compute_supercell_dim(superCell, superCellDim_);
 	numModes_ = unitCell->get_atoms_list().size()*3;
@@ -262,6 +263,18 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 					std::copy(R, R+3, &RVectors_[iR*3]);
 				}
 	}
+
+	if (not coarseGrainGrid.empty())
+	{
+		assert(coarseGrainGrid.size() == 3);
+		coarseGrainGrid_ = std::make_shared<LatticeStructure::RegularBareGrid>();
+		coarseGrainGrid_->initialize(
+				std::move(coarseGrainGrid),
+				/*is reciprcal space=*/true,
+				unitCellGrid_.get_grid_prec(),
+				/*set grid shit to zero :*/{0.0, 0.0, 0.0},
+				unitcellGrid.get_lattice());
+	}
 }
 
 void
@@ -279,7 +292,8 @@ DisplacementPotential::compute_dvscf_q(
 		std::vector<double> const & qVect,
 		std::vector<std::complex<double>> const & dynamicalMatrices,
 		std::vector<double> const & masses,
-		std::vector<std::complex<float>> & dvscf) const
+		std::vector<std::complex<float>> & dvscf,
+		std::vector<std::vector<std::complex<float>>> & buffer) const
 {
 	assert( qVect.size() % 3 == 0 );
 	const int nq = qVect.size()/3;
@@ -287,26 +301,33 @@ DisplacementPotential::compute_dvscf_q(
 	assert( (dynamicalMatrices.size()/nq) / (numModes_*numModes_) == 1 );
 	assert( (masses.size()*3) / numModes_ == 1 );
 
+	// introduce names for the various buffers
+	buffer.resize(4);
+	std::vector<std::complex<float>> & ftDisplPot = buffer[0];
+	std::vector<std::complex<float>> & dvscfqBuffer = buffer[1];
+	std::vector<std::complex<float>> & dynmatMassBuffer = buffer[2];
+	std::vector<std::complex<float>> & phaseBuffer = buffer[3];
+
 	// in case there are only few modes in the system, avoid the caling overhead of
 	// the blas package
 	if ( numModes_ < 12 )
 	{
-		this->compute_dvscf_q_optimized_low_num_modes( qVect, dynamicalMatrices, masses, dvscf);
+		this->compute_dvscf_q_optimized_low_num_modes( qVect, dynamicalMatrices, masses, dvscf, ftDisplPot);
 		return;
 	}
 
 	Algorithms::LinearAlgebraInterface linAlg;
 	// fill the buffers
-	if ( dvscfqBuffer_.empty() )
-		dvscfqBuffer_.assign(data_.begin(), data_.end());
+	if ( dvscfqBuffer.empty() )
+		dvscfqBuffer.assign(data_.begin(), data_.end());
 
-	if ( ftDisplPot_.size() != nq*numModes_*nptsRealSpace_ )
-		ftDisplPot_.resize(nq*numModes_*nptsRealSpace_);
+	if ( ftDisplPot.size() != nq*numModes_*nptsRealSpace_ )
+		ftDisplPot.resize(nq*numModes_*nptsRealSpace_);
 
-	if ( dynmatMassBuffer_.size() != numModes_*numModes_)
-		dynmatMassBuffer_.resize(numModes_*numModes_);
+	if ( dynmatMassBuffer.size() != numModes_*numModes_)
+		dynmatMassBuffer.resize(numModes_*numModes_);
 
-	phaseBuffer_.resize(nq*nR);
+	phaseBuffer.resize(nq*nR);
 	for ( int iq = 0 ; iq < nq; ++iq)
 	{
 		for ( int iR = 0 ; iR < nR; ++iR)
@@ -314,7 +335,7 @@ DisplacementPotential::compute_dvscf_q(
 			float dprod = 2.0*M_PI*(qVect[iq*3+0]*RVectors_[3*iR+0]
 									+qVect[iq*3+1]*RVectors_[3*iR+1]
 									+qVect[iq*3+2]*RVectors_[3*iR+2]);
-			phaseBuffer_[iq*nR+iR] = std::exp( std::complex<float>(0,dprod));
+			phaseBuffer[iq*nR+iR] = std::exp( std::complex<float>(0,dprod));
 		}
 	}
 
@@ -326,19 +347,19 @@ DisplacementPotential::compute_dvscf_q(
 
 	linAlg.call_gemm( 'n', 'n',
 			nq, nptsRealSpace_*numModes_, nR,
-			std::complex<float>(1.0f), phaseBuffer_.data(), nR,
-			dvscfqBuffer_.data(), numModes_*nptsRealSpace_,
-			std::complex<float>(0.0f), ftDisplPot_.data(), nptsRealSpace_*numModes_);
+			std::complex<float>(1.0f), phaseBuffer.data(), nR,
+			dvscfqBuffer.data(), numModes_*nptsRealSpace_,
+			std::complex<float>(0.0f), ftDisplPot.data(), nptsRealSpace_*numModes_);
 
 	for ( int iq = 0 ; iq < nq; ++iq)
 	{
 		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
 			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
-				dynmatMassBuffer_[mu1*numModes_+mu2] = dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2] / masses[mu2/3];
+				dynmatMassBuffer[mu1*numModes_+mu2] = dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2] / masses[mu2/3];
 
 		auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
-		auto dmat_ptr = &dynmatMassBuffer_[0];
-		auto ftdp_ptr = &ftDisplPot_[iq*numModes_*nptsRealSpace_];
+		auto dmat_ptr = &dynmatMassBuffer[0];
+		auto ftdp_ptr = &ftDisplPot[iq*numModes_*nptsRealSpace_];
 		linAlg.call_gemm( 'n', 'n',
 				numModes_, nptsRealSpace_ , numModes_,
 				std::complex<float>(1.0f), dmat_ptr, numModes_,
@@ -352,18 +373,19 @@ DisplacementPotential::compute_dvscf_q_optimized_low_num_modes(
 		std::vector<double> const & qVect,
 		std::vector<std::complex<double>> const & dynamicalMatrices,
 		std::vector<double> const & masses,
-		std::vector<std::complex<float>> & dvscf) const
+		std::vector<std::complex<float>> & dvscf,
+		std::vector<std::complex<float>> & ftDisplPot) const
 {
 	const int nq = qVect.size()/3;
 	const int nR = this->get_num_R();
 
-	if ( ftDisplPot_.size() != numModes_*nptsRealSpace_ )
-		ftDisplPot_.resize(numModes_*nptsRealSpace_);
+	if ( ftDisplPot.size() != numModes_*nptsRealSpace_ )
+		ftDisplPot.resize(numModes_*nptsRealSpace_);
 
 	dvscf.assign(nq*numModes_*nptsRealSpace_, std::complex<float>(0));
 	for ( int iq = 0 ; iq < nq; ++iq)
 	{
-		std::fill(ftDisplPot_.begin(), ftDisplPot_.end(), std::complex<float>(0));
+		std::fill(ftDisplPot.begin(), ftDisplPot.end(), std::complex<float>(0));
 		for ( int iR = 0 ; iR < nR; ++iR)
 		{
 			float dprod = 2.0*M_PI*(qVect[iq*3+0]*RVectors_[3*iR+0]
@@ -372,7 +394,7 @@ DisplacementPotential::compute_dvscf_q_optimized_low_num_modes(
 			std::complex<float> phase = std::exp( std::complex<float>(0,dprod));
 
 			for (int imr = 0 ; imr < nptsRealSpace_*numModes_; ++imr)
-				ftDisplPot_[imr] += phase*data_[imr+nptsRealSpace_*numModes_*iR];
+				ftDisplPot[imr] += phase*data_[imr+nptsRealSpace_*numModes_*iR];
 		}
 
 		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
@@ -380,7 +402,41 @@ DisplacementPotential::compute_dvscf_q_optimized_low_num_modes(
 				for ( int ir = 0 ; ir < nptsRealSpace_; ++ir )
 					dvscf[(iq*numModes_+mu1)*nptsRealSpace_+ir] +=
 							std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3])
-									  *ftDisplPot_[mu2*nptsRealSpace_+ir];
+									  *ftDisplPot[mu2*nptsRealSpace_+ir];
+	}
+}
+
+void
+DisplacementPotential::query_q(
+		std::vector<double> const & qVect,
+		std::map<LatticeStructure::RegularBareGrid::GridPoint, std::vector<int>> & qGridCorseGainToQIndex) const
+{
+	assert(qVect.size()%3 == 0);
+	qGridCorseGainToQIndex.clear();
+	const int nq = qVect.size()/3;
+	const double gPrec = unitCell_->get_symmetry().get_symmetry_prec();
+
+	if ( not coarseGrainGrid_ )
+	{
+		for (int iq = 0 ; iq < nq ;++iq)
+		{
+			LatticeStructure::RegularBareGrid::GridPoint g(std::move(std::vector<double>(&qVect[iq*3], &qVect[iq*3]+3)), gPrec);
+			auto ret = qGridCorseGainToQIndex.insert(std::move(std::make_pair(std::move(g), std::vector<int>())));
+			ret.first->second.push_back(iq);
+		}
+	}
+	else
+	{
+		std::vector<int> closestGridIndices;
+		coarseGrainGrid_->find_closest_reducible_grid_points(qVect, closestGridIndices);
+
+		for (int iq = 0 ; iq < nq ;++iq)
+		{
+			auto gridVector = coarseGrainGrid_->get_vector_direct(closestGridIndices[iq]);
+			LatticeStructure::RegularBareGrid::GridPoint g(std::move(gridVector), gPrec);
+			auto ret = qGridCorseGainToQIndex.insert(std::move(std::make_pair(std::move(g), std::vector<int>())));
+			ret.first->second.push_back(iq);
+		}
 	}
 }
 
@@ -470,7 +526,8 @@ DisplacementPotential::write_dvscf_q(
 	int nq = qVect.size()/3;
 
 	std::vector<std::complex<float>> qDataPlus;
-	this->compute_dvscf_q(qVect,dynamicalMatrices,masses,qDataPlus);
+	std::vector<std::vector<std::complex<float>>> buffers;
+	this->compute_dvscf_q(qVect, dynamicalMatrices, masses, qDataPlus, buffers);
 
 	int nr = unitCellGrid_.get_num_points();
 	assert(qDataPlus.size() == nq*numModes_*nr);

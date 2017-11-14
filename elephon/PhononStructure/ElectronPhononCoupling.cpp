@@ -24,6 +24,8 @@
 #include <set>
 #include <map>
 #include <chrono>
+#include <sstream>
+#include <omp.h>
 
 namespace elephon
 {
@@ -48,7 +50,6 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 		return;
 
 	bool report_timings = nKp_ > 100;
-//	bool report_timings = false;
 
 	// TODO a system-wide meaure of timings would be desirable
 	std::map<std::string,std::pair< decltype(std::chrono::system_clock::now()), std::chrono::duration<double> >> durations;
@@ -67,10 +68,6 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 		it->second.second += std::chrono::duration<double>(time_now - it->second.first);
 	};
 
-	std::vector<double> modes;
-	std::vector<std::complex<double> > dynmat;
-	std::vector<std::complex<float> > dvscfData;
-
 	if ( report_timings )
 		start_m_c("wfcts_gen");
 
@@ -88,13 +85,12 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	if ( report_timings )
 	{
 		stop_m_c("wfcts_gen");
-		std::cout << "Generating wavefunctions at "<<kList.size()/3+kpList.size()/3
+		std::cout << "\tGenerating wavefunctions at "<<kList.size()/3+kpList.size()/3
 				<< " k points: "<<durations["wfcts_gen"].second.count()<<"s"<< std::endl;
+		durations.erase("wfcts_gen");
 	}
 
 	std::vector<int> potentialFFTGrid = dvscf->get_real_space_grid().get_grid_dim();
-
-	std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
 
 	int nr = potentialFFTGrid[0]*potentialFFTGrid[1]*potentialFFTGrid[2];
 	std::vector<double> rVectors(nr*3);
@@ -109,105 +105,130 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	nB_ = bandList.size();
 	nBp_ = bandpList.size();
 
-	std::vector<float> dotProdQr(nr), phasesRe(nr), phasesIm(nr), buffer(nr);
-	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
-	std::vector<std::complex<float> > localGkkp;
 	Algorithms::LinearAlgebraInterface linalg;
 
-	phononFrequencies_.reserve(nK_*nKp_*nM_);
-	data_.resize( nK_*nKp_*nM_*nB_*nBp_ );
-	Algorithms::FFTInterface fft;
-	auto start_clock = std::chrono::system_clock::now();
+	std::vector<double> allQVectors(nK_*nKp_*3);
+	std::vector<std::pair<int,int>> q_to_k_and_kp_map(nK_*nKp_);
 	for ( int ik = 0 ; ik < nK_; ++ik)
-	{
-		if ( report_timings )
-			start_m_c("sparse_fft");
-		fft.fft_sparse_data(
-				fftMapsK[ik],
-				wfcts->get_max_fft_dims(),
-				wfcsk[ik],
-				nB_,
-				1,
-				bufferWfct1,
-				potentialFFTGrid,
-				false,
-				nK_*nKp_);
-
-		if ( report_timings )
-			stop_m_c("sparse_fft");
-
 		for ( int ikp = 0 ; ikp < nKp_; ++ikp)
 		{
-			std::vector<double> q{	kList[ik*3+0]-kpList[ikp*3+0],
-									kList[ik*3+1]-kpList[ikp*3+1],
-									kList[ik*3+2]-kpList[ikp*3+2]};
+			const int ikkp = ik*nKp_+ikp;
+			allQVectors[ikkp*3+0] = kList[ik*3+0]-kpList[ikp*3+0];
+			allQVectors[ikkp*3+1] = kList[ik*3+1]-kpList[ikp*3+1];
+			allQVectors[ikkp*3+2] = kList[ik*3+2]-kpList[ikp*3+2];
 
-			// map q vectors back to the 1. BZ
-			for ( auto &qi : q )
-				qi -= std::floor(qi+0.5);
-
-			if ( report_timings )
-				start_m_c("ph");
-			ph->compute_at_q( q, modes, dynmat );
-			if ( report_timings )
-				stop_m_c("ph");
-			if ( report_timings )
-				start_m_c("ph_dvscf");
-			dvscf->compute_dvscf_q( q, dynmat, ph->get_masses(), dvscfData);
-			phononFrequencies_.insert(std::end(phononFrequencies_), modes.begin(), modes.end() );
-			if ( report_timings )
-				stop_m_c("ph_dvscf");
-
-			if ( report_timings )
-				start_m_c("sparse_fft");
-			fft.fft_sparse_data(
-					fftMapsKp[ikp],
-					wfcts->get_max_fft_dims(),
-					wfcskp[ikp],
-					nBp_,
-					-1,
-					bufferWfct2,
-					potentialFFTGrid,
-					false,
-					nK_*nKp_);
-			if ( report_timings )
-				stop_m_c("sparse_fft");
-
-			// compute the phases from the Bloch phase factors of the two wave functions
-			// NOTE: because this is the most performance critical part of the code, we
-			//			jump throw some hoops to get it faster ...
-			if ( report_timings )
-				start_m_c("phases");
-			this->compute_phases(nr, rVectors, q, buffer, phasesRe, phasesIm);
-
-			if ( report_timings )
-				stop_m_c("phases");
-
-			if ( report_timings )
-				start_m_c("gkkp_local");
-			this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, localGkkp);
-			if ( report_timings )
-				stop_m_c("gkkp_local");
-
-			std::copy(localGkkp.begin(), localGkkp.end(), &data_[this->tensor_layout(ik,ikp,0,0,0)]);
+			q_to_k_and_kp_map[ikkp].first = ik;
+			q_to_k_and_kp_map[ikkp].second = ikp;
 		}
-		if ( report_timings )
+
+	// map q vectors back to the 1. BZ
+	for ( auto &qi : allQVectors )
+		qi -= std::floor(qi+0.5);
+
+	std::map<LatticeStructure::RegularBareGrid::GridPoint, std::vector<int>> gp_to_q_index;
+	dvscf->query_q(allQVectors, gp_to_q_index);
+
+	double percentageDone = 0.0;
+	auto start_clock = std::chrono::system_clock::now();
+
+	// for OpenMP, we need random access iterators ...
+	std::vector<std::pair<LatticeStructure::RegularBareGrid::GridPoint, std::vector<int>>> gp_to_q_index_vector;
+	gp_to_q_index_vector.reserve(gp_to_q_index.size());
+	for ( auto const & coarseGP : gp_to_q_index )
+		gp_to_q_index_vector.push_back(coarseGP);
+
+#ifndef NDEBUG
+	// cross check that all q-indices are there once.
+	std::set<int> cross_check_set;
+	for (int igp = 0 ; igp < gp_to_q_index_vector.size(); ++igp)
+		for (int iq : gp_to_q_index_vector[igp].second )
+			cross_check_set.insert(iq);
+	assert(cross_check_set.size() == nK_*nKp_);
+	assert(*cross_check_set.rbegin() == (nK_*nKp_-1));
+#endif
+
+
+	Algorithms::FFTInterface fft1, fft2;
+	fft1.plan_fft(potentialFFTGrid, nB_,  1, false, nK_);
+	fft2.plan_fft(potentialFFTGrid, nBp_, -1, false, nKp_);
+
+	phononFrequencies_.resize(nK_*nKp_*nM_);
+	data_.resize( nK_*nKp_*nM_*nB_*nBp_ );
+	#pragma omp parallel
+	{
+		// thread private buffer data
+		std::vector<float> phasesRe(nr), phasesIm(nr), buffer(nr);
+		std::vector<std::complex<float>> wfcProdBuffRealSpace(nr);
+		std::vector<std::complex<float> > localGkkp;
+		std::vector<double> modes;
+		std::vector<std::complex<double> > dynmat;
+		std::vector<std::complex<float> > dvscfData;
+		std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
+		std::vector<std::vector<std::complex<float> >> dvscfBuffers;
+
+		#pragma omp for
+		for (int icgp = 0 ; icgp < gp_to_q_index_vector.size(); ++icgp)
 		{
-			auto thisTime_clock = std::chrono::system_clock::now();
-			std::chrono::duration<double> elapsed_seconds = thisTime_clock-start_clock;
-			std::chrono::duration<double> projectedRuntime_seconds = double(nK_) / double(ik+1) * elapsed_seconds;
-			std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
+		    int thread_id = omp_get_thread_num();
 
-			std::string timings;
-			for ( auto &c : durations)
-				timings += std::string(" ")+c.first + ": " + std::to_string(c.second.second.count()) + "; ";
-			std::cout << "\r\tPercentage done : " << std::floor(100.0 *double(ik+1) / double(nK_) + 0.5)
-					<< "; estimated time to finish: " << remainingRuntine.count() << "s\t"
-					<< "timings: " << timings
-					<<  "                 ";
-			std::cout.flush();
+			auto const & coarseGP = gp_to_q_index_vector[icgp];
+
+			// set things that go onto the coarse grid
+			std::vector<double> const & gridQ = coarseGP.first.get_coords();
+
+			this->compute_phases(nr, rVectors, gridQ, buffer, phasesRe, phasesIm);
+
+			ph->compute_at_q( gridQ, modes, dynmat );
+
+			dvscf->compute_dvscf_q( gridQ, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
+
+			// now compute things that are handled without a grid
+			for (int iq  : coarseGP.second )
+			{
+				int ik = q_to_k_and_kp_map[iq].first;
+				int ikp = q_to_k_and_kp_map[iq].second;
+
+				fft1.fft_sparse_data(
+						fftMapsK[ik],
+						wfcts->get_max_fft_dims(),
+						wfcsk[ik],
+						1,
+						bufferWfct1);
+
+				fft2.fft_sparse_data(
+						fftMapsKp[ikp],
+						wfcts->get_max_fft_dims(),
+						wfcskp[ikp],
+						-1,
+						bufferWfct2);
+
+				ph->compute_at_q( std::vector<double>(&allQVectors[iq*3], &allQVectors[iq*3]+3), modes, dynmat );
+				std::copy(modes.begin(), modes.end(), &phononFrequencies_[(ik*nKp_+ikp)*nM_]);
+
+				this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, wfcProdBuffRealSpace, localGkkp);
+				std::copy(localGkkp.begin(), localGkkp.end(), &data_[this->tensor_layout(ik,ikp,0,0,0)]);
+			}
+
+			double localIncrement = static_cast<double>(coarseGP.second.size())/static_cast<double>(nK_*nKp_);
+
+			if (report_timings )
+			{
+				#pragma omp critical
+				{
+					percentageDone += localIncrement;
+					auto thisTime_clock = std::chrono::system_clock::now();
+					std::chrono::duration<double> elapsed_seconds = thisTime_clock-start_clock;
+					std::chrono::duration<double> projectedRuntime_seconds = elapsed_seconds/percentageDone;
+					std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
+
+					std::cout << "\r\tPercentage done : " << std::floor(percentageDone*100 + 0.5)
+							<< "; estimated time to finish: " << std::floor(remainingRuntine.count()+0.5) << " s"
+							<<  "                 ";
+					std::cout.flush();
+				}
+			}
 		}
-	}
+	}//end #pragma omp parallel
 
 	if ( report_timings )
 		std::cout << std::endl;
@@ -255,13 +276,17 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 			rVectors[ir*3+i] = rVec[i];
 	}
 
-	Algorithms::FFTInterface fft;
+	Algorithms::FFTInterface fft1, fft2;
+	fft1.plan_fft(potentialFFTGrid, nB, 1, false, nk);
+	fft2.plan_fft(potentialFFTGrid, nBp, -1, false, nk);
 
 	std::vector<float> phasesRe(nr), phasesIm(nr), buffer(nr);
+	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
 	std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
 	std::vector<double> modes;
 	std::vector<std::complex<double> > dynmat;
 	std::vector<std::complex<float> > dvscfData, localGkkp;
+	std::vector<std::vector<std::complex<float>>> dvscfBuffers;
 	gkkp.reserve(nk*nB*nBp*nM);
 	for ( int ik = 0 ; ik < nk ; ++ik )
 	{
@@ -277,34 +302,26 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 
 		// compute phonon modes and dynamical matrix
 		ph->compute_at_q( q, modes, dynmat );
-		dvscf->compute_dvscf_q( q, dynmat, ph->get_masses(), dvscfData);
+		dvscf->compute_dvscf_q(q, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
 		assert(modes.size() == nM);
 		assert(dvscfData.size() == nr*nM);
 
 		// generate wfcts on the potential grid
-		fft.fft_sparse_data(
+		fft1.fft_sparse_data(
 				fftMapsK[ik],
 				wfcts->get_max_fft_dims(),
 				wfcsk[ik],
-				nB,
 				1, // conjugate wfct
-				bufferWfct1,
-				potentialFFTGrid,
-				/*dataLayoutRowMajor =*/false,
-				nk*2);
+				bufferWfct1);
 
-		fft.fft_sparse_data(
+		fft2.fft_sparse_data(
 				fftMapsKp[ik],
 				wfcts->get_max_fft_dims(),
 				wfcskp[ik],
-				nBp,
 				-1,
-				bufferWfct2,
-				potentialFFTGrid,
-				/*dataLayoutRowMajor =*/false,
-				nk*2);
+				bufferWfct2);
 
-		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, localGkkp);
+		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, wfcProdBuffRealSpace, localGkkp);
 
 		gkkp.insert(std::end(gkkp), std::begin(localGkkp), std::end(localGkkp));
 	}
@@ -346,6 +363,7 @@ ElectronPhononCoupling::compute_gkkp_local(
 		std::vector<std::complex<float>> const & wfctBufferkp,
 		std::vector<float> const & phasesRe,
 		std::vector<float> const & phasesIm,
+		std::vector<std::complex<float>> & wfcProdBuffRealSpace,
 		std::vector<std::complex<float>> & localGkkp) const
 {
 	assert( wfctBufferk.size() == nr*nB );
@@ -353,10 +371,10 @@ ElectronPhononCoupling::compute_gkkp_local(
 	assert( dvscfData.size() == nr*nM );
 	assert( phasesIm.size() == nr);
 	assert( phasesRe.size() == nr);
+	assert( wfcProdBuffRealSpace.size() == nr);
 
 	Algorithms::LinearAlgebraInterface linalg;
 	localGkkp.resize(nB*nBp*nM);
-	std::vector<std::complex<float>> wfcProdBuffRealSpace(nr);
 
 	for ( int ib = 0 ; ib < nB; ++ib )
 		for ( int ibp = 0 ; ibp < nBp; ++ibp )
