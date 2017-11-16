@@ -21,6 +21,7 @@
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "Auxillary/UnitConversion.h"
 #include <stdexcept>
+#include <utility>
 
 namespace elephon
 {
@@ -164,6 +165,31 @@ std::vector<double> const &
 Phonon::get_masses() const
 {
 	return masses_;
+}
+
+void
+Phonon::write_bands_path(
+		std::string const & filename,
+		std::shared_ptr<const IOMethods::KPath> kpath ) const
+{
+	auto gnuplotFile = filename+".gp";
+
+	std::vector<double> modesAlongPath;
+	std::vector<double> const & qpath = kpath->get_k_points();
+	std::vector<std::complex<double>> dynmat;
+	this->compute_at_q(qpath, modesAlongPath, dynmat);
+
+	auto mm = std::minmax_element(modesAlongPath.begin(), modesAlongPath.end());
+	double range = *mm.second - *mm.first;
+	auto frequencyWindow = std::make_pair(*mm.first, *mm.second+range*0.05);
+
+	kpath->produce_gnuplot_script_stable_particle(
+			gnuplotFile,
+			filename,
+			"${\varOmega}_{\nu}(\bf{q})$",
+			modesAlongPath,
+			this->get_num_modes(),
+			frequencyWindow);
 }
 
 } /* namespace PhononStructure */

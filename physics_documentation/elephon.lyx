@@ -613,8 +613,8 @@ In order to make it approximately equivalent to the results for the infinite
 \begin_inset Formula 
 \begin{equation}
 R_{x_{i}}\in M_{x_{i}}=\begin{cases}
-[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\;L_{x_{i}}\;{\rm even}\\
-{}[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\;L_{x_{i}}\;{\rm odd}
+[-\frac{L_{x_{i}}}{2},\frac{L_{x_{i}}}{2}] & \;{\rm for}\;L_{x_{i}}\;{\rm even}\\{}
+[-\frac{L_{x_{i}}+1}{2},\frac{L_{x_{i}}-1}{2}] & \;{\rm for}\;L_{x_{i}}\;{\rm odd}
 \end{cases}
 \end{equation}
 
@@ -672,7 +672,7 @@ w_{\boldsymbol{R}}\tilde{C}_{\Sigma}(\mu_{1}\boldsymbol{0},\mu_{2}\boldsymbol{R}
  coordinates) 
 \begin_inset Formula 
 \begin{eqnarray}
-\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2}) & = & \sum_{\boldsymbol{R}}\tilde{C}(\boldsymbol{0}\mu_{1},\boldsymbol{R}_{2}-\boldsymbol{R}_{1}\mu_{2}){\rm e}^{-{\rm i}\boldsymbol{q}(\boldsymbol{R}_{2}-\boldsymbol{R}_{1})}\nonumber \\
+\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2}) & = & \sum_{\boldsymbol{R}=\boldsymbol{R}_{2}-\boldsymbol{R}_{1}}\tilde{C}(\boldsymbol{0}\mu_{1},\boldsymbol{R}_{2}-\boldsymbol{R}_{1}\mu_{2}){\rm e}^{-{\rm i}\boldsymbol{q}(\boldsymbol{R}_{2}-\boldsymbol{R}_{1})}\nonumber \\
 \\
 \tilde{C}(\boldsymbol{0}\mu_{1},\boldsymbol{R}_{2}-\boldsymbol{R}_{1}\mu_{2}) & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{q}}\tilde{C}(\boldsymbol{q}\mu_{1},\mu_{2}){\rm e}^{{\rm i}\boldsymbol{q}(\boldsymbol{R}_{2}-\boldsymbol{R}_{1})}
 \end{eqnarray}
@@ -1411,7 +1411,7 @@ We follow a similar approach as for the matrix of force constants above.
  we obtain from the numerical calculation the cumlutative sum
 \begin_inset Formula 
 \begin{equation}
-{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\mu}(\boldsymbol{r}-\boldsymbol{R})=\sum_{\boldsymbol{L}}\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\mu}(\boldsymbol{r}-\boldsymbol{R}+\boldsymbol{L})
+{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\mu}(\boldsymbol{r}-\boldsymbol{R})=\sum_{\boldsymbol{L}}\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\mu}(\boldsymbol{r}-\boldsymbol{R}+\boldsymbol{L})\label{eq:CummulativeSum}
 \end{equation}
 
 \end_inset
@@ -1608,7 +1608,7 @@ and the linear displacement potential in cartesian coordinates as a solution
 Applying the same procedure regarding the definition of Fourier vectors
 \begin_inset Formula 
 \begin{equation}
-\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\approx\begin{cases}
+\nabla_{\mu}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\approx\begin{cases}
 w_{\boldsymbol{R}}{\delta v_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\mu}(\boldsymbol{r}-\boldsymbol{R}) & \boldsymbol{R}\in\boldsymbol{M}\\
 0 & {\rm else}
 \end{cases}
@@ -1628,9 +1628,27 @@ reference "eq:SymmetryDisplacementPotential"
 \end_inset
 
 .
- Let us have a look at the order of numerical complexity.
+ To be explicit, again, we shift the reference frame for each
+\begin_inset Formula $\boldsymbol{\tau}_{i}$
+\end_inset
+
+ in the unit cell to the center of the supercell.
  
-\begin_inset Formula $\mathcal{O}(\boldsymbol{R})\sim10$
+\begin_inset Formula $\boldsymbol{M}$
+\end_inset
+
+ constitutes the set of 
+\begin_inset Formula $\boldsymbol{R}$
+\end_inset
+
+ that extend within the supercell radius while including all borders with
+ appropriate weight factors.
+\end_layout
+
+\begin_layout Standard
+Let us have a look at the order of numerical complexity.
+ 
+\begin_inset Formula $\mathcal{O}(\boldsymbol{M})\sim100$
 \end_inset
 
  since the interactions are usually pretty local and screening is good.
@@ -1658,7 +1676,7 @@ reference "eq:SymmetryDisplacementPotential"
 \end_inset
 
  real (single pricision) values, which is 
-\begin_inset Formula $\mathcal{O}(1)$
+\begin_inset Formula $\mathcal{O}(10)$
 \end_inset
 
 GB of data and easily managable of modern computer hardware.
@@ -1674,6 +1692,25 @@ Matrix elements between Bloch orbitals
 \end_layout
 
 \begin_layout Standard
+In a normalization convention adopted in many electronic structure codes
+ 
+\begin_inset Formula 
+\begin{equation}
+\int_{{\rm UC}}{\rm d}\boldsymbol{r}\vert\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\vert^{2}=1
+\end{equation}
+
+\end_inset
+
+Thus, if we insist on the total normalization of Bloch states, but still
+ use the convention, we must use a different form of integral over the entire
+ space
+\begin_inset Formula 
+\begin{equation}
+\frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\vert\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\vert^{2}=1
+\end{equation}
+
+\end_inset
+
 Now, let us compute the overlap among Bloch states 
 \begin_inset Formula $\psi_{\boldsymbol{k}i}(\boldsymbol{r})$
 \end_inset
@@ -1681,7 +1718,7 @@ Now, let us compute the overlap among Bloch states
  created by the transformed
 \begin_inset Formula 
 \begin{equation}
-\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\label{eq:ModeDisplacementPotential}
+\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}=\sum_{\boldsymbol{M}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{M}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}\label{eq:ModeDisplacementPotential}
 \end{equation}
 
 \end_inset
@@ -1690,7 +1727,18 @@ where
 \begin_inset Formula ${\rm u}$
 \end_inset
 
- is the atomic unit mass which leads to
+ is the atomic unit mass.
+ Note the transformation property
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}^{\prime})}{\delta u_{\boldsymbol{q}\nu}} & = & \sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{R}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}^{\prime})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\\
+ & = & \sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}[\nabla_{\mu\boldsymbol{R}-\boldsymbol{R}^{\prime}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\\
+ & = & {\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}^{\prime}}\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}
+\end{eqnarray}
+
+\end_inset
+
+which leads to
 \begin_inset ERT
 status open
 
@@ -1706,12 +1754,9 @@ begin{widetext}
  
 \begin_inset Formula 
 \begin{eqnarray}
-g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q}) & = & \frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})=\nonumber \\
- & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x}+\boldsymbol{R}^{\prime}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}\\
- & = & \frac{1}{N_{\boldsymbol{q}}}\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R}-\boldsymbol{R}^{\prime})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x})u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{x}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}\\
- & = & \frac{1}{N_{\boldsymbol{q}}}\int_{{\rm UC}}{\rm d}\boldsymbol{x}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{x}){\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{x})u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{x}){\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{x}}\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot(\boldsymbol{x}+\boldsymbol{R}^{\prime})}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot(\boldsymbol{R}+\boldsymbol{R}^{\prime})}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}\\
- & = & \frac{1}{N_{\boldsymbol{q}}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}){\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}}\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}(\boldsymbol{k}+\boldsymbol{q}-\boldsymbol{k}^{\prime})\cdot\boldsymbol{R}^{\prime}}\\
- & = & \int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\sum_{\boldsymbol{R}\mu}\sqrt{\frac{{\rm u}}{m_{\mu}}}C_{\boldsymbol{q}\nu\mu}\nabla_{(\mu\boldsymbol{R})}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}){\rm e}^{-{\rm i}(\boldsymbol{k}^{\prime}-\boldsymbol{k})\cdot\boldsymbol{R}}\delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\\
+g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q}) & = & \frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\\
+ & = & \frac{1}{N_{\boldsymbol{q}}}\int\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r}+\boldsymbol{R}^{\prime})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}^{\prime})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}+\boldsymbol{R}^{\prime})\\
+ & = & \int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\frac{1}{N_{\boldsymbol{q}}}\int\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{R}^{\prime}}\\
  & = & \delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\label{eq:BlochElphCoupling}
 \end{eqnarray}
 
@@ -1743,7 +1788,40 @@ and thus already includes the volume factor
 \end_inset
 
 .
- 
+ Note also the following symmetry properties that follow from Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:SymmetryDisplacementPotential"
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray}
+{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\beta}(\boldsymbol{r}-\boldsymbol{R}) & = & {\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}\bigl(g^{-1}\cdot(\boldsymbol{r}-\boldsymbol{R})-\tau\bigr)\cdot g\\
+\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}} & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}C_{\boldsymbol{q}\nu i_{\mu}x_{i}}g_{x_{i}x_{j}}\{\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}[g^{-1}\cdot(\boldsymbol{r}-\boldsymbol{M})-\tau]\}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}\\
+ & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}C_{\boldsymbol{q}\nu i_{\mu}x_{i}}g_{x_{i}x_{j}}\{\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}[g^{-1}\cdot\boldsymbol{r}-\boldsymbol{M}-\tau]\}{\rm e}^{-{\rm i}(g^{-1}\cdot\boldsymbol{q})\cdot\boldsymbol{M}}
+\end{eqnarray}
+
+\end_inset
+
+and thus
+\begin_inset Formula 
+\begin{eqnarray}
+\{g|\tau\}^{-1}\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}i_{\nu}x_{\nu}}} & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}x_{k}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}g_{x_{\nu}x_{k}}^{-1}C_{g\cdot\boldsymbol{q}i_{\nu}x_{k}i_{\mu}x_{i}}g_{x_{i}x_{j}}[\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{M})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}\\
+ & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}x_{k}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}C_{\boldsymbol{q}i_{\nu}x_{k}i_{\mu}x_{i}}g_{x_{i}x_{j}}[\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{M})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 \begin_inset ERT
 status open
 
@@ -1756,6 +1834,10 @@ end{widetext}
 
 \end_inset
 
+
+\end_layout
+
+\begin_layout Standard
 In practice, we will compute 
 \begin_inset Formula $\psi_{\boldsymbol{k}i}(\boldsymbol{r})$
 \end_inset

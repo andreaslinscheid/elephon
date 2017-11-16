@@ -40,6 +40,8 @@ public:
 	 */
 	void initialize( std::vector<double> latticeMatrix );
 
+	LatticeModule build_supercell(std::vector<int> const & supercellDim) const;
+
 	std::vector<double> const & get_latticeMatrix() const;
 
 	std::vector<double> const & get_reciprocal_latticeMatrix() const;

@@ -93,6 +93,20 @@ LatticeModule::initialize( std::vector<double> latticeMatrix )
 			if ( (std::abs(b[i*3+j] - (i==j?1.0:0.0)) > 1e-6) or (std::abs(c[i*3+j] - (i==j?1.0:0.0)) > 1e-6) )
 				throw std::runtime_error("Problem of non-orthogonal lattice and reciprocal matrix");
 }
+
+LatticeModule
+LatticeModule::build_supercell(std::vector<int> const & supercellDim) const
+{
+	assert(supercellDim.size() == 3);
+	std::vector<double> newLatticeMatrix = this->get_latticeMatrix();
+	for ( int i = 0 ; i < 3; ++i)
+		for ( int j = 0 ; j < 3; ++j)
+			newLatticeMatrix[i*3+j] *= supercellDim[i]*this->get_alat();
+	LatticeStructure::LatticeModule newLattice;
+	newLattice.initialize(newLatticeMatrix);
+	return newLattice;
+}
+
 //
 std::vector<double> const &
 LatticeModule::get_latticeMatrix() const

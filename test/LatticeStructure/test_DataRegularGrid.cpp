@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE( Si_vasp_electron_bands )
 	auto kpath = resource->get_k_path();
 	std::vector<double> bandsAlongPath;
 	int numBandsInWindow;
-	bands->compute_bands_along_path( kpath->get_k_points(),
+	bands->interpolate_bands_along_path( kpath->get_k_points(),
 			resource->get_optns().get_ewinbnd(),
 			bandsAlongPath,
 			numBandsInWindow,

@@ -361,10 +361,13 @@ GridPt::transform( Symmetry::Sop const & sop )
 	this->map_back();
 }
 
-std::vector<double> const &
+std::vector<double>
 GridPt::get_coords() const
 {
-	return coords_;
+	auto res = coords_;
+	for (auto & pi : res)
+		pi -= std::floor(pi+0.5);
+	return res;
 }
 
 bool

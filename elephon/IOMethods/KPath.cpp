@@ -189,7 +189,7 @@ KPath::build_plot_script_common(
 	std::string plotscript =
 	"#!/usr/bin/gnuplot\n"
 	"reset\n"
-	"set terminal epslatex color font 'Helvetica,10' lw 2\n"
+	"set terminal epslatex\n"
 	"set output './tmp.tex'\n\n"
 	"unset key\n"
 	"set grid xtics\n"

@@ -223,7 +223,7 @@ public:
 			std::vector<double> const & energies,
 			std::vector<T> & dos) const;
 
-	void compute_bands_along_path(
+	void interpolate_bands_along_path(
 			std::vector<double> const & nonGridPoints,
 			std::vector<T> energyRange,
 			std::vector<T> & bands,

@@ -90,15 +90,10 @@ UnitCell::set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const
 
 UnitCell UnitCell::build_supercell(int scx, int scy, int scz) const
 {
-	double scale[3] = {double(scx),double(scy),double(scz)};
+	std::vector<int> scale{scx,scy,scz};
 
 	//Here we build the new lattice module
-	std::vector<double> newLatticeMatrix = lattice_.get_latticeMatrix();
-	for ( int i = 0 ; i < 3; ++i)
-		for ( int j = 0 ; j < 3; ++j)
-			newLatticeMatrix[i*3+j] *= scale[i]*lattice_.get_alat();
-	LatticeStructure::LatticeModule newLattice;
-	newLattice.initialize(newLatticeMatrix);
+	auto newLattice = lattice_.build_supercell(scale);
 
 	//Here we build the new set of Atoms
 	std::vector<LatticeStructure::Atom> newAtoms;

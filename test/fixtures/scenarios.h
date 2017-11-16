@@ -47,6 +47,7 @@ load_Al_fcc_primitive_vasp_sc2x2x2()
 			"lep = true\n"
 			"lp = true\n"
 			"root_dir="+rootDir.string()+"\n"
+			"dvscfc = 0\n"
 			"elphd="+phononDir.string()+"\n"
 			"eld="+ (phononDir / "electrons").string()+"\n"
 			"f_a2F="+ (phononDir / "a2F.dat").string()+"\n"

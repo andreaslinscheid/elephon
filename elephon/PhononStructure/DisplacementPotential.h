@@ -42,17 +42,19 @@ public:
 			LatticeStructure::RegularBareGrid unitcellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector<double> const & potentialUC,
-			std::vector< std::vector<double> > const & potentialDispl,
+			std::vector< std::vector<double> > potentialDispl,
 			std::vector<int> coarseGrainGrid);
 
 	void compute_dvscf_q(
 			std::vector<double> const & qVect,
+			std::vector<double> const & modes,
 			std::vector<std::complex<double>> const & dynamicalMatrices,
 			std::vector<double> const & masses,
 			std::vector<std::complex<float>> & dvscf,
-			std::vector<std::vector<std::complex<float>>> & buffer) const;
+			std::vector<std::vector<std::complex<float>>> & buffer,
+			double freqCutoff = 0.0) const;
 
-	int RVectorLayout(int iRz, int iRy, int iRx ) const;
+	int RVectorLayout(int iRx, int iRy, int iRz ) const;
 
 	LatticeStructure::RegularBareGrid const & get_real_space_grid() const;
 
@@ -78,6 +80,7 @@ public:
 
 	void write_dvscf_q(std::vector<double> const & qVect,
 			std::vector<int> modeIndices,
+			std::vector<double> const & modes,
 			std::vector<std::complex<double>> const & dynamicalMatrices,
 			std::vector<double> const & masses,
 			std::string filename) const;
@@ -99,12 +102,12 @@ private:
 
 	std::vector<int> superCellDim_;
 
+	std::vector<int> RVectorDim_;
+
 	/// A buffer for the R vectors. These are implicitly defined by superCellDim_
 	std::vector<double> RVectors_;
 
-	void set_R_vector_map(
-			LatticeStructure::UnitCell const & unitCell,
-			LatticeStructure::UnitCell const & superCell);
+	std::vector<int> numRSpacePointsForLatticeVector_;
 
 	void compute_rot_map(
 			std::vector<double> const & shift,
@@ -114,19 +117,41 @@ private:
 
 	int mem_layout(int ir, int mu, int iR ) const;
 
-	void build_supercell_to_primite(
+	/**
+	 * Establish a connection between a point in the supercell and the corresponding one in the primitive cell.
+	 *
+	 * This means to create a table which maps a point in real space in the supercell
+	 * into a point in the primitive cell plus a lattice vector
+	 * With 'primitive' we mean the point in the reference frame of the infinite lattice where a given atom
+	 * is always in the center. Thus even for the trivial supercell, this will not be an identity mapping.
+	 *
+	 * @param primitiveCellGrid		The grid which describes the real space of the primitive cell
+	 * @param supercellGrid			The grid which describes the real space of the supercell
+	 * @param atomsUC				A list of atoms in the primitive cell.
+	 * @param rSuperCellToPrimitve	a vector that will be resized to hold 1) for each atom 2) a list of
+	 * 								pairs where the first (int) references the consequtive real space index
+	 * 								in the primitive cell and the second is a vector of 3 ints labeling
+	 * 								the R vectors
+	 */
+	void build_supercell_to_primitive(
 			LatticeStructure::RegularBareGrid const & primitiveCellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
-			std::vector< std::pair<int,std::vector<int> > > & rSuperCellToPrimitve) const;
+			std::vector<LatticeStructure::Atom> const & atomsUC,
+			std::vector< std::vector< std::pair<int,std::vector<int> > > > & rSuperCellToPrimitve) const;
 
 	void clean_displacement_potential();
 
-	void compute_dvscf_q_optimized_low_num_modes(
-			std::vector<double> const & qVect,
-			std::vector<std::complex<double>> const & dynamicalMatrices,
-			std::vector<double> const & masses,
-			std::vector<std::complex<float>> & dvscf,
-			std::vector<std::complex<float>> & ftDisplPot) const;
+	void set_R_vectors();
+
+	/**
+	 * This method subtracts from the potentialDispl the periodically repeated one of the prestive unit cell.
+	 */
+	void constuct_potential_variation(
+			std::vector<double> const & potentialUC,
+			int nRSC,
+			LatticeStructure::RegularBareGrid const & unitcellGrid,
+			LatticeStructure::RegularBareGrid const & supercellGrid,
+			std::vector< std::vector<double> > & potentialDispl);
 };
 
 } /* namespace PhononStructure */

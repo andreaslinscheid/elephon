@@ -127,14 +127,6 @@ private:
 
 	int local_tensor_layout( int ib, int ibp, int imu, int nB, int nBp, int nM) const;
 
-	void compute_phases(
-			int nr,
-			std::vector<double> const & rVectors,
-			std::vector<double> const & q,
-			std::vector<float> & buffer,
-			std::vector<float> & phasesRe,
-			std::vector<float> & phasesIm) const;
-
 	void compute_gkkp_local(
 			int nr,
 			int nB,
@@ -144,8 +136,6 @@ private:
 			std::vector<std::complex<float>> const & dvscfData,
 			std::vector<std::complex<float>> const & wfctBufferk,
 			std::vector<std::complex<float>> const & wfctBufferkp,
-			std::vector<float> const & phasesRe,
-			std::vector<float> const & phasesIm,
 			std::vector<std::complex<float>> & wfcProdBuffRealSpace,
 			std::vector<std::complex<float>> & localGkkp) const;
 };

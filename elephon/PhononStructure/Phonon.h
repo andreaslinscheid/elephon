@@ -21,6 +21,7 @@
 #define ELEPHON_PHONONSTRUCTURE_PHONON_H_
 
 #include "PhononStructure/ForceConstantMatrix.h"
+#include "IOMethods/KPath.h"
 #include <memory>
 
 namespace elephon
@@ -62,6 +63,10 @@ public:
 	int get_num_modes() const;
 
 	std::vector<double> const & get_masses() const;
+
+	void write_bands_path(
+			std::string const & filename,
+			std::shared_ptr<const IOMethods::KPath> kpath ) const;
 private:
 
 	std::shared_ptr<const ForceConstantMatrix> fc_;

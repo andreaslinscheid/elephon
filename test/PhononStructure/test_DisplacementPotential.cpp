@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 
 	BOOST_REQUIRE( dvscf->get_num_modes() == 3 );
 
-	BOOST_REQUIRE( dvscf->get_num_R() == 2*2*2 );
+	BOOST_REQUIRE( dvscf->get_num_R() == 3*3*3 );
 
 	//Write the real space variant
 	auto rootDir = boost::filesystem::path( resourceHandler->get_optns().get_root_dir() );
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 	ph->compute_at_q( qVect, w, dynMat );
 
 	boost::filesystem::path dvscfqFile = rootDir / "dvscf_q.dat";
-	dvscf->write_dvscf_q(qVect, modes, dynMat, ph->get_masses(), dvscfqFile.string());
+	dvscf->write_dvscf_q(qVect, modes, w, dynMat, ph->get_masses(), dvscfqFile.string());
 
 	//At this point we can perform tests on the files and its content.
 

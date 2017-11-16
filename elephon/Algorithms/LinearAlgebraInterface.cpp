@@ -186,6 +186,17 @@ LinearAlgebraInterface::call_heev( int matrix_order, char jobz, char uplo,
 }
 
 int
+LinearAlgebraInterface::call_heevr( int matrix_order, char jobz, char uplo,
+		char range,  int n, std::complex<double> * a, int lda, double vl, double vu,
+		int il, int iu, double abstol, int * m, double * w, std::complex<double> * z, int ldz, int * isuppz,
+		 std::complex<double> * work, int lwork,
+		double * rwork, int lrwork, int * iwork, int liwork) const
+{
+	return LAPACKE_zheevr_work(matrix_order, jobz, range, uplo, n, a, lda, vl, vu, il, iu, abstol, m, w, z,
+			ldz, isuppz, work, lwork, rwork, lrwork, iwork, liwork);
+}
+
+int
 LinearAlgebraInterface::call_gesdd(
 		int matrix_order, char jobz, int m,
 		int n, double* a, int lda,

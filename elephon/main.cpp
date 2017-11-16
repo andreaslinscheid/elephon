@@ -74,6 +74,14 @@ main(int argc, char* argv[])
 							resources->get_optns().get_f_phdos(),
 							frequencies);
 				}
+
+				if ( not resources->get_optns().get_f_ph_bands().empty() )
+				{
+					std::cout << "Computing phonon bands ..." << std::endl;
+					resources->get_phonon_obj()->write_bands_path(
+							resources->get_optns().get_f_ph_bands(),
+							resources->get_k_path());
+				}
 			}
 
 			if ( resources->get_optns().get_lep() )

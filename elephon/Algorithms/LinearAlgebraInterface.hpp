@@ -171,6 +171,29 @@ LinearAlgebraInterface::svd(std::vector<T> A, int m, int n,
 
 template<typename T>
 void
+LinearAlgebraInterface::transpose_square_matrix(std::vector<T> & A) const
+{
+	int dim = this->square_matrix_dim(A);
+	for (int i = 0 ; i < dim ; ++i)
+		for (int j = i+1 ; j < dim ; ++j)
+		{
+			T tmp = A[i*dim+j];
+			A[i*dim+j] = A[j*dim+i];
+			A[j*dim+i] = tmp;
+		}
+}
+
+template<typename T>
+void
+LinearAlgebraInterface::conjugate_square_matrix(std::vector<T> & A) const
+{
+	this->transpose_square_matrix(A);
+	for (auto & a : A )
+		a = std::conj(a);
+}
+
+template<typename T>
+void
 LinearAlgebraInterface::inverse(std::vector<T> A, std::vector<T> & invA )
 {
 	invA = std::move(A);
@@ -208,37 +231,86 @@ LinearAlgebraInterface::diagonalize_hermitian(
 		std::vector<T> & eigenvalues )
 {
 	int dim = this->square_matrix_dim( matrix );
-	eigenvectors = std::move( matrix );
+	eigenvectors = matrix;
 	eigenvalues.resize(dim);
 
-	char v = ( comEV ?  'v' : 'n' );
+	char v = ( comEV ?  'V' : 'N' );
 
 	char dataLoc = ( data_upper ? 'U' : 'L' );
 
-	int rworksize = ( 3*dim-2 > 1 ? 3 * dim - 2 : 1 ) ;
-	rWork_.resize(sizeof(T)*rworksize);
 
+	// first attempt to diagonalize with heevr
+	// according to Intel, heevr should be the default for diagonalizing hermitian matrices
+	int info = 0;
+	int liwork = -1;
+	int lrwork = -1;
+	int lwork = -1;
+	std::vector<int> & iwork  = IPIV_; // use same naming convention as in the interface
+	int iwork_query;
+	T rwork_query;
 	std::complex<T> work_query;
-	this->call_heev(
-			LAPACK_ROW_MAJOR,
-			v, dataLoc,
-			dim, eigenvectors.data(), dim,
-			eigenvalues.data(),&work_query,-1,
-			reinterpret_cast< T* >(rWork_.data()));
-	size_t optimal_size = static_cast<size_t>( std::real(work_query) ) ;
-	workbuffer_.resize( sizeof(std::complex<T>)*optimal_size );
+	int m;
+	std::vector<int> isuppz(2*dim);
 
-	int lwork = static_cast<int>(optimal_size);
-	int info = this->call_heev(
-			LAPACK_ROW_MAJOR,
-			v, dataLoc,
-			dim, eigenvectors.data(), dim,
-			eigenvalues.data(),
-			reinterpret_cast< std::complex<T>* >(workbuffer_.data()),
-			lwork,
-			reinterpret_cast< T* >(rWork_.data()));
+	char range = 'A'; // we want all eigenvalues
+	T vl = 0, vu = 0;
+	int il = 0, iu = 0;
+	T abstol = 1e-8; // all eigenproblems we are concerned with in this code are O(1)
 
-	this->check_library_info(info, "heev diag");
+	// Query optimal working array size
+	info = this->call_heevr( LAPACK_ROW_MAJOR, v, dataLoc, range, dim, matrix.data(), dim, vl,
+							 vu, il, iu, abstol, &m, eigenvalues.data(), eigenvectors.data(), dim, isuppz.data(),
+							 &work_query, lwork, &rwork_query, lrwork,
+							 &iwork_query, liwork );
+
+	int optimal_size = static_cast<int>( std::real(work_query) ) ;
+	if ( workbuffer_.size() < sizeof(std::complex<T>)*optimal_size )
+		workbuffer_.resize( sizeof(std::complex<T>)*optimal_size );
+
+	liwork = (int)iwork_query;
+	if ( iwork.size() < sizeof(T)*liwork )
+		iwork.resize(sizeof(T)*liwork);
+
+	lrwork = (int)rwork_query;
+	if ( rWork_.size() < sizeof(T)*lrwork )
+		rWork_.resize(sizeof(T)*lrwork);
+
+	info = this->call_heevr( LAPACK_ROW_MAJOR, v, dataLoc, range, dim, matrix.data(), dim, vl,
+							 vu, il, iu, abstol, &m, eigenvalues.data(), eigenvectors.data(), dim, isuppz.data(),
+							 reinterpret_cast< std::complex<T>* >(workbuffer_.data()), optimal_size,
+							 reinterpret_cast< T* >(rWork_.data()), lrwork,
+							 iwork.data(), liwork );
+
+	// backup if heevr fails
+	if ( info != 0 )
+	{
+		int rworksize = ( 3*dim-2 > 1 ? 3 * dim - 2 : 1 ) ;
+		if ( rWork_.size() < sizeof(T)*rworksize )
+			rWork_.resize(sizeof(T)*rworksize);
+
+		std::complex<T> work_query;
+		this->call_heev(
+				LAPACK_ROW_MAJOR,
+				v, dataLoc,
+				dim, eigenvectors.data(), dim,
+				eigenvalues.data(),&work_query,-1,
+				reinterpret_cast< T* >(rWork_.data()));
+		size_t optimal_size = static_cast<size_t>( std::real(work_query) ) ;
+		if ( workbuffer_.size() < sizeof(std::complex<T>)*optimal_size )
+			workbuffer_.resize( sizeof(std::complex<T>)*optimal_size );
+
+		int lwork = static_cast<int>(optimal_size);
+		info = this->call_heev(
+				LAPACK_ROW_MAJOR,
+				v, dataLoc,
+				dim, eigenvectors.data(), dim,
+				eigenvalues.data(),
+				reinterpret_cast< std::complex<T>* >(workbuffer_.data()),
+				lwork,
+				reinterpret_cast< T* >(rWork_.data()));
+
+		this->check_library_info(info, "heev diag");
+	}
 
 	//Ensure phase convention on eigenvectors (real part of the last component is non-negative)
 	for ( int ib = 0 ; ib < dim ; ++ib )

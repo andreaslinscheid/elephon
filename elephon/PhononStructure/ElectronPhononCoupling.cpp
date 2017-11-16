@@ -113,9 +113,9 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 		for ( int ikp = 0 ; ikp < nKp_; ++ikp)
 		{
 			const int ikkp = ik*nKp_+ikp;
-			allQVectors[ikkp*3+0] = kList[ik*3+0]-kpList[ikp*3+0];
-			allQVectors[ikkp*3+1] = kList[ik*3+1]-kpList[ikp*3+1];
-			allQVectors[ikkp*3+2] = kList[ik*3+2]-kpList[ikp*3+2];
+			allQVectors[ikkp*3+0] = kpList[ik*3+0]-kList[ikp*3+0];
+			allQVectors[ikkp*3+1] = kpList[ik*3+1]-kList[ikp*3+1];
+			allQVectors[ikkp*3+2] = kpList[ik*3+2]-kList[ikp*3+2];
 
 			q_to_k_and_kp_map[ikkp].first = ik;
 			q_to_k_and_kp_map[ikkp].second = ikp;
@@ -152,12 +152,14 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	fft1.plan_fft(potentialFFTGrid, nB_,  1, false, nK_);
 	fft2.plan_fft(potentialFFTGrid, nBp_, -1, false, nKp_);
 
+	std::vector<int> localQDone(omp_get_max_threads(), 0);
+
 	phononFrequencies_.resize(nK_*nKp_*nM_);
 	data_.resize( nK_*nKp_*nM_*nB_*nBp_ );
 	#pragma omp parallel
 	{
 		// thread private buffer data
-		std::vector<float> phasesRe(nr), phasesIm(nr), buffer(nr);
+		std::vector<float> buffer(nr);
 		std::vector<std::complex<float>> wfcProdBuffRealSpace(nr);
 		std::vector<std::complex<float> > localGkkp;
 		std::vector<double> modes;
@@ -176,11 +178,9 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 			// set things that go onto the coarse grid
 			std::vector<double> const & gridQ = coarseGP.first.get_coords();
 
-			this->compute_phases(nr, rVectors, gridQ, buffer, phasesRe, phasesIm);
-
 			ph->compute_at_q( gridQ, modes, dynmat );
 
-			dvscf->compute_dvscf_q( gridQ, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
+			dvscf->compute_dvscf_q( gridQ, modes, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
 
 			// now compute things that are handled without a grid
 			for (int iq  : coarseGP.second )
@@ -205,33 +205,40 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 				ph->compute_at_q( std::vector<double>(&allQVectors[iq*3], &allQVectors[iq*3]+3), modes, dynmat );
 				std::copy(modes.begin(), modes.end(), &phononFrequencies_[(ik*nKp_+ikp)*nM_]);
 
-				this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, wfcProdBuffRealSpace, localGkkp);
+				this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
 				std::copy(localGkkp.begin(), localGkkp.end(), &data_[this->tensor_layout(ik,ikp,0,0,0)]);
 			}
 
-			double localIncrement = static_cast<double>(coarseGP.second.size())/static_cast<double>(nK_*nKp_);
+			// check if we crossed a cumulative number of njump q points
+			const int njump = 100;
+			bool report = ((localQDone[thread_id] + coarseGP.second.size())%njump) < (localQDone[thread_id]%njump);
 
-			if (report_timings )
+			localQDone[thread_id] += coarseGP.second.size();
+
+			if (report and report_timings and (thread_id == 0))
 			{
-				#pragma omp critical
-				{
-					percentageDone += localIncrement;
-					auto thisTime_clock = std::chrono::system_clock::now();
-					std::chrono::duration<double> elapsed_seconds = thisTime_clock-start_clock;
-					std::chrono::duration<double> projectedRuntime_seconds = elapsed_seconds/percentageDone;
-					std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
+				percentageDone = 0.0;
+				for (auto n : localQDone)
+					percentageDone += static_cast<double>(n)/static_cast<double>(nK_*nKp_);
+				auto thisTime_clock = std::chrono::system_clock::now();
+				std::chrono::duration<double> elapsed_seconds = thisTime_clock-start_clock;
+				std::chrono::duration<double> projectedRuntime_seconds = elapsed_seconds/percentageDone;
+				std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
 
-					std::cout << "\r\tPercentage done : " << std::floor(percentageDone*100 + 0.5)
-							<< "; estimated time to finish: " << std::floor(remainingRuntine.count()+0.5) << " s"
-							<<  "                 ";
-					std::cout.flush();
-				}
+				std::cout << "\r\tPercentage done : " << std::floor(percentageDone*100 + 0.5)
+						<< "; estimated time to finish: " << std::floor(remainingRuntine.count()+0.5) << " s"
+						<<  "                 ";
+				std::cout.flush();
 			}
 		}
 	}//end #pragma omp parallel
 
 	if ( report_timings )
+	{
 		std::cout << std::endl;
+		for (int it = 0 ; it < localQDone.size() ; ++it)
+			std::cout << "Thread: " << it << " finished " << localQDone[it] << " q-points" << std::endl;
+	}
 }
 
 void
@@ -280,7 +287,7 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 	fft1.plan_fft(potentialFFTGrid, nB, 1, false, nk);
 	fft2.plan_fft(potentialFFTGrid, nBp, -1, false, nk);
 
-	std::vector<float> phasesRe(nr), phasesIm(nr), buffer(nr);
+	std::vector<float> buffer(nr);
 	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
 	std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
 	std::vector<double> modes;
@@ -291,18 +298,16 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 	for ( int ik = 0 ; ik < nk ; ++ik )
 	{
 		// compute q vector in the 1. BZ
-		std::vector<double> q{	kList[ik*3+0]-kpList[ik*3+0],
-								kList[ik*3+1]-kpList[ik*3+1],
-								kList[ik*3+2]-kpList[ik*3+2]};
+		std::vector<double> q{	kpList[ik*3+0]-kList[ik*3+0],
+								kpList[ik*3+1]-kList[ik*3+1],
+								kpList[ik*3+2]-kList[ik*3+2]};
 		for ( auto &qi : q )
 			qi -= std::floor(qi+0.5);
 
-		// compute the phases from the Bloch phase factors of the two wave functions
-		this->compute_phases(nr, rVectors, q, buffer, phasesRe, phasesIm);
-
 		// compute phonon modes and dynamical matrix
 		ph->compute_at_q( q, modes, dynmat );
-		dvscf->compute_dvscf_q(q, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
+		dvscf->compute_dvscf_q(q, modes, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
+
 		assert(modes.size() == nM);
 		assert(dvscfData.size() == nr*nM);
 
@@ -321,33 +326,8 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 				-1,
 				bufferWfct2);
 
-		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, phasesRe, phasesIm, wfcProdBuffRealSpace, localGkkp);
-
+		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
 		gkkp.insert(std::end(gkkp), std::begin(localGkkp), std::end(localGkkp));
-	}
-}
-
-void
-ElectronPhononCoupling::compute_phases(
-		int nr,
-		std::vector<double> const & rVectors,
-		std::vector<double> const & q,
-		std::vector<float> & buffer,
-		std::vector<float> & phasesRe,
-		std::vector<float> & phasesIm) const
-{
-	assert(buffer.size() == nr);
-	assert(phasesRe.size() == nr);
-	assert(phasesIm.size() == nr);
-	assert(rVectors.size() == nr*3);
-	assert(q.size() == 3);
-	for ( int ir = 0 ; ir < nr ; ++ir)
-		buffer[ir] = -2.0f*M_PI*(rVectors[ir*3+0]*q[0]+rVectors[ir*3+1]*q[1]+rVectors[ir*3+2]*q[2]);
-
-	for ( int ir = 0 ; ir < nr ; ++ir)
-	{
-		phasesRe[ir] = std::cos(buffer[ir]);
-		phasesIm[ir] = std::sin(buffer[ir]);
 	}
 }
 
@@ -361,20 +341,17 @@ ElectronPhononCoupling::compute_gkkp_local(
 		std::vector<std::complex<float>> const & dvscfData,
 		std::vector<std::complex<float>> const & wfctBufferk,
 		std::vector<std::complex<float>> const & wfctBufferkp,
-		std::vector<float> const & phasesRe,
-		std::vector<float> const & phasesIm,
 		std::vector<std::complex<float>> & wfcProdBuffRealSpace,
 		std::vector<std::complex<float>> & localGkkp) const
 {
 	assert( wfctBufferk.size() == nr*nB );
 	assert( wfctBufferkp.size() == nr*nBp );
 	assert( dvscfData.size() == nr*nM );
-	assert( phasesIm.size() == nr);
-	assert( phasesRe.size() == nr);
 	assert( wfcProdBuffRealSpace.size() == nr);
+	assert( modes.size() == nM);
 
 	Algorithms::LinearAlgebraInterface linalg;
-	localGkkp.resize(nB*nBp*nM);
+	localGkkp.assign(nB*nBp*nM, std::complex<float>(0.0f));
 
 	for ( int ib = 0 ; ib < nB; ++ib )
 		for ( int ibp = 0 ; ibp < nBp; ++ibp )
@@ -383,24 +360,20 @@ ElectronPhononCoupling::compute_gkkp_local(
 			auto ptr_wf2 = wfctBufferkp.data() + ibp*nr;
 
 			for (int ir = 0 ; ir < nr ; ++ir)
-				wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir]*std::complex<float>(phasesRe[ir], phasesIm[ir]);
+				wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir]
+											/static_cast<float>(nr);
 
-			linalg.call_gemv('n', nM, nr,
-					std::complex<float>(1.0f/nr),
-					dvscfData.data(), nM,
-					wfcProdBuffRealSpace.data(), 1,
-					std::complex<float>(0.0f),
-					&localGkkp[this->local_tensor_layout(ib, ibp, 0, nB, nBp, nM)], 1);
+//			linalg.call_gemv('n', nM, nr,
+//					std::complex<float>(1.0f),
+//					dvscfData.data(), nM,
+//					wfcProdBuffRealSpace.data(), 1,
+//					std::complex<float>(0.0f),
+//					&localGkkp[this->local_tensor_layout(ib, ibp, 0, nB, nBp, nM)], 1);
 
-			// convert to displacement matrix element type, i.e. from units of eV/A to eV
 			for (int inu = 0 ; inu < nM; ++inu)
-			{
-				double freq = modes[inu]; // modes is in units of Hz
-				for (int ib = 0 ; ib < nB; ++ib)
-					for (int ibp = 0 ; ibp < nBp; ++ibp)
-						localGkkp[this->local_tensor_layout(ib, ibp, inu, nB, nBp, nM)] *=
-									Auxillary::units::SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM/std::sqrt(freq);
-			}
+				for (int ir = 0 ; ir < nr ; ++ir)
+					localGkkp[this->local_tensor_layout(ib, ibp, inu, nB, nBp, nM)] +=
+							dvscfData[inu*nM+ir]*wfcProdBuffRealSpace[ir];
 		}
 }
 

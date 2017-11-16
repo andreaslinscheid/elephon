@@ -460,7 +460,7 @@ void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> reso
 
 		std::vector<double> bandsAlongPath;
 		int numBandsInWindow;
-		bandsObj->compute_bands_along_path(
+		bandsObj->interpolate_bands_along_path(
 				kpath->get_k_points(),
 				resource->get_optns().get_ewinbnd(),
 				bandsAlongPath,

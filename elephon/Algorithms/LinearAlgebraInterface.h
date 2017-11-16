@@ -115,6 +115,13 @@ public:
 			std::vector<T> & VT,
 			std::vector< typename detail::ComplexTypeTrait< std::complex<T> >::type > & sv);
 
+	template<typename T>
+	void transpose_square_matrix(std::vector<T> & A) const;
+
+	template<typename T>
+	void conjugate_square_matrix(std::vector<T> & A) const;
+
+
 	//Here come the low level routines
 
 	/**
@@ -173,6 +180,12 @@ public:
 			   int lda, double * w,
 			   std::complex<double> * work, int lwork,
 			   double * rwork) const;
+
+	int call_heevr(  int matrix_order, char jobz, char uplo,
+			char range,  int n, std::complex<double> * a, int lda, double vl, double vu,
+			int il, int iu, double abstol, int * m, double * w, std::complex<double> * z, int ldz, int * isuppz,
+			 std::complex<double> * work, int lwork,
+			double * rwork, int lrwork, int * iwork, int liwork) const;
 
 	int call_gesdd(
 			int matrix_order, char jobz, int m,

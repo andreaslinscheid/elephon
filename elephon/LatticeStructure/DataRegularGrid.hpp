@@ -524,7 +524,7 @@ DataRegularGrid<T>::compute_DOS_general(
 
 template<typename T>
 void
-DataRegularGrid<T>::compute_bands_along_path(
+DataRegularGrid<T>::interpolate_bands_along_path(
 		std::vector<double> const & nonGridPoints,
 		std::vector<T> energyRange,
 		std::vector<T> & bands,

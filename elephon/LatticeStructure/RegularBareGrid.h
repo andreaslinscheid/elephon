@@ -59,6 +59,14 @@ public:
 
 	int get_xyz_to_reducible(std::vector<int> const & xyzTouple) const;
 
+	/**
+	 * Compute the reducible grid index for given xyz tuple while xyz can have indices in neighboring cells.
+	 *
+	 * NOTE: only one iteration of periodicty is accounted for. (!!!)
+	 *
+	 * @param xyzTouple		x y and z coordinates of the grid.
+	 * @return				the reducible grid index.
+	 */
 	int get_xyz_to_reducible_periodic(std::vector<int> xyzTouple) const;
 
 	std::vector<int> get_reducible_to_xyz(int i) const;
@@ -125,7 +133,7 @@ public:
 
 	void transform( Symmetry::Sop const & sop );
 
-	std::vector<double> const & get_coords() const;
+	std::vector<double> get_coords() const;
 
 	friend bool operator< (GridPt const& d1, GridPt const& d2);
 private:
