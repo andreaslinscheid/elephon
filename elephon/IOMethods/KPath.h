@@ -20,6 +20,7 @@
 #ifndef ELEPHON_IOMETHODS_KPATH_H_
 #define ELEPHON_IOMETHODS_KPATH_H_
 
+#include "Auxillary/AlignedVector.h"
 #include <string>
 #include <vector>
 
@@ -45,13 +46,13 @@ public:
 			std::string filenameScript,
 			std::string filenameData,
 			std::string quantityLabel,
-			std::vector<double> const & data,
+			Auxillary::alignedvector::DV const & data,
 			int numBnds,
 			std::pair<double,double> energyRange) const;
 
 	void save_bands_path_stable_particle(
 			std::string const & filename,
-			std::vector<double> const & data,
+			Auxillary::alignedvector::DV const & data,
 			int numBnds) const;
 
 	std::vector<double> const & get_k_points() const;

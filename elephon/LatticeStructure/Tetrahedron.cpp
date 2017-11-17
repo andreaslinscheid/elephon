@@ -168,7 +168,6 @@ Tetrahedron::check_vectors_inside(
 		// definition : point on the boundary is inside.
 		// We allow a numerical grace zone what we consider "on" the border.
 		// the value below is effectively a threshold on the volume fraction
-		double signd0 = d0/std::abs(d0);
 		const double borderThr = 1e-6;
 
 		barycentricCoordinates[ip*4+0] = d1/d0;

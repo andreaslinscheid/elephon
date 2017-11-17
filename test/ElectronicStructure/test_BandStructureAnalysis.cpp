@@ -16,7 +16,6 @@
  *  Created on: Sep 8, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE ElectronicStructure
 #include <boost/test/unit_test.hpp>
 #include "Auxillary/UnitConversion.h"
@@ -43,7 +42,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor )
 
 	// create a cosine kx + cosine ky + cosine kz band structure
 	auto g = grid.get_grid_dim();
-	std::vector<double> bandData( g[0]*g[1]*g[2] );
+	elephon::Auxillary::alignedvector::DV bandData( g[0]*g[1]*g[2] );
 	for (int k = 0 ; k < g[2]; ++k)
 		for (int j = 0 ; j < g[1]; ++j)
 			for (int i = 0 ; i < g[0]; ++i)
@@ -118,7 +117,7 @@ BOOST_AUTO_TEST_CASE( write_mass_tensor_skew_basis )
 	std::vector<int> g{64, 64, 64};
 	int nG = g[0]*g[1]*g[2];
 	int D = 3;
-	std::vector<double> data(nG);
+	elephon::Auxillary::alignedvector::DV data(nG);
 
 	// here we initialize data in the cubic cell. In terms of the lattice basis
 	// this will of cause be tilted.

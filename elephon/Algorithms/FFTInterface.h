@@ -37,13 +37,13 @@ public:
 
 	~FFTInterface();
 
-	template<typename TI, typename TR>
+	template<typename VI, typename VR>
 	void fft_sparse_data(
 			std::vector<int> const & mapFFTCoeff,
 			std::vector<int> const & gridDimsInputData,
-			std::vector< TI > const & sparseInputData,
+			VI const & sparseInputData,
 			int exponentSign,
-			std::vector< TR > & dataResult);
+			VR & dataResult);
 
 	void plan_fft(
 			std::vector<int> const & gridDimsData,
@@ -63,10 +63,10 @@ public:
 	 * @param dataResult		vector that will be resized to fit the Fourier transformed data.
 	 * @param exponentSign		if the transformation is forward or backwards. Must not be zero.
 	 */
-	template<typename TI, typename TR>
+	template<typename VTI, typename VTR>
 	void fft_data(
-			std::vector< TI > const & data,
-			std::vector< TR > & dataResult,
+			VTI const & data,
+			VTR & dataResult,
 			int exponentSign);
 
 	/**
@@ -81,14 +81,14 @@ public:
 	 * @param dataResult		The interpolated \p data. Same data order as input. Will be resized to fit the output.
 	 * @param nDataPerGridPt	The number of data elements per grid point.
 	 */
-	template<typename T>
+	template<typename VT>
 	void fft_interpolate(
 			std::vector<int> const & gridDimsIn,
 			std::vector<double> const & gridShiftIn,
-			std::vector< T > const & data,
+			VT const & data,
 			std::vector<int> const & gridDimsOut,
 			std::vector<double> const & gridShiftOut,
-			std::vector< T > & dataResult,
+			VT & dataResult,
 			int nDataPerGridPt);
 
 	/**
@@ -168,8 +168,8 @@ private:
 			std::vector<int> const & gridDims,
 			int nDataPerGridPt);
 
-	template< typename TR>
-	void fill_result(int ngrid, std::vector<TR> & dataResult );
+	template< typename VTR>
+	void fill_result(int ngrid, VTR & dataResult );
 
 	void plan_fft_local(
 			std::vector<int> const & gridDims,

@@ -87,7 +87,7 @@ DataLoader::create_symmetric_cosine_model(
 {
 	int nB = 2;
 
-	std::vector<double> data(nB*griddims[2]*griddims[1]*griddims[0]);
+	Auxillary::alignedvector::DV data(nB*griddims[2]*griddims[1]*griddims[0]);
 	for ( int iz = 0 ; iz < griddims[2]; ++iz )
 		for ( int iy = 0 ; iy < griddims[1]; ++iy )
 			for ( int ix = 0 ; ix < griddims[0]; ++ix )

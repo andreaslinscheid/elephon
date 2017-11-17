@@ -17,7 +17,6 @@
  *      Author: A. Linscheid
  */
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE TetraGrids
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -152,7 +151,7 @@ BOOST_AUTO_TEST_CASE( Tetrahedra_data_grid_reducible )
 	tetraNoSym.initialize(std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>(g_nosym));
 
 	// create symmetric data in the irreducible zone
-	std::vector<double> dataIr(g.get_np_irred());
+	elephon::Auxillary::alignedvector::DV dataIr(g.get_np_irred());
 	for ( int ikir = 0 ; ikir < g.get_np_irred() ; ++ikir )
 	{
 		dataIr[ikir] = ikir;
@@ -162,7 +161,7 @@ BOOST_AUTO_TEST_CASE( Tetrahedra_data_grid_reducible )
 
 	// expand to the reducible zone
 	elephon::LatticeStructure::DataRegularGrid<double> dgridRed;
-	std::vector<double> dataRed;
+	elephon::Auxillary::alignedvector::DV dataRed;
 	dgrid.generate_reducible_data({0}, dataRed);
 
 	BOOST_REQUIRE(dataRed.size() == g.get_np_red());
@@ -270,7 +269,7 @@ BOOST_AUTO_TEST_CASE( Tetrahedra_fcc_Al_vasp_tetra_dos )
 	for (int ibnd = 0 ; ibnd < bndIndices.size(); ++ibnd)
 		bndIndices[ibnd] = ibnd;
 
-	std::vector<double> reducibleBndData;
+	elephon::Auxillary::alignedvector::DV reducibleBndData;
 	bands->generate_reducible_data(bndIndices, reducibleBndData);
 	auto reducibleBands = std::make_shared<elephon::ElectronicStructure::ElectronicBands>();
 	auto gridNoSym = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();

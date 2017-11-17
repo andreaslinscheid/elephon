@@ -334,7 +334,7 @@ ForceConstantMatrix::get_num_R() const
 
 void
 ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
-		std::vector<std::complex<double>> & data) const
+		Auxillary::alignedvector::ZV & data) const
 {
 	assert( qVect.size()%3 == 0 );
 	int nq = int(qVect.size())/3;
@@ -382,7 +382,7 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 
 void
 ForceConstantMatrix::fourier_transform_derivative(std::vector<double> const & qVect,
-		std::vector<std::complex<double>> & data) const
+		Auxillary::alignedvector::ZV & data) const
 {
 	assert( qVect.size()%3 == 0 );
 	auto tauCart = tau_;

@@ -22,6 +22,7 @@
 
 #include "LatticeStructure/RegularSymmetricGrid.h"
 #include "LatticeStructure/TetrahedraGrid.h"
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <memory>
 
@@ -34,6 +35,13 @@ template<typename T>
 class DataRegularGrid
 {
 public:
+
+	/**
+	 * Define a generic vector type for memory aligned data.
+	 */
+	typedef Auxillary::alignedvector::aligned_vector<T,Auxillary::alignedvector::architecture_align> VT;
+
+	typedef Auxillary::alignedvector::aligned_vector<std::complex<T>,Auxillary::alignedvector::architecture_align> VCT;
 
 	template<class F>
 	void initialize(
@@ -56,7 +64,7 @@ public:
 	void initialize(
 			int numBands,
 			T zeroEnergy,
-			std::vector<T> bandData,
+			VT bandData,
 			LatticeStructure::RegularSymmetricGrid grid);
 
 	/**
@@ -75,7 +83,7 @@ public:
 	void initialize_accumulation(
 			int numBands,
 			T zeroEnergy,
-			std::vector<T> bandData,
+			VT bandData,
 			LatticeStructure::RegularSymmetricGrid grid);
 
 	/**
@@ -107,11 +115,12 @@ public:
 	 * compute data for bIndices in the reducible grid.
 	 *
 	 * @param bIndices	The band indices for which the data will be mapped onto the reducible grid.
-	 * @param bands		Data for each band in the list for the reducible grid with band-major order.
+	 * @param bands		Data for each band in the list for the reducible grid with band-major order in some form of vector VR.
 	 */
+	template<typename VR>
 	void generate_reducible_data(
 			std::vector<int> const & bIndices,
-			std::vector<T> & bands) const;
+			VR & bands) const;
 
 	/**
 	 * compute data for bIndices and interpolate in to the reducible grid.
@@ -123,7 +132,7 @@ public:
 	void generate_interpolated_reducible_data(
 			std::vector<int> const & bIndices,
 			LatticeStructure::RegularBareGrid const & interpolationGrid,
-			std::vector<T> & interpolatedReducibleData) const;
+			VT & interpolatedReducibleData) const;
 
 	/**
 	 * Constant access to the internal copy of the regular grid.
@@ -226,14 +235,14 @@ public:
 	void interpolate_bands_along_path(
 			std::vector<double> const & nonGridPoints,
 			std::vector<T> energyRange,
-			std::vector<T> & bands,
+			VT & bands,
 			int &numBands,
 			std::shared_ptr<const LatticeStructure::TetrahedraGrid> interpolMesh = nullptr) const;
 private:
 
 	int nDGP_ = 0;
 
-	std::vector<T> dataIrred_;
+	VT dataIrred_;
 
 	LatticeStructure::RegularSymmetricGrid grid_;
 

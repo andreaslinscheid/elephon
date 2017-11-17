@@ -49,7 +49,7 @@ NestingFunction::compute_nesting_function(
 	for (int iE = 0 ; iE < isoSurface_->get_num_iso_energies(); ++iE )
 	{
 		// allocate storage
-		std::vector<float> nesting( nBnd*nBnd* regularGrid->get_np_red(), 0.0 );
+		Auxillary::alignedvector::FV nesting( nBnd*nBnd* regularGrid->get_np_red(), 0.0 );
 		auto mem_layout = [&] (int ib, int ibp, int ikr)
 		{
 			return (ikr*nBnd+ib)*nBnd+ibp;

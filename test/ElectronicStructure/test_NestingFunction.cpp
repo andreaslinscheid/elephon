@@ -17,7 +17,6 @@
  *      Author: A. Linscheid
  */
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE NestingFunction
 #include <boost/test/unit_test.hpp>
 #include "ElectronicStructure/NestingFunction.h"

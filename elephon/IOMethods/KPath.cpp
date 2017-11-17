@@ -134,7 +134,7 @@ KPath::produce_gnuplot_script_stable_particle(
 		std::string filenameScript,
 		std::string filenameData,
 		std::string quantityLabel,
-		std::vector<double> const & data,
+		Auxillary::alignedvector::DV const & data,
 		int numBnds,
 		std::pair<double,double> energyRange) const
 {
@@ -154,7 +154,7 @@ KPath::produce_gnuplot_script_stable_particle(
 void
 KPath::save_bands_path_stable_particle(
 		std::string const & filename,
-		std::vector<double> const & data,
+		Auxillary::alignedvector::DV const & data,
 		int numBnds) const
 {
 	int numK = data.size()/numBnds;

@@ -23,6 +23,7 @@
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/AtomDisplacement.h"
 #include "LatticeStructure/RegularSymmetricGrid.h"
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <complex>
 #include <memory>
@@ -47,11 +48,11 @@ public:
 
 	void compute_dvscf_q(
 			std::vector<double> const & qVect,
-			std::vector<double> const & modes,
-			std::vector<std::complex<double>> const & dynamicalMatrices,
+			Auxillary::alignedvector::DV const & modes,
+			Auxillary::alignedvector::ZV const & dynamicalMatrices,
 			std::vector<double> const & masses,
-			std::vector<std::complex<float>> & dvscf,
-			std::vector<std::vector<std::complex<float>>> & buffer,
+			Auxillary::alignedvector::CV & dvscf,
+			std::vector<Auxillary::alignedvector::CV> & buffer,
 			double freqCutoff = 0.0) const;
 
 	int RVectorLayout(int iRx, int iRy, int iRz ) const;
@@ -80,8 +81,8 @@ public:
 
 	void write_dvscf_q(std::vector<double> const & qVect,
 			std::vector<int> modeIndices,
-			std::vector<double> const & modes,
-			std::vector<std::complex<double>> const & dynamicalMatrices,
+			Auxillary::alignedvector::DV const & modes,
+			Auxillary::alignedvector::ZV const & dynamicalMatrices,
 			std::vector<double> const & masses,
 			std::string filename) const;
 private:

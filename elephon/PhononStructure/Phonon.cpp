@@ -39,8 +39,8 @@ Phonon::initialize( std::shared_ptr<const ForceConstantMatrix> fc,
 
 void
 Phonon::compute_at_q(std::vector<double> const & q,
-		std::vector<double> & w2,
-		std::vector< std::complex<double> > & eigenModes) const
+		Auxillary::alignedvector::DV & w2,
+		Auxillary::alignedvector::ZV & eigenModes) const
 {
 	assert( fc_ );
 	assert( q.size()%3 == 0 );
@@ -58,7 +58,7 @@ Phonon::compute_at_q(std::vector<double> const & q,
 	for ( int mu1 = 0 ; mu1 < nM ; ++mu1)
 		sqrtMasses[mu1] = std::sqrt(masses_[mu1/3]);
 
-	fc_->fourier_transform_q(q,eigenModes);
+	fc_->fourier_transform_q(q, eigenModes);
 	assert( eigenModes.size() == nM*nM*nq );
 	w2.resize( nq*nM );
 	for ( int iq = 0 ; iq < nq ; ++iq)
@@ -81,13 +81,13 @@ Phonon::compute_at_q(std::vector<double> const & q,
 void
 Phonon::evaluate_derivative(
 		std::vector<double> const & q,
-		std::vector<double> & dwdq) const
+		Auxillary::alignedvector::DV & dwdq) const
 {
 	assert( fc_ );
-	std::vector<double> w;
-	std::vector< std::complex<double> > unitaryTrafo;
+	Auxillary::alignedvector::DV w;
+	Auxillary::alignedvector::ZV unitaryTrafo;
 	this->compute_at_q(q, w, unitaryTrafo);
-	std::vector< std::complex<double> > ftderivative;
+	Auxillary::alignedvector::ZV ftderivative;
 	fc_->fourier_transform_derivative(q,ftderivative);
 
 	int nq = q.size()/3;
@@ -107,7 +107,7 @@ Phonon::evaluate_derivative(
 
 	Algorithms::LinearAlgebraInterface linalg;
 
-	std::vector< std::complex<double> > matrixBuffer(nM*nM);
+	Auxillary::alignedvector::ZV matrixBuffer(nM*nM);
 	std::vector< std::complex<double> > matrixBufferResult(nM*nM);
 	dwdq.resize( 3*nq*nM );
 	for ( int iq = 0 ; iq < nq ; ++iq)
@@ -149,8 +149,8 @@ Phonon::evaluate_derivative(
 
 void
 Phonon::evaluate(std::vector<double> const & q,
-		std::vector<double> & w2,
-		std::vector< std::complex<double> > & eigenModes) const
+		Auxillary::alignedvector::DV & w2,
+		Auxillary::alignedvector::ZV & eigenModes) const
 {
 	this->compute_at_q(q, w2, eigenModes);
 }
@@ -174,9 +174,9 @@ Phonon::write_bands_path(
 {
 	auto gnuplotFile = filename+".gp";
 
-	std::vector<double> modesAlongPath;
+	Auxillary::alignedvector::DV modesAlongPath;
 	std::vector<double> const & qpath = kpath->get_k_points();
-	std::vector<std::complex<double>> dynmat;
+	Auxillary::alignedvector::ZV dynmat;
 	this->compute_at_q(qpath, modesAlongPath, dynmat);
 
 	auto mm = std::minmax_element(modesAlongPath.begin(), modesAlongPath.end());

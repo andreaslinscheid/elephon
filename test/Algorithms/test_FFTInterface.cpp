@@ -16,7 +16,6 @@
  *  Created on: Jul 8, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Algorithms
 #include <boost/test/unit_test.hpp>
 #include "Algorithms/FFTInterface.h"

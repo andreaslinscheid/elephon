@@ -17,8 +17,6 @@
  *      Author: A. Linscheid
  */
 
-
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE PhononStructure
 #include <boost/test/unit_test.hpp>
 #include "fixtures/MockStartup.h"
@@ -45,8 +43,8 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 	//Write the q displacement variant
 	std::vector<double> qVect{ 0.0,0.0,0.0 , 0.25,0.0,0.0, 0.5,0.0,0.0 };
 	std::vector<int> modes{0,1};
-	std::vector<double> w;
-	std::vector< std::complex<double> > dynMat;
+	elephon::Auxillary::alignedvector::DV w;
+	elephon::Auxillary::alignedvector::ZV dynMat;
 	auto ph = resourceHandler->get_phonon_obj();
 	ph->compute_at_q( qVect, w, dynMat );
 
@@ -57,7 +55,7 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 
 	//Outcomment the following for manual inspection of the files generated
 	BOOST_REQUIRE( boost::filesystem::is_regular_file( dvscfFile ) );
-//	boost::filesystem::remove( dvscfFile );
+	boost::filesystem::remove( dvscfFile );
 
 	for ( auto mu : modes )
 	{
@@ -65,7 +63,7 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 		{
 			std::string filename = std::string("dvscf_q_")+std::to_string(iq)+"_"+std::to_string(mu)+".dat" ;
 			BOOST_REQUIRE( boost::filesystem::is_regular_file( rootDir / filename ) );
-//			boost::filesystem::remove( rootDir / filename );
+			boost::filesystem::remove( rootDir / filename );
 		}
 	}
 }

@@ -3,22 +3,40 @@ set(elephon_INCLUDE "")
 set(elephon_DEFINE "")
 set(elephon_OPTS "")
 
+macro( prefer_static )
+    if( NOT WIN32 )
+        list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
+        list( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
+    endif()
+endmacro()
+
+macro( prefer_dynamic )
+    if( NOT WIN32 )
+        list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES ".a" )
+        list( APPEND      CMAKE_FIND_LIBRARY_SUFFIXES ".a" )
+    endif()
+endmacro()
+
 # BOOST
-find_package(Boost COMPONENTS program_options unit_test_framework regex filesystem system REQUIRED)
+prefer_static() 
+find_package(Boost COMPONENTS unit_test_framework regex filesystem system REQUIRED)
 list(APPEND elephon_LD_LIBS ${Boost_LIBRARIES} )
 list(APPEND elephon_INCLUDE ${Boost_INCLUDE_DIRS})
 
 # VTK 
+prefer_static() 
 find_package(VTK REQUIRED NO_MODULE)
 include( ${VTK_USE_FILE} )
 list(APPEND elephon_LD_LIBS ${VTK_LIBRARIES} )
 
 # FFTW3
+prefer_static() 
 find_package( FFTW3 )
 list(APPEND elephon_INCLUDE ${FFTW3_INCLUDES})
 list(APPEND elephon_LD_LIBS ${FFTW3_LIBRARIES})
 
 # BLAS
+prefer_static() 
 if(NOT APPLE)
   set(BLAS "Open" CACHE STRING "Selected BLAS library")
   set_property(CACHE BLAS PROPERTY STRINGS "Atlas;Open;MKL")
@@ -50,6 +68,7 @@ elseif(APPLE)
 endif()
 
 # OPENMP
+prefer_static() 
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

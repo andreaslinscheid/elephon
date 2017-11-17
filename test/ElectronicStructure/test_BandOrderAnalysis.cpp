@@ -16,7 +16,6 @@
  *  Created on: Sep 12, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE ElectronicStructure
 #include <boost/test/unit_test.hpp>
 #include "ElectronicStructure/BandOrderAnalysis.h"

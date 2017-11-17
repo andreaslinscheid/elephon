@@ -84,14 +84,14 @@ struct MakeComplex<std::complex<T>>
 };
 } /* namespace detail */
 
-template<typename TI, typename TR>
+template<typename VI, typename VR>
 void
 FFTInterface::fft_sparse_data(
 		std::vector<int> const & mapFFTCoeff,
 		std::vector<int> const & gridDimsInputData,
-		std::vector< TI > const & sparseInputData,
+		VI const & sparseInputData,
 		int exponentSign,
-		std::vector< TR > & dataResult )
+		VR & dataResult )
 {
 	assert(exponentSign != 0);
 	int threadID = omp_get_thread_num();
@@ -112,7 +112,7 @@ FFTInterface::fft_sparse_data(
 
 	dataResult.resize(ngrid*nDataPerGridPt_);
 
-	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
+	detail::ComplexConversion< std::complex<double>, typename VI::value_type > converterFwd;
 
 	auto xyz_to_cnsq = [&] (
 			std::vector<int>::const_iterator toupleBegin,
@@ -177,7 +177,7 @@ FFTInterface::fft_sparse_data(
 	auto fillResult = [&] () {
 		assert(FFTBuffer_ != nullptr);
 
-		detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
+		detail::ComplexConversion< typename VR::value_type, std::complex<double> > converterBkwd;
 		for (int id = 0 ; id < nDataPerGridPt_; ++id)
 			for (int ig = 0 ; ig < ngrid; ++ig)
 			{
@@ -216,13 +216,13 @@ FFTInterface::fft_sparse_data(
 };
 
 
-template< typename TR>
+template< typename VTR>
 void
-FFTInterface::fill_result(int ngrid, std::vector<TR> & dataResult )
+FFTInterface::fill_result(int ngrid, VTR & dataResult )
 {
 	int threadID = omp_get_thread_num();
 	dataResult.resize(ngrid*nDataPerGridPt_);
-	detail::ComplexConversion< TR, std::complex<double> > converterBkwd;
+	detail::ComplexConversion< typename VTR::value_type, std::complex<double> > converterBkwd;
 	for (int ig = 0 ; ig < ngrid; ++ig)
 		for (int id = 0 ; id < nDataPerGridPt_; ++id)
 		{
@@ -245,11 +245,11 @@ FFTInterface::fill_result(int ngrid, std::vector<TR> & dataResult )
 		}
 };
 
-template<typename TI, typename TR>
+template<typename VTI, typename VTR>
 void
 FFTInterface::fft_data(
-		std::vector< TI > const & data,
-		std::vector< TR > & dataResult,
+		VTI const & data,
+		VTR & dataResult,
 		int exponentSign)
 {
 	std::vector<int> gridDims = exponentSign > 0 ? gridDimsBKWD_ : gridDimsFWD_;
@@ -262,7 +262,7 @@ FFTInterface::fft_data(
 
 	this->allocate_this_thread(gridDims, nDataPerGridPt_);
 
-	detail::ComplexConversion< std::complex<double>, TI > converterFwd;
+	detail::ComplexConversion< std::complex<double>, typename VTI::value_type > converterFwd;
 
 	auto fillBuffer = [&] () {
 		auto ptr = reinterpret_cast<std::complex<double> * >(FFTBuffer_[threadID]);
@@ -288,18 +288,19 @@ FFTInterface::fft_data(
 	}
 }
 
-template<typename T>
+template<typename VT>
 void
 FFTInterface::fft_interpolate(
 		std::vector<int> const & gridDimsIn,
 		std::vector<double> const & gridShiftIn,
-		std::vector< T > const & data,
+		VT const & data,
 		std::vector<int> const & gridDimsOut,
 		std::vector<double> const & gridShiftOut,
-		std::vector< T > & dataResult,
+		VT & dataResult,
 		int nDataPerGridPt)
 {
-	typedef typename detail::MakeComplex<T>::type CT;
+	typedef typename VT::value_type T;
+	typedef typename detail::MakeComplex<typename VT::value_type>::type CT;
 
 	int dim = gridDimsIn.size();
 	assert(dim == gridDimsOut.size());

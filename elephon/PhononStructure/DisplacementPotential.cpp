@@ -273,11 +273,11 @@ DisplacementPotential::compute_rot_map(
 void
 DisplacementPotential::compute_dvscf_q(
 		std::vector<double> const & qVect,
-		std::vector<double> const & modes,
-		std::vector<std::complex<double>> const & dynamicalMatrices,
+		Auxillary::alignedvector::DV const & modes,
+		Auxillary::alignedvector::ZV const & dynamicalMatrices,
 		std::vector<double> const & masses,
-		std::vector<std::complex<float>> & dvscf,
-		std::vector<std::vector<std::complex<float>>> & buffer,
+		Auxillary::alignedvector::CV & dvscf,
+		std::vector<Auxillary::alignedvector::CV> & buffer,
 		double freqCutoff) const
 {
 	assert( qVect.size() % 3 == 0 );
@@ -291,9 +291,9 @@ DisplacementPotential::compute_dvscf_q(
 
 	// introduce names for the various buffers
 	buffer.resize(2);
-	std::vector<std::complex<float>> & ftDisplPot = buffer[0];
+	Auxillary::alignedvector::CV & ftDisplPot = buffer[0];
 	ftDisplPot.resize(numModes_*nptsRealSpace_);
-	std::vector<std::complex<float>> & dynmatMassBuffer = buffer[1];
+	Auxillary::alignedvector::CV & dynmatMassBuffer = buffer[1];
 
 	dvscf.assign(nq*numModes_*nptsRealSpace_, 0.0f);
 	Algorithms::LinearAlgebraInterface linAlg;
@@ -322,30 +322,25 @@ DisplacementPotential::compute_dvscf_q(
 
 		// in case there are only few modes in the system, avoid the calling overhead of
 		// the blas package
-		if (nAUC < 3)
-		{
-			for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
-				for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
-					for ( int ir = 0 ; ir < nptsRealSpace_; ++ir )
-						dvscf[(iq*numModes_+mu1)*nptsRealSpace_+ir] +=
-								std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3])
-										  *ftDisplPot[mu2*nptsRealSpace_+ir];
-		}
-		else
-		{
-			dynmatMassBuffer.resize(numModes_*numModes_);
-			for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
-				for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
-					dynmatMassBuffer[mu1*numModes_+mu2] =
-							std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3]);
+//		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
+//			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
+//				for ( int ir = 0 ; ir < nptsRealSpace_; ++ir )
+//					dvscf[(iq*numModes_+mu1)*nptsRealSpace_+ir] +=
+//							std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3])
+//									  *ftDisplPot[mu2*nptsRealSpace_+ir];
 
-			auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
-			linAlg.call_gemm( 'n', 'n',
-					numModes_, nptsRealSpace_ , numModes_,
-					std::complex<float>(1.0f), dynmatMassBuffer.data(), numModes_,
-					ftDisplPot.data(), nptsRealSpace_,
-					std::complex<float>(0.0f), r_ptr, nptsRealSpace_);
-		}
+		dynmatMassBuffer.resize(numModes_*numModes_);
+		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
+			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
+				dynmatMassBuffer[mu1*numModes_+mu2] =
+						std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3]);
+
+		auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
+		linAlg.call_gemm( 'n', 'n',
+				numModes_, nptsRealSpace_ , numModes_,
+				std::complex<float>(1.0f), dynmatMassBuffer.data(), numModes_,
+				ftDisplPot.data(), nptsRealSpace_,
+				std::complex<float>(0.0f), r_ptr, nptsRealSpace_);
 
 		for ( int mu = 0 ; mu < numModes_; ++mu )
 		{
@@ -511,16 +506,16 @@ void
 DisplacementPotential::write_dvscf_q(
 		std::vector<double> const & qVect,
 		std::vector<int> modeIndices,
-		std::vector<double> const & modes,
-		std::vector<std::complex<double>> const & dynamicalMatrices,
+		Auxillary::alignedvector::DV const & modes,
+		Auxillary::alignedvector::ZV const & dynamicalMatrices,
 		std::vector<double> const & masses,
 		std::string filename) const
 {
 	assert( qVect.size()%3 == 0 );
 	int nq = qVect.size()/3;
 
-	std::vector<std::complex<float>> qDataPlus;
-	std::vector<std::vector<std::complex<float>>> buffers;
+	Auxillary::alignedvector::CV qDataPlus;
+	std::vector<Auxillary::alignedvector::CV> buffers;
 	this->compute_dvscf_q(qVect, modes, dynamicalMatrices, masses, qDataPlus, buffers);
 
 	int nr = unitCellGrid_.get_num_points();

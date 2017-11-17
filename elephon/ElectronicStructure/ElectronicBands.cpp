@@ -50,7 +50,7 @@ ElectronicBands::initialize(
 	if ( bandData.size() != static_cast<size_t>(numBands)*kpoints.size()/3 )
 		throw std::logic_error("Called initialize inconsistent data size.");
 
-	std::vector<double> dataIrredOrdered(npIrr*numBands);
+	Auxillary::alignedvector::DV dataIrredOrdered(npIrr*numBands);
 	for ( int irr = 0 ; irr < npIrr; ++irr )
 		for ( int ibnd = 0 ; ibnd < numBands; ++ibnd )
 			dataIrredOrdered[ pointIndices[irr]*numBands + ibnd ] = bandData[ irr*numBands + ibnd ] - fermiEnergy;
@@ -98,8 +98,8 @@ ElectronicBands::fft_interpolate_part(
 			this->get_grid().get_symmetry(),
 			this->get_grid().get_lattice());
 
-	std::vector<double> bndData;
-	std::vector<double> allData(newGrid.get_np_irred()*(endBnd-startBnD));
+	Auxillary::alignedvector::DV bndData;
+	Auxillary::alignedvector::DV allData(newGrid.get_np_irred()*(endBnd-startBnD));
 	for ( int ib = startBnD ; ib < endBnd; ++ib)
 	{
 		this->generate_interpolated_reducible_data(

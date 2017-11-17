@@ -17,7 +17,6 @@
  *      Author: A. Linscheid
  */
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -78,7 +77,8 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
 	elephon::ElectronicStructure::ElectronicBands bands_sym;
 	loader->read_band_structure((testd / "symmetric").string(), bands_sym);
-	bands_sym.initialize( wfcSymRead.get_num_bands(), 0.0, wfcSymRead.get_energies(), bands_sym.get_grid() );
+	elephon::Auxillary::alignedvector::DV energies(wfcSymRead.get_energies().begin(), wfcSymRead.get_energies().end());
+	bands_sym.initialize( wfcSymRead.get_num_bands(), 0.0, energies, bands_sym.get_grid() );
 
 	elephon::LatticeStructure::Symmetry identity;
 	identity.initialize(
@@ -98,7 +98,8 @@ BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 			bands_sym.get_grid().get_lattice() );
 
 	elephon::ElectronicStructure::ElectronicBands bands_nosym;
-	bands_nosym.initialize( wfcNoSymRead.get_num_bands(), 0.0, wfcNoSymRead.get_energies(), gridNoSym );
+	energies = elephon::Auxillary::alignedvector::DV(wfcNoSymRead.get_energies().begin(), wfcNoSymRead.get_energies().end());
+	bands_nosym.initialize( wfcNoSymRead.get_num_bands(), 0.0, energies, gridNoSym );
 
 	//Check that the reducible grids match
 	BOOST_REQUIRE( bands_sym.get_grid().get_np_red() == bands_nosym.get_grid().get_np_red() );

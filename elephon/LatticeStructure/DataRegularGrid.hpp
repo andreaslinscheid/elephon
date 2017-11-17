@@ -39,14 +39,14 @@ DataRegularGrid<T>::initialize(
 		F const & functor,
 		LatticeStructure::RegularSymmetricGrid grid)
 {
-	std::vector<T> dataEnergies;
+	VT dataEnergies;
 	int numBands = 0;
 	for ( int ikir = 0 ; ikir < grid.get_np_irred(); ++ikir)
 	{
 		int ikr = grid.get_maps_irreducible_to_reducible()[ikir][ grid.get_symmetry().get_identity_index() ];
 		std::vector<double> gridVector = grid.get_vector_direct(ikr);
-		std::vector<T> thisBands;
-		std::vector<std::complex<T>> eigenvectors;
+		VT thisBands;
+		VCT eigenvectors;
 		functor.evaluate(gridVector, thisBands, eigenvectors);
 		if ( dataEnergies.empty() )
 		{
@@ -65,7 +65,7 @@ void
 DataRegularGrid<T>::initialize(
 		int numBands,
 		T zeroEnergy,
-		std::vector<T> bandData,
+		VT bandData,
 		LatticeStructure::RegularSymmetricGrid grid)
 {
 	grid_ = std::move(grid);
@@ -100,13 +100,13 @@ void
 DataRegularGrid<T>::initialize_accumulation(
 		int numBands,
 		T zeroEnergy,
-		std::vector<T> bandData,
+		VT bandData,
 		LatticeStructure::RegularSymmetricGrid grid)
 {
 	if ( bandData.size() != grid.get_np_red()*numBands )
 		throw std::runtime_error("Problem in DataRegularGrid::initialize_accumulation : input data does not match reducible grid");
 
-	std::vector<T> irredbandData(grid.get_np_irred()*numBands, T(0));
+	VT irredbandData(grid.get_np_irred()*numBands, T(0));
 	for ( int irr = 0 ; irr < grid.get_np_irred(); ++irr )
 	{
 		auto star = grid.get_maps_irreducible_to_reducible()[irr];
@@ -166,10 +166,11 @@ DataRegularGrid<T>::get_nData_gpt() const
 }
 
 template<typename T>
+template<typename VR>
 void
 DataRegularGrid<T>::generate_reducible_data(
 		std::vector<int> const & bIndices,
-		std::vector<T> & bands) const
+		VR & bands) const
 {
 	std::vector<int> redIndices( grid_.get_np_red() ), irredIndices;
 	for (int i = 0 ; i < grid_.get_np_red() ; ++i )
@@ -192,9 +193,9 @@ void
 DataRegularGrid<T>::generate_interpolated_reducible_data(
 		std::vector<int> const & bIndices,
 		LatticeStructure::RegularBareGrid const & interpolationGrid,
-		std::vector<T> & interpolatedReducibleData) const
+		VT & interpolatedReducibleData) const
 {
-	std::vector<T> reducibleData;
+	VT reducibleData;
 	this->generate_reducible_data(bIndices, reducibleData);
 
 	Algorithms::FFTInterface fft;
@@ -222,14 +223,14 @@ DataRegularGrid<T>::fft_interpolate(
 			 and (std::abs(grid_.get_grid_shift()[2]-gridShift[2]) < grid_.get_grid_prec()) ))
 		return;
 
-	std::vector<double> oldData;
+	elephon::Auxillary::alignedvector::DV  oldData;
 	int nB = this->get_nData_gpt();
 	std::vector<int> bandList(nB);
 	for ( int ib = 0 ; ib < nB; ++ib )
 		   bandList[ib] = ib;
 	this->generate_reducible_data(bandList, oldData);
 
-	std::vector<double> newReducibleData;
+	elephon::Auxillary::alignedvector::DV  newReducibleData;
 	Algorithms::FFTInterface fft;
 	fft.fft_interpolate(
 				   grid_.get_grid_dim(),
@@ -428,7 +429,7 @@ DataRegularGrid<T>::compute_DOS_wan(
 		return;
 
 	// generate and store the derivative data for the entire grid
-	std::vector<T> derivativeData;
+	VT derivativeData;
 	std::vector<double> allGridVectors(grid_.get_np_red()*3);
 	for ( int igr = 0 ; igr < grid_.get_np_red() ; ++igr )
 	{
@@ -485,9 +486,9 @@ DataRegularGrid<T>::compute_DOS_general(
 	}
 	Algorithms::TrilinearInterpolation trilin(tetraGrid_);
 
-	std::vector<T> bndData;
+	std::vector<double> bndData;
 	std::vector<int> reqGridIndices;
-	std::vector<T> gradient;
+	std::vector<double> gradient;
 	for ( int iw = 0 ; iw < energies.size() ; ++iw )
 	{
 		auto e = energies[iw];
@@ -527,7 +528,7 @@ void
 DataRegularGrid<T>::interpolate_bands_along_path(
 		std::vector<double> const & nonGridPoints,
 		std::vector<T> energyRange,
-		std::vector<T> & bands,
+		VT & bands,
 		int &numBands,
 		std::shared_ptr<const LatticeStructure::TetrahedraGrid> interpolMesh) const
 {
@@ -549,7 +550,8 @@ DataRegularGrid<T>::interpolate_bands_along_path(
 	Algorithms::TrilinearInterpolation trilin(fineTetraMesh);
 	trilin.data_query(nonGridPoints, queriedGridIndices);
 
-	std::vector<T> interpolBndsRegularGrid, dataQueried, thisBandData;
+	VT interpolBndsRegularGrid;
+	std::vector<T> dataQueried, thisBandData;
 	for ( auto ibnd : bandIndices)
 	{
 		this->generate_interpolated_reducible_data(

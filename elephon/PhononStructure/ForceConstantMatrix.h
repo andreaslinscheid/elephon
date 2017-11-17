@@ -23,6 +23,7 @@
 #include "LatticeStructure/UnitCell.h"
 #include "LatticeStructure/AtomDisplacement.h"
 #include "LatticeStructure/Symmetry.h"
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <complex>
 #include <map>
@@ -45,10 +46,10 @@ public:
 	double operator() (int Rz, int Ry, int Rx,int mu2, int mu1) const;
 
 	void fourier_transform_q(std::vector<double> const & qVect,
-			std::vector<std::complex<double>> & data) const;
+			Auxillary::alignedvector::ZV & data) const;
 
 	void fourier_transform_derivative(std::vector<double> const & qVect,
-			std::vector<std::complex<double>> & data) const;
+			Auxillary::alignedvector::ZV & data) const;
 
 	int get_num_modes() const;
 

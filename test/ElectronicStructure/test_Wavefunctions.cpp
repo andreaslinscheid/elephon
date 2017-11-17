@@ -17,7 +17,6 @@
  *      Author: A. Linscheid
  */
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -508,7 +507,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_reconstruction )
 
 	const int nBnd = 1;
 	const double eCut = 10;
-	std::vector<double> bandData(kgrid.get_np_irred(), 0.0);
+	elephon::Auxillary::alignedvector::DV bandData(kgrid.get_np_irred(), 0.0);
 	elephon::ElectronicStructure::ElectronicBands bands;
 	bands.initialize(nBnd, 0.0, bandData, kgrid);
 
@@ -660,7 +659,7 @@ BOOST_AUTO_TEST_CASE( Phony_VASP_Wfct_interpolation )
 
 	const int nBnd = 2;
 	const double eCut = 11;
-	std::vector<double> bandData(kgrid.get_np_irred()*nBnd, 0.0);
+	elephon::Auxillary::alignedvector::DV bandData(kgrid.get_np_irred()*nBnd, 0.0);
 	elephon::ElectronicStructure::ElectronicBands bands;
 	bands.initialize(nBnd, 0.0, bandData, kgrid);
 

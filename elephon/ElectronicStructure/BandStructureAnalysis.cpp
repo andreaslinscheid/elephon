@@ -458,7 +458,7 @@ void do_band_structure_analysis(std::shared_ptr<IOMethods::ResourceHandler> reso
 		auto bandsObj = resource->get_dense_electronic_bands_obj();
 		auto kpath = resource->get_k_path();
 
-		std::vector<double> bandsAlongPath;
+		Auxillary::alignedvector::DV bandsAlongPath;
 		int numBandsInWindow;
 		bandsObj->interpolate_bands_along_path(
 				kpath->get_k_points(),

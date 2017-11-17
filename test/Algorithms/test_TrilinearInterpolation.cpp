@@ -17,7 +17,6 @@
  *  Created on: Apr 28, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include "Algorithms/TrilinearInterpolation.h"

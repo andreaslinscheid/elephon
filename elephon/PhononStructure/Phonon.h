@@ -22,6 +22,7 @@
 
 #include "PhononStructure/ForceConstantMatrix.h"
 #include "IOMethods/KPath.h"
+#include "Auxillary/AlignedVector.h"
 #include <memory>
 
 namespace elephon
@@ -46,19 +47,19 @@ public:
 	 * 						Layout is (q, mode mu, mode nu) such that nu is fastest and q is slowest running.
 	 */
 	void compute_at_q(std::vector<double> const & q,
-			std::vector<double> & w2,
-			std::vector< std::complex<double> > & eigenModes) const;
+			Auxillary::alignedvector::DV & w2,
+			Auxillary::alignedvector::ZV & eigenModes) const;
 
 	void evaluate_derivative(
 			std::vector<double> const & q,
-			std::vector<double> & dwdq) const;
+			Auxillary::alignedvector::DV & dwdq) const;
 
 	/**
 	 * Other name for compute_at_q to conform with templated band structure calculations.
 	 */
 	void evaluate(std::vector<double> const & q,
-			std::vector<double> & w2,
-			std::vector< std::complex<double> > & eigenModes) const;
+			Auxillary::alignedvector::DV & w2,
+			Auxillary::alignedvector::ZV & eigenModes) const;
 
 	int get_num_modes() const;
 

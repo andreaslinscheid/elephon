@@ -159,14 +159,10 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 	#pragma omp parallel
 	{
 		// thread private buffer data
-		std::vector<float> buffer(nr);
-		std::vector<std::complex<float>> wfcProdBuffRealSpace(nr);
-		std::vector<std::complex<float> > localGkkp;
-		std::vector<double> modes;
-		std::vector<std::complex<double> > dynmat;
-		std::vector<std::complex<float> > dvscfData;
-		std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
-		std::vector<std::vector<std::complex<float> >> dvscfBuffers;
+		Auxillary::alignedvector::DV modes;
+		Auxillary::alignedvector::ZV dynmat;
+		Auxillary::alignedvector::CV wfcProdBuffRealSpace(nr), localGkkp, dvscfData, bufferWfct1,bufferWfct2;
+		std::vector<Auxillary::alignedvector::CV> dvscfBuffers;
 
 		#pragma omp for
 		for (int icgp = 0 ; icgp < gp_to_q_index_vector.size(); ++icgp)
@@ -205,12 +201,12 @@ ElectronPhononCoupling::generate_gkkp_and_phonon(
 				ph->compute_at_q( std::vector<double>(&allQVectors[iq*3], &allQVectors[iq*3]+3), modes, dynmat );
 				std::copy(modes.begin(), modes.end(), &phononFrequencies_[(ik*nKp_+ikp)*nM_]);
 
-				this->compute_gkkp_local(nr, nB_, nBp_, nM_, modes, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
+				this->compute_gkkp_local(nr, nB_, nBp_, nM_, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
 				std::copy(localGkkp.begin(), localGkkp.end(), &data_[this->tensor_layout(ik,ikp,0,0,0)]);
 			}
 
 			// check if we crossed a cumulative number of njump q points
-			const int njump = 100;
+			const int njump = 1000;
 			bool report = ((localQDone[thread_id] + coarseGP.second.size())%njump) < (localQDone[thread_id]%njump);
 
 			localQDone[thread_id] += coarseGP.second.size();
@@ -288,12 +284,11 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 	fft2.plan_fft(potentialFFTGrid, nBp, -1, false, nk);
 
 	std::vector<float> buffer(nr);
-	std::vector<std::complex<float> > wfcProdBuffRealSpace(nr);
-	std::vector<std::complex<float> > bufferWfct1,bufferWfct2;
-	std::vector<double> modes;
-	std::vector<std::complex<double> > dynmat;
-	std::vector<std::complex<float> > dvscfData, localGkkp;
-	std::vector<std::vector<std::complex<float>>> dvscfBuffers;
+	Auxillary::alignedvector::DV modes;
+	Auxillary::alignedvector::ZV dynmat;
+	Auxillary::alignedvector::CV wfcProdBuffRealSpace(nr), localGkkp, dvscfData, bufferWfct1,bufferWfct2;
+	std::vector<Auxillary::alignedvector::CV> dvscfBuffers;
+
 	gkkp.reserve(nk*nB*nBp*nM);
 	for ( int ik = 0 ; ik < nk ; ++ik )
 	{
@@ -326,7 +321,7 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 				-1,
 				bufferWfct2);
 
-		this->compute_gkkp_local(nr, nB, nBp, nM, modes, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
+		this->compute_gkkp_local(nr, nB, nBp, nM, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
 		gkkp.insert(std::end(gkkp), std::begin(localGkkp), std::end(localGkkp));
 	}
 }
@@ -337,18 +332,16 @@ ElectronPhononCoupling::compute_gkkp_local(
 		int nB,
 		int nBp,
 		int nM,
-		std::vector<double> const & modes,
-		std::vector<std::complex<float>> const & dvscfData,
-		std::vector<std::complex<float>> const & wfctBufferk,
-		std::vector<std::complex<float>> const & wfctBufferkp,
-		std::vector<std::complex<float>> & wfcProdBuffRealSpace,
-		std::vector<std::complex<float>> & localGkkp) const
+		Auxillary::alignedvector::CV const & dvscfData,
+		Auxillary::alignedvector::CV const & wfctBufferk,
+		Auxillary::alignedvector::CV const & wfctBufferkp,
+		Auxillary::alignedvector::CV & wfcProdBuffRealSpace,
+		Auxillary::alignedvector::CV & localGkkp) const
 {
 	assert( wfctBufferk.size() == nr*nB );
 	assert( wfctBufferkp.size() == nr*nBp );
 	assert( dvscfData.size() == nr*nM );
 	assert( wfcProdBuffRealSpace.size() == nr);
-	assert( modes.size() == nM);
 
 	Algorithms::LinearAlgebraInterface linalg;
 	localGkkp.assign(nB*nBp*nM, std::complex<float>(0.0f));
@@ -363,17 +356,17 @@ ElectronPhononCoupling::compute_gkkp_local(
 				wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir]
 											/static_cast<float>(nr);
 
-//			linalg.call_gemv('n', nM, nr,
-//					std::complex<float>(1.0f),
-//					dvscfData.data(), nM,
-//					wfcProdBuffRealSpace.data(), 1,
-//					std::complex<float>(0.0f),
-//					&localGkkp[this->local_tensor_layout(ib, ibp, 0, nB, nBp, nM)], 1);
+			linalg.call_gemv('n', nM, nr,
+					std::complex<float>(1.0f),
+					dvscfData.data(), nM,
+					wfcProdBuffRealSpace.data(), 1,
+					std::complex<float>(0.0f),
+					&localGkkp[this->local_tensor_layout(ib, ibp, 0, nB, nBp, nM)], 1);
 
-			for (int inu = 0 ; inu < nM; ++inu)
-				for (int ir = 0 ; ir < nr ; ++ir)
-					localGkkp[this->local_tensor_layout(ib, ibp, inu, nB, nBp, nM)] +=
-							dvscfData[inu*nM+ir]*wfcProdBuffRealSpace[ir];
+//			for (int inu = 0 ; inu < nM; ++inu)
+//				for (int ir = 0 ; ir < nr ; ++ir)
+//					localGkkp[this->local_tensor_layout(ib, ibp, inu, nB, nBp, nM)] +=
+//							dvscfData[inu*nM+ir]*wfcProdBuffRealSpace[ir];
 		}
 }
 

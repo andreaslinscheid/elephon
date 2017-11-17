@@ -23,6 +23,7 @@
 #include "PhononStructure/Phonon.h"
 #include "PhononStructure/DisplacementPotential.h"
 #include "ElectronicStructure/Wavefunctions.h"
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <complex>
 #include <memory>
@@ -132,12 +133,11 @@ private:
 			int nB,
 			int nBp,
 			int nM,
-			std::vector<double> const & modes,
-			std::vector<std::complex<float>> const & dvscfData,
-			std::vector<std::complex<float>> const & wfctBufferk,
-			std::vector<std::complex<float>> const & wfctBufferkp,
-			std::vector<std::complex<float>> & wfcProdBuffRealSpace,
-			std::vector<std::complex<float>> & localGkkp) const;
+			Auxillary::alignedvector::CV const & dvscfData,
+			Auxillary::alignedvector::CV const & wfctBufferk,
+			Auxillary::alignedvector::CV const & wfctBufferkp,
+			Auxillary::alignedvector::CV & wfcProdBuffRealSpace,
+			Auxillary::alignedvector::CV & localGkkp) const;
 };
 
 } /* namespace PhononStructure */

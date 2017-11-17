@@ -17,7 +17,6 @@
  *      Author: A. Linscheid
  */
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -60,8 +59,8 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 			refData[i*3+j] = data[3+j];
 	}
 
-	std::vector<double> w;
-	std::vector< std::complex<double> > eigenmodes;
+	elephon::Auxillary::alignedvector::DV w;
+	elephon::Auxillary::alignedvector::ZV eigenmodes;
 	ph->compute_at_q( qVect, w, eigenmodes );
 	assert( w.size() == ph->get_num_modes()*nq );
 	for ( int iq = 0; iq < nq; ++iq)
@@ -101,8 +100,8 @@ BOOST_AUTO_TEST_CASE( Al_phonon_derivative )
 	for ( int i = 0 ; i < nq ; ++i)
 		qVect[i*3] = 0.5*double(i)/double(nq-1);
 
-	std::vector<double> omega, domegadq;
-	std::vector<std::complex<double>> em;
+	elephon::Auxillary::alignedvector::DV omega, domegadq;
+	elephon::Auxillary::alignedvector::ZV em;
 	ph->compute_at_q(qVect, omega, em);
 	ph->evaluate_derivative(qVect, domegadq);
 

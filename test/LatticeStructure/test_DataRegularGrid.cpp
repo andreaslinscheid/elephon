@@ -16,7 +16,7 @@
  *  Created on: Nov 1, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_DYN_LINK
+
 #define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE( Si_vasp_electron_bands )
 
 	auto bands = resource->get_dense_electronic_bands_obj();
 	auto kpath = resource->get_k_path();
-	std::vector<double> bandsAlongPath;
+	elephon::Auxillary::alignedvector::DV bandsAlongPath;
 	int numBandsInWindow;
 	bands->interpolate_bands_along_path( kpath->get_k_points(),
 			resource->get_optns().get_ewinbnd(),

@@ -1756,8 +1756,8 @@ begin{widetext}
 \begin{eqnarray}
 g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q}) & = & \frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\\
  & = & \frac{1}{N_{\boldsymbol{q}}}\int\sum_{\boldsymbol{R}^{\prime}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r}+\boldsymbol{R}^{\prime})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}+\boldsymbol{R}^{\prime})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}+\boldsymbol{R}^{\prime})\\
- & = & \int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\frac{1}{N_{\boldsymbol{q}}}\int\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{R}^{\prime}}\\
- & = & \delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\psi_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\label{eq:BlochElphCoupling}
+ & = & \int_{{\rm UC}}{\rm d}\boldsymbol{r}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}}u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\frac{1}{N_{\boldsymbol{q}}}\int\sum_{\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{k}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{R}^{\prime}}{\rm e}^{{\rm i}\boldsymbol{k}^{\prime}\cdot\boldsymbol{R}^{\prime}}\\
+ & = & \delta_{\boldsymbol{q},\boldsymbol{k}^{\prime}-\boldsymbol{k}}\int_{{\rm UC}}{\rm d}\boldsymbol{r}u_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}u_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r})\label{eq:BlochElphCoupling}
 \end{eqnarray}
 
 \end_inset
@@ -1769,7 +1769,7 @@ In a numerical evaluation
  and so 
 \begin_inset Formula 
 \begin{equation}
-g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q})\approx\sum_{j}\frac{{\rm \Omega_{{\rm UC}}}}{N_{j}}\tilde{\psi}_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r}_{j})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}_{j})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\tilde{\psi}_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}_{j})
+g_{\boldsymbol{k},\boldsymbol{k}^{\prime}}^{i,i^{\prime}\nu}(\boldsymbol{q})\approx\sum_{j}\frac{{\rm \Omega_{{\rm UC}}}}{N_{j}}\tilde{u}_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r}_{j})\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}_{j})}{\delta u_{\boldsymbol{k}^{\prime}-\boldsymbol{k}\nu}}\tilde{u}_{\boldsymbol{k}^{\prime}i^{\prime}}(\boldsymbol{r}_{j})
 \end{equation}
 
 \end_inset
@@ -1778,7 +1778,7 @@ Note that the normalization of the wavefunctions in the code is chosen as
  
 \begin_inset Formula 
 \begin{equation}
-\sum_{j}\vert\psi_{\boldsymbol{k}i}(\boldsymbol{r}_{j})\vert^{2}=1
+\sum_{j}\vert u_{\boldsymbol{k}i}(\boldsymbol{r}_{j})\vert^{2}=1
 \end{equation}
 
 \end_inset

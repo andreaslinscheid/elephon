@@ -55,6 +55,7 @@ extern "C"
 #include <lapacke.h>
 }
 #endif
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 
 namespace elephon
@@ -208,9 +209,9 @@ private:
 
 	std::vector<int> IPIV_;
 
-	std::vector<char> workbuffer_;
+	Auxillary::alignedvector::CV workbuffer_;
 
-	std::vector<char> rWork_;
+	Auxillary::alignedvector::CV rWork_;
 
 	template<class C>
 	int square_matrix_dim(C const & A) const;

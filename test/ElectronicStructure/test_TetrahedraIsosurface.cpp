@@ -17,7 +17,6 @@
  *      Author: A. Linscheid
  */
 
-#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE TetraGrids
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
@@ -75,7 +74,7 @@ BOOST_AUTO_TEST_CASE( Sphere_simple )
 	sym.set_reciprocal_space_sym();
 	grid->initialize( {30,30,30}, 1e-6, {0.0, 0.0, 0.0}, sym, elephon::LatticeStructure::LatticeModule() );
 	auto d = grid->get_grid_dim();
-	std::vector<double> data(d[0]*d[1]*d[2]);
+	elephon::Auxillary::alignedvector::DV data(d[0]*d[1]*d[2]);
 	for (int k = 0 ; k < d[2]; ++k)
 	  for (int j = 0 ; j < d[1]; ++j)
 		for (int i = 0 ; i < d[0]; ++i)
@@ -112,7 +111,7 @@ BOOST_AUTO_TEST_CASE( wall_simple )
 	sym.set_reciprocal_space_sym();
 	grid->initialize( {2, 1, 1}, 1e-6, {0.0, 0.0, 0.0}, sym, elephon::LatticeStructure::LatticeModule() );
 	auto d = grid->get_grid_dim();
-	std::vector<double> data(d[0]*d[1]*d[2]);
+	elephon::Auxillary::alignedvector::DV data(d[0]*d[1]*d[2]);
 	for (int k = 0 ; k < d[2]; ++k)
 		for (int j = 0 ; j < d[1]; ++j)
 			for (int i = 0 ; i < d[0]; ++i)
@@ -161,7 +160,7 @@ BOOST_AUTO_TEST_CASE( box_simple )
 	sym.set_reciprocal_space_sym();
 	grid->initialize( {4,4,4}, 1e-6, {0.0, 0.0, 0.0}, sym, elephon::LatticeStructure::LatticeModule() );
 	auto d = grid->get_grid_dim();
-	std::vector<double> data(d[0]*d[1]*d[2]);
+	elephon::Auxillary::alignedvector::DV data(d[0]*d[1]*d[2]);
 	for (int k = 0 ; k < d[2]; ++k)
 		for (int j = 0 ; j < d[1]; ++j)
 			for (int i = 0 ; i < d[0]; ++i)
@@ -208,7 +207,7 @@ BOOST_AUTO_TEST_CASE( TetrahedraIsosurface_Al )
 	for (int ibnd = 0 ; ibnd < bndIndices.size(); ++ibnd)
 		bndIndices[ibnd] = ibnd;
 
-	std::vector<double> reducibleBndData;
+	elephon::Auxillary::alignedvector::DV reducibleBndData;
 	bands->generate_reducible_data(bndIndices, reducibleBndData);
 	auto reducibleBands = std::make_shared<elephon::ElectronicStructure::ElectronicBands>();
 	auto gridNoSym = std::make_shared<elephon::LatticeStructure::RegularSymmetricGrid>();
