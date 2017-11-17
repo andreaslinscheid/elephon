@@ -3,23 +3,11 @@ set(elephon_INCLUDE "")
 set(elephon_DEFINE "")
 set(elephon_OPTS "")
 
-macro( prefer_static )
-    if( NOT WIN32 )
-        list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES   ".a" )
-        list( INSERT      CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" )
-    endif()
-endmacro()
-
-macro( prefer_dynamic )
-    if( NOT WIN32 )
-        list( REMOVE_ITEM CMAKE_FIND_LIBRARY_SUFFIXES ".a" )
-        list( APPEND      CMAKE_FIND_LIBRARY_SUFFIXES ".a" )
-    endif()
-endmacro()
+include(../cmake/Macros.cmake)
 
 # BOOST
 prefer_static() 
-find_package(Boost COMPONENTS unit_test_framework regex filesystem system REQUIRED)
+find_package(Boost 1.56 COMPONENTS unit_test_framework regex filesystem system REQUIRED)
 list(APPEND elephon_LD_LIBS ${Boost_LIBRARIES} )
 list(APPEND elephon_INCLUDE ${Boost_INCLUDE_DIRS})
 

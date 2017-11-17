@@ -68,10 +68,7 @@ foreach(libElephon ${subdirlist})
 endforeach(libElephon)
 
 # The projects own libraries
-# %%%% HACK (!!!) %%%%
-# ${elephonLibraryNames} appears multiple times to resolve cross dependencies of symbols
-# the linker should stop searching once it hits the first, so this should work without causing harm ..
-list(INSERT elephon_LD_LIBS 0 ${elephonLibraryNames} ${elephonLibraryNames} ${elephonLibraryNames})
+list(INSERT elephon_LD_LIBS 0 ${elephonLibraryNames})
 list(INSERT elephon_INCLUDE 0 ${elephon_src_tree})
 
 #add a library with the tests
@@ -88,7 +85,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -mtune=g
 target_compile_options(elephon PUBLIC ${elephon_OPTS} )
 target_include_directories(elephon PUBLIC ${elephon_INCLUDE})
 
-target_link_libraries(elephon PUBLIC ${elephon_LD_LIBS} )
+target_link_libraries(elephon PUBLIC -Wl,--start-group ${elephon_LD_LIBS} -Wl,--end-group )
 
 include(CTest)
 
@@ -100,7 +97,7 @@ foreach(testSrc ${sources_test})
        	add_executable(${testName} ${testSrc})
 
        	#link to Boost libraries AND your targets and dependencies
-       	target_link_libraries(${testName} PUBLIC libTest ${elephon_LD_LIBS} )
+       	target_link_libraries(${testName} PUBLIC libTest -Wl,--start-group ${elephon_LD_LIBS} -Wl,--end-group )
 
        	#I like to move testing binaries into a test/bin directory
        	set_target_properties(${testName} PROPERTIES 
