@@ -121,7 +121,7 @@ FFTInterface::fft_sparse_data(
 		auto output_aligned = [] (int iG, int maxGIn, int maxGOut)
 		{
 			//Convert to the negative-positive frequency scheme
-			int iGAct = iG < maxGIn/2 ? iG : iG - maxGIn;
+			int iGAct = iG <= maxGIn/2 ? iG : iG - maxGIn;
 			//alias back in case ...
 			iGAct = iGAct % maxGOut;
 			//Convert back to the positive index scheme with the second half being the negative freqs

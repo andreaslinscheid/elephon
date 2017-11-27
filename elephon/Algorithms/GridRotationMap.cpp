@@ -67,5 +67,58 @@ void compute_grid_rotation_map(
 	}
 }
 
+void compute_grid_rotation_map_no_shift(
+		LatticeStructure::RegularBareGrid const & grid,
+		LatticeStructure::Symmetry const & symmetry,
+		std::vector< std::vector<int> > & rotMap)
+{
+	const int nR = grid.get_num_points();
+	const int iS = symmetry.get_num_symmetries();
+	rotMap.resize(iS);
+
+	const int nx = grid.get_grid_dim()[0];
+	const int ny = grid.get_grid_dim()[1];
+	const int nz = grid.get_grid_dim()[2];
+
+	for ( int isym = 0 ; isym < iS; ++isym)
+	{
+		rotMap[isym].resize(nR);
+		auto sop = symmetry.get_sym_op(isym);
+
+		std::vector<int> symOpShift(3);
+		for (int i = 0 ; i < 3; ++i)
+		{
+			symOpShift[i] = sop.fracTrans[i]*grid.get_grid_dim()[i];
+			symOpShift[i] -= std::floor(symOpShift[i]+0.5);
+		}
+
+		std::vector<int> xyz(3), xyzRot(3);
+		for ( int iz = 0 ; iz < nz; ++iz)
+		{
+			xyz[2] = iz;
+			for ( int iy = 0 ; iy < ny; ++iy)
+			{
+				xyz[1] = iy;
+				for ( int ix = 0 ; ix < nx; ++ix)
+				{
+					xyz[0] = ix;
+					// apply the symmetry operation directly on the lattice
+					for (int i = 0 ; i < 3 ; ++i)
+					{
+						xyzRot[i] = symOpShift[i];
+						for (int j = 0 ; j < 3 ; ++j)
+							xyzRot[i] += sop.ptgroup[i*3+j]*xyz[j];
+						xyzRot[i] = xyzRot[i] % grid.get_grid_dim()[i];
+					}
+					int cnsq = grid.get_xyz_to_reducible_periodic(xyzRot);
+					assert( (cnsq >= 0) && (cnsq < nR));
+					rotMap[isym][cnsq] = grid.get_xyz_to_reducible(xyz);
+				}
+			}
+		}
+	}
+}
+
+
 } /* namespace Algorithms */
 } /* namespace elephon */

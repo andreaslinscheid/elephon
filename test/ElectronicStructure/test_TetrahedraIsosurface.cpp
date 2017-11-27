@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE( TetrahedraIsosurface_Al )
 	tetraSurf->initialize(tetra, reducibleBands, {0.0});
 
 	tetraSurf->write_polydata_file( surfDataFile.string(), 0);
-//	boost::filesystem::remove(surfDataFile);
+	boost::filesystem::remove(surfDataFile);
 //	plot_iso_surface(tetraSurf, 0);
 
 
@@ -254,4 +254,21 @@ BOOST_AUTO_TEST_CASE( TetrahedraIsosurface_Al )
 	}
 	BOOST_CHECK_CLOSE(dosRef[0], dosIrreducible, 1e-5);
 	BOOST_CHECK_CLOSE(dosRef[0], dosReducible, 1e-5);
+}
+
+BOOST_AUTO_TEST_CASE( TetrahedraIsosurface_Al_sc444 )
+{
+	elephon::test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "sc_4x4x4";
+	auto surfDataFile = rootDir / "surface.vtp";
+	boost::filesystem::remove(surfDataFile);
+	elephon::test::fixtures::DataLoader dl;
+	auto resHndler = dl.create_resource_handler(std::string()+
+			"root_dir = "+rootDir.string()
+			);
+	auto tetraSurf = resHndler->get_tetrahedra_isosurface_fft();
+
+	tetraSurf->write_polydata_file( surfDataFile.string(), 0);
+	boost::filesystem::remove(surfDataFile);
+//	plot_iso_surface(tetraSurf, 0);
 }

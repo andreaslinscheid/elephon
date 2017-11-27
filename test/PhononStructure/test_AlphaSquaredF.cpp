@@ -28,11 +28,11 @@
 
 BOOST_AUTO_TEST_CASE( a2F_write_file_vasp_fcc_primitive )
 {
-	//TODO figure out a way of testing the a2F generation that is acceptably fast.
-//	auto resourceHandler = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
+//	//TODO figure out a way of testing the a2F generation that is acceptably fast.
+//	auto resourceHandler = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc4x4x4();
 //
 //	elephon::PhononStructure::AlphaSquaredF a2F;
-//	a2F.compute_a2F(resourceHandler);
+//	a2F.compute_a2F_grid(resourceHandler);
 //
 //	auto a2FFilename = boost::filesystem::path(resourceHandler->get_optns().get_f_a2F());
 //	boost::filesystem::remove(a2FFilename);

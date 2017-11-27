@@ -97,66 +97,15 @@ load_reference_data(boost::filesystem::path filename,
 	for ( auto &ki : kpoints)
 		ki -= std::floor(ki +0.5);
 
-	const double mHaToEVEnergyConversion = 27.21138602/1000.0;
+	const double RyToEVEnergyConversion = 27.21138602/2.0;
 	for ( auto &g : gkkpData)
-		g *= mHaToEVEnergyConversion*mHaToEVEnergyConversion;
-}
-
-BOOST_AUTO_TEST_CASE( check_gkkp_methods )
-{
-	// confirm that the two methods of computing gkkp matrix elements give the same results
-	auto resHandl = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
-	std::vector<double> qpoints{0.5, 0.0, 0.0};
-	std::vector<double> kpoints{0.0, 0.0, 0.0};
-	std::vector<double> kPrimePoints = kpoints;
-	std::vector<int> bandsList = { 1, 2 };
-	auto bandspList = bandsList;
-	for ( int i = 0; i < 3; ++i)
-	{
-		kPrimePoints[i] += qpoints[i];
-		kPrimePoints[i] -= std::floor(kPrimePoints[i]+0.5);
-	}
-	const int numBands = bandsList.size();
-	const int numModes = resHandl->get_phonon_obj()->get_num_modes();
-
-	elephon::PhononStructure::ElectronPhononCoupling gkkp;
-	std::vector<std::complex<float>> gkkpData;
-	gkkp.generate_gkkp_energy_units(
-			kpoints, kPrimePoints,
-			bandsList, bandspList,
-			resHandl->get_phonon_obj(),
-			resHandl->get_displacement_potential_obj(),
-			resHandl->get_wfct_obj(),
-			gkkpData);
-
-	gkkp.generate_gkkp_and_phonon(
-			kpoints, kPrimePoints,
-			bandsList, bandspList,
-			resHandl->get_phonon_obj(),
-			resHandl->get_displacement_potential_obj(),
-			resHandl->get_wfct_obj());
-
-	std::vector<std::complex<float>>::iterator itB, itE;
-	std::vector<float>::iterator  itPB, itPE;
-	gkkp.get_local_matrix_range(0, 0, itB, itE, itPB, itPE);
-
-	std::complex<double> integral1 = 0, integral2 =0;
-	for ( int ib = 0 ; ib < numBands ; ++ib)
-		for ( int ibp = 0 ; ibp < numBands ; ++ibp)
-			for ( int inu = 0 ; inu < numModes ; ++inu)
-			{
-				int cnq = (ib*numBands+ibp)*numModes + inu;
-				integral1 += *itB++;
-				integral2 += gkkpData[cnq];
-			}
-	BOOST_CHECK_CLOSE(std::real(integral1), std::real(integral2), 0.001);
-	BOOST_CHECK_CLOSE(std::imag(integral1), std::imag(integral2), 0.001);
+		g *= RyToEVEnergyConversion*RyToEVEnergyConversion;
 }
 
 //Again, we have to outcomment this cross check below, because the time a test takes is unaccatable in debug mode.
-//BOOST_AUTO_TEST_CASE( Gkkp_generate_regular_k_grid_q_zero )
-//{
-//	auto resHandl = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
+BOOST_AUTO_TEST_CASE( Gkkp_generate_regular_k_grid_q_zero )
+{
+//	auto resHandl = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc4x4x4();
 //
 //	// this reads in the reference data from the modified version of QE that writes these files
 //	std::vector<double> qpoints;
@@ -166,6 +115,7 @@ BOOST_AUTO_TEST_CASE( check_gkkp_methods )
 //	std::vector<double> gkkpDataRef;
 //	auto ref_data_filename = boost::filesystem::path(resHandl->get_optns().get_root_dir())
 //														/ "gkkp_reference.dat";
+//	auto kgrid = resHandl->get_wfct_obj()->get_k_grid().view_bare_grid();
 //	load_reference_data(ref_data_filename,
 //						qpoints,
 //						kdim,
@@ -177,54 +127,73 @@ BOOST_AUTO_TEST_CASE( check_gkkp_methods )
 //	std::vector<int> bandsList = { 1, 2 };
 //	auto bandspList = bandsList;
 //
-//	int nq = qpoints.size()/3;
+//	std::vector<int> kpointIndices;
+//	std::vector<int> qpointIndex;
+//	kgrid.get_list_reducible_lattice_point_indices(qpoints, qpointIndex);
+//	kgrid.get_list_reducible_lattice_point_indices(kpoints, kpointIndices);
+//	std::vector<std::pair<int,int>> kandKPPointIndices(kpointIndices.size());
+//	std::vector<int> xyz(3), xyzQ(3);
+//	kgrid.get_reducible_to_xyz(qpointIndex[0], xyzQ);
+//	for (int ik = 0 ; ik < kpointIndices.size() ; ++ik )
+//	{
+//		kandKPPointIndices[ik].first = kpointIndices[ik];
+//		kgrid.get_reducible_to_xyz(kpointIndices[ik], xyz);
+//		for (int i = 0 ; i < 3 ; ++i)
+//			xyz[i] += xyzQ[i];
+//		kandKPPointIndices[ik].second = kgrid.get_xyz_to_reducible_periodic(xyz);
+//	}
+//
 //	int nk = kpoints.size()/3;
 //
 //	elephon::PhononStructure::ElectronPhononCoupling gkkp;
-//	std::vector<std::complex<float>> gkkpData;
+//	elephon::Auxillary::alignedvector::FV gkkpMod2Data;
 //
-//	// we skip gamma since the coupling for acoustic modes at q=0 0 0 is something very peculiar
-//	for ( int iq = 1 ; iq < 2 ; ++iq ) // so that the test will run acceptably fast in debug mode, we only check one k point
+//	// PLEASE NOTE for manual inspection:
+//	// The matrix elements computed by generate_gkkp_and_phonon are not symmetrized.
+//	// Since the sum of the absolute value squared over the star of a given k point
+//	// has the symmetry of the small group of q = k - k', they should be symmetrized
+//	// by this small group. In the integral it does not matter, though.
+//	gkkp.generate_gkkp_mod_2_of_q(
+//			qpointIndex[0],
+//			kandKPPointIndices,
+//			bandspList, bandsList,
+//			resHandl->get_phonon_obj(),
+//			resHandl->get_displacement_potential_obj(),
+//			resHandl->get_wfct_obj(),
+//			gkkpMod2Data);
+//	BOOST_REQUIRE_EQUAL(gkkpMod2Data.size(), nk*numBands*numBands*numModes);
+//
+//	for ( int ik = 0 ; ik < nk ; ++ik )
 //	{
-//		// generate_gkkp_and_phonon computes every combination of k, k'
-//		// the reference data is for k0+q0, k0. Thus, we need to compute k'=k0, k=k0+q0
-//		std::vector<double> kPrimePoints = kpoints;
-//		for ( int ik = 0; ik < nk; ++ik)
-//			for ( int i = 0; i < 3; ++i)
-//			{
-//				kPrimePoints[ik*3+i] += qpoints[iq*3+i];
-//				kPrimePoints[ik*3+i] -= std::floor(kPrimePoints[ik*3+i]+0.5);
-//			}
-//
-//		// PLEASE NOTE for manual inspection:
-//		// The matrix elements computed by generate_gkkp_and_phonon are not symmetrized.
-//		// Since the sum of the absolute value squared over the star of a given k point
-//		// has the symmetry of the small group of q = k - k', they should be symmetrized
-//		// by this small group. In the integral it does not matter, though.
-//		gkkp.generate_gkkp_energy_units(
-//				kPrimePoints, kpoints,
-//				bandspList, bandsList,
-//				resHandl->get_phonon_obj(),
-//				resHandl->get_displacement_potential_obj(),
-//				resHandl->get_wfct_obj(),
-//				gkkpData);
-//		BOOST_REQUIRE_EQUAL(gkkpData.size(), nk*numBands*numBands*numModes);
-//
+//		auto kvect = kgrid.get_vector_direct(kpointIndices[ik]);
+//		std::cout << kvect[0] << '\t' << kvect[1] << '\t'<<kvect[2];
 //		double integral = 0.0, integralRef = 0.0;
-//		for ( int ik = 0 ; ik < nk ; ++ik )
+//		for ( int inu = 0 ; inu < numModes ; ++inu)
+//		{
 //			for ( int ib = 0 ; ib < numBands ; ++ib)
 //				for ( int ibp = 0 ; ibp < numBands ; ++ibp)
-//					for ( int inu = 0 ; inu < numModes ; ++inu)
 //					{
-//						int cnsk = ((ik*numBands+ib)*numBands+ibp)*numModes + inu;
-//						int cnsq = (((iq*nk+ik)*numBands+ib)*numBands+ibp)*numModes + inu;
-//						integral += std::real(std::conj(gkkpData[cnsk])*(gkkpData[cnsk]));
-//						integralRef += gkkpDataRef[cnsq] ;
+//						int cns = ((ik*numBands+ib)*numBands+ibp)*numModes + inu;
+//						integral += gkkpMod2Data[cns];
+//						integralRef += gkkpDataRef[cns];
 //					}
-//
-//		std::cout << "Integrated |gkkp|^2 for this q = "<< integral << "\t(this code)"
-//				<<integralRef <<" (modified espresso)"<<std::endl;
-//		BOOST_CHECK_CLOSE(integral, integralRef, 50);
+//		}
+//		std::cout<<'\t' << integral<<'\t'<<integralRef;
+//		std::cout <<'\n';
 //	}
-//}
-
+//
+//	double integral = 0.0, integralRef = 0.0;
+//	for ( int ik = 0 ; ik < nk ; ++ik )
+//		for ( int ib = 0 ; ib < numBands ; ++ib)
+//			for ( int ibp = 0 ; ibp < numBands ; ++ibp)
+//				for ( int inu = 0 ; inu < numModes ; ++inu)
+//				{
+//					int cns = ((ik*numBands+ib)*numBands+ibp)*numModes + inu;
+//					integral += gkkpMod2Data[cns];
+//					integralRef += gkkpDataRef[cns] ;
+//				}
+//
+//	std::cout << "Integrated |gkkp|^2 for this q = "<< integral << "\t(this code)"
+//			<<integralRef <<" (modified espresso)"<<std::endl;
+//	BOOST_CHECK_CLOSE(integral, integralRef, 50);
+}

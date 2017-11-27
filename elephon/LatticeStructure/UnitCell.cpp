@@ -45,6 +45,27 @@ void UnitCell::initialize(
 	//synchronize symmetries and lattice
 	this->set_symmetry_to_lattice( symmetry_);
 	this->generate_site_symmetries(atoms_,symmetry_,siteSymmetries_);
+
+	atomSymMap_.resize(atoms_.size());
+	std::map<Atom, int> atomSet;
+	for (int ia = 0 ; ia < atoms_.size(); ++ia)
+		atomSet[atoms_[ia]] = ia;
+
+	for (int ia = 0 ; ia < atoms_.size(); ++ia)
+	{
+		auto const & a = atoms_[ia];
+		atomSymMap_[ia].resize(symmetry_.get_num_symmetries());
+		for (int isym = 0 ; isym < symmetry_.get_num_symmetries(); ++isym)
+		{
+			auto aTransform = a;
+			aTransform.transform(symmetry_.get_sym_op(isym));
+			auto it = atomSet.find(aTransform);
+			if (it==atomSet.end())
+				throw std::logic_error(std::string("Symmetry operation ")+
+						std::to_string(isym)+" not a symmetry of the lattice");
+			atomSymMap_[ia][isym] = it->second;
+		}
+	}
 }
 
 void
@@ -462,6 +483,14 @@ UnitCell::compute_supercell_dim(
 	assert( (std::abs(scaleX - supercellDim[0]) < superCell->get_symmetry().get_symmetry_prec()) &&
 			(std::abs(scaleY - supercellDim[1]) < superCell->get_symmetry().get_symmetry_prec()) &&
 			(std::abs(scaleZ - supercellDim[2]) < superCell->get_symmetry().get_symmetry_prec()) );
+}
+
+int
+UnitCell::atom_rot_map(int symIndex, int atomIndex) const
+{
+	assert((symIndex >= 0) && (symIndex < symmetry_.get_num_symmetries()));
+	assert((atomIndex >= 0) && (atomIndex < atoms_.size()));
+	return atomSymMap_[atomIndex][symIndex];
 }
 
 } /* namespace LatticeStructure */

@@ -31,8 +31,14 @@ void output_wire_frame(elephon::LatticeStructure::TetrahedraGrid const & tetra)
 	int c = 0;
 	for ( auto t : tetra.get_tetra_list() )
 	{
-		std::vector<double> p0, v123;
-		t.compute_corner_vectors(p0, v123);
+		std::vector<double> p0123;
+		t.compute_corner_points(p0123);
+
+		std::vector<double> p0{p0123[0], p0123[1], p0123[2]};
+		std::vector<double> v123(&p0123[3], &p0123[3]+3*3);
+		for (int iv = 0; iv < 3; ++iv)
+			for (int i = 0 ; i < 3; ++i)
+				v123[iv*3+i] -= p0[i];
 
 		std::cout << p0[0]<< '\t'<< p0[1]<< '\t' << p0[2]<< '\t'<<v123[0] << '\t' <<v123[1] << '\t' <<v123[2] << '\t' <<c<<'\n';
 		std::cout << p0[0]<< '\t'<< p0[1]<< '\t' << p0[2]<< '\t'<<v123[3+0] << '\t' <<v123[3+1] << '\t' <<v123[3+2] << '\t' <<c <<'\n';
@@ -76,9 +82,8 @@ BOOST_AUTO_TEST_CASE( Tetrahedra_partitioning_no_sym )
 
 	// cross check volume and stuff
 	auto vol = [&g] (elephon::LatticeStructure::Tetrahedron const & t) {
-		std::vector<double> p0;
 		std::vector<double> v123;
-		t.compute_corner_vectors(p0, v123);
+		t.compute_corner_vectors(v123);
 		double A11 = v123[3*0+0];double A12 = v123[3*0+1];double A13 = v123[3*0+2];
 		double A21 = v123[3*1+0];double A22 = v123[3*1+1];double A23 = v123[3*1+2];
 		double A31 = v123[3*2+0];double A32 = v123[3*2+1];double A33 = v123[3*2+2];

@@ -57,6 +57,22 @@ public:
 
 	std::vector<double> get_vector_direct(int i) const;
 
+	/**
+	 * Convert a reducible grid index into a grid vector.
+	 *
+	 * This is the variant of the function that does not reallocate memory
+	 * which should be faster where that matters.
+	 *
+	 * @param i		The input reducible grid index.
+	 * @param xyz	a 3 component vector used as buffer. Overwritten on output.
+	 * @param v		a 3 component double vector. On output set to the grid reducible vector.
+	 */
+	void get_vector_direct(int i, std::vector<int> & xyz, std::vector<double> & v) const;
+
+	std::vector<double> get_vectors_direct(std::vector<int> const & reducibleIndices) const;
+
+	std::vector<double> get_all_vectors_grid() const;
+
 	int get_xyz_to_reducible(std::vector<int> const & xyzTouple) const;
 
 	/**
@@ -70,6 +86,8 @@ public:
 	int get_xyz_to_reducible_periodic(std::vector<int> xyzTouple) const;
 
 	std::vector<int> get_reducible_to_xyz(int i) const;
+
+	void get_reducible_to_xyz(int i, std::vector<int> & xyz) const;
 
 	std::vector<int> const & get_grid_dim() const;
 

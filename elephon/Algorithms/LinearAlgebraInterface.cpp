@@ -54,7 +54,7 @@ LinearAlgebraInterface::call_gemv(
 		cblasTrans = CblasTrans;
 	if ( (TRANS == 'C') or (TRANS == 'c') )
 		cblasTrans = CblasConjTrans;
-	cblas_cgemv(CblasColMajor, cblasTrans, M, N,
+	cblas_cgemv(CblasRowMajor, cblasTrans, M, N,
 			reinterpret_cast<CBLAS_CMPLFLT_PTR*>(&ALPHA),
 			reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(A), LDA,
 			reinterpret_cast<const CBLAS_CMPLFLT_PTR*>(X), INCX,

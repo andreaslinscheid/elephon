@@ -127,13 +127,26 @@ public:
 	 * obtain the tetrahedra iso-surface of the dense electronic band structure.
 	 *
 	 * Values for the isosurface are taken from the input parameter ea2F.
-	 * The code will first try to obtain the 'dense' electronic wavefunctions specified in
+	 * The code will first try to obtain the 'dense' electronic energies specified in
 	 * the 'eld' input option. If that directory does not exist, we gracefully try to load
-	 * the wavefunctions in the root directory. Only if these do not exist either, we bail.
+	 * the electronic structure in the root directory. Only if these do not exist either, we bail.
 	 *
 	 * @return shared pointer, initialized with the dense electron band mesh.
 	 */
 	std::shared_ptr<const ElectronicStructure::TetrahedraIsosurface> get_tetrahedra_isosurface();
+
+	/**
+	 * obtain the tetrahedra iso-surface of the fft interpolated electronic band structure.
+	 *
+	 * Values for the isosurface are taken from the input parameter ea2F.
+	 * The code will first try to obtain the 'dense' electronic structure specified in
+	 * the 'eld' input option. If that directory does not exist, we gracefully try to load
+	 * the electronic structure in the root directory. Only if these do not exist either, we bail.
+	 * The resulting electronic structure will be interpolated to the fft dim using the fft type interpolation.
+	 *
+	 * @return shared pointer, initialized with the fft interpolated electron band mesh.
+	 */
+	std::shared_ptr<const ElectronicStructure::TetrahedraIsosurface> get_tetrahedra_isosurface_fft();
 
 	std::shared_ptr<const IOMethods::KPath> get_k_path();
 private:
@@ -170,6 +183,8 @@ private:
 
 	std::shared_ptr<ElectronicStructure::TetrahedraIsosurface> tetraIso_;
 
+	std::shared_ptr<ElectronicStructure::TetrahedraIsosurface> tetraIsoFFT_;
+
 	std::shared_ptr<IOMethods::KPath> kpath_;
 
 	void initialize_phonon_obj();
@@ -201,6 +216,8 @@ private:
 	void initialize_tetrahedra_grid();
 
 	void initialize_tetrahedra_isosurface();
+
+	void initialize_tetrahedra_isosurface_fft();
 
 	void initialize_k_path();
 };

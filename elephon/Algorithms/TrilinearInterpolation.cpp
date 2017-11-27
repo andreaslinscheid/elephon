@@ -42,9 +42,18 @@ TrilinearInterpolation::data_query(
 		std::vector<int> & requiredGridIndices)
 {
 	listOfPoints_ = std::move(listOfPoints);
+	const double g = tetraGrid_->get_grid()->get_grid_prec();
 	//Map back to the periodic cell [0,1[ this is done, because the tetrahedra are defined in this cell.
 	for ( auto & xi : listOfPoints_ )
+	{
 		xi -= std::floor(xi);
+		// Note: this resetting of points very close to 1.0 is because the periodicity causes trouble
+		//		in the way points are handled. For example it can be that xi = 1.0-1e-16 and here
+		//		this is computed < 1 while due to numerical inaccuracy, later we find via some
+		//		equivalent re-calculation such as in compute_grid_tetrahedra_surrounding_nongrid_points
+		//		line 258 xi > 1 which gets mapped to 0. To prevent that, we shift all such points to a safe margin
+		xi = xi > 1.0-g? 1.0-g : xi;
+	}
 	int nPts = listOfPoints_.size()/3;
 
 	std::map<LatticeStructure::Tetrahedron, std::vector<int>> tetraContainedIndicesListMap;

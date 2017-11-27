@@ -73,6 +73,8 @@ public:
 	void generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const;
 
 	void compute_supercell_dim(std::shared_ptr<const UnitCell> supercell, std::vector<int> & supercellDim ) const;
+
+	int atom_rot_map(int symIndex, int atomIndex) const;
 private:
 
 	LatticeStructure::LatticeModule lattice_;
@@ -82,6 +84,8 @@ private:
 	std::vector<LatticeStructure::Atom> atoms_;
 
 	std::vector<LatticeStructure::Symmetry> siteSymmetries_;
+
+	std::vector<std::vector<int>> atomSymMap_;
 
 	void add_displacement( std::vector<double> direction,
 			std::vector<double> const & position,

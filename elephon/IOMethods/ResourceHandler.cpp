@@ -178,6 +178,15 @@ ResourceHandler::get_tetrahedra_isosurface()
 	return tetraIso_;
 }
 
+std::shared_ptr<const ElectronicStructure::TetrahedraIsosurface>
+ResourceHandler::get_tetrahedra_isosurface_fft()
+{
+	if ( ! tetraIsoFFT_ )
+		this->initialize_tetrahedra_isosurface_fft();
+	assert(tetraIsoFFT_);
+	return tetraIsoFFT_;
+}
+
 std::shared_ptr<const IOMethods::KPath>
 ResourceHandler::get_k_path()
 {
@@ -334,7 +343,7 @@ ResourceHandler::initialize_displacement_potential_obj()
 	LatticeStructure::RegularBareGrid rsGridSC;
 	rsGridSC.initialize( dim, false, gPrec, {0.0, 0.0, 0.0}, supercell->get_lattice());
 
-	//Read the normal periodic potential form the root dir
+	// Read the normal periodic potential form the root dir
 	std::vector<double> primitiveCellPotential;
 	dataLoader_->read_electronic_potential(
 			dataLoader_->get_optns().get_root_dir(),
@@ -342,6 +351,11 @@ ResourceHandler::initialize_displacement_potential_obj()
 			primitiveCellPotential);
 	elephon::LatticeStructure::RegularBareGrid rsGridUC;
 	rsGridUC.initialize( dim, false, gPrec, {0.0, 0.0, 0.0}, unitCell->get_lattice());
+
+	// check if the grids are compatible
+	for (int ix = 0 ; ix < 3 ; ++ix)
+		if ( rsGridSC.get_grid_dim()[ix] % rsGridUC.get_grid_dim()[ix] )
+			throw std::runtime_error("Input error: The Fourier grid of the supercell is not a multiple of the unit cell grid.");
 
 	std::vector<int> coarseGrainGrid = this->get_optns().get_dvscfc();
 	if ( coarseGrainGrid.size() == 1 )
@@ -449,6 +463,21 @@ ResourceHandler::initialize_tetrahedra_isosurface()
 					this->get_dense_electronic_bands_obj(),
 					this->get_optns().get_ea2f() );
 	tetraIso_ = std::make_shared<ElectronicStructure::TetrahedraIsosurface>( std::move(tis) );
+}
+
+void
+ResourceHandler::initialize_tetrahedra_isosurface_fft()
+{
+	auto fft_tetra_mesh = this->get_interpol_reci_tetra_mesh_obj();
+	ElectronicStructure::ElectronicBands denseBands = *this->get_dense_electronic_bands_obj();
+	auto bareGrid = this->get_interpol_reci_mesh_obj();
+	denseBands.fft_interpolate(bareGrid->get_grid_dim(), bareGrid->get_grid_shift());
+	auto fftbands_ptr = std::make_shared<ElectronicStructure::ElectronicBands>(std::move(denseBands));
+	ElectronicStructure::TetrahedraIsosurface tis;
+	tis.initialize( this->get_interpol_reci_tetra_mesh_obj(),
+					fftbands_ptr,
+					this->get_optns().get_ea2f() );
+	tetraIsoFFT_ = std::make_shared<ElectronicStructure::TetrahedraIsosurface>( std::move(tis) );
 }
 
 void

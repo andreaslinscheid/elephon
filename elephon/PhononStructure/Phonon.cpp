@@ -58,7 +58,7 @@ Phonon::compute_at_q(std::vector<double> const & q,
 	for ( int mu1 = 0 ; mu1 < nM ; ++mu1)
 		sqrtMasses[mu1] = std::sqrt(masses_[mu1/3]);
 
-	fc_->fourier_transform_q(q, eigenModes);
+	fc_->fourier_transform_q(q, eigenModes, true);
 	assert( eigenModes.size() == nM*nM*nq );
 	w2.resize( nq*nM );
 	for ( int iq = 0 ; iq < nq ; ++iq)
@@ -75,6 +75,23 @@ Phonon::compute_at_q(std::vector<double> const & q,
 		for ( int mu = 0 ; mu < nM ; ++mu)
 			w2[iq*nM+mu] = Auxillary::units::SQRT_EV_BY_A2_U_TO_THZ*
 					( qlocalFreq[mu] >= 0 ? std::sqrt(qlocalFreq[mu]) : -std::sqrt(-qlocalFreq[mu]));
+
+		// phase convention: choose the first eigenmode real
+		for (int imode = 0 ; imode < nM; ++imode)
+		{
+			std::complex<double> phase(1.0);
+			for (int icomponent = 0 ; icomponent < nM; ++icomponent)
+			{
+				if ( std::abs(eigenModes[(iq*nM+icomponent)*nM+imode]) > 1e-8 )
+				{
+					phase = eigenModes[(iq*nM+icomponent)*nM+imode]
+									   /std::abs(eigenModes[(iq*nM+icomponent)*nM+imode]);
+					break;
+				}
+			}
+			for (int icomponent = 0 ; icomponent < nM; ++icomponent)
+				eigenModes[(iq*nM+icomponent)*nM+imode] *= std::conj(phase);
+		}
 	}
 }
 

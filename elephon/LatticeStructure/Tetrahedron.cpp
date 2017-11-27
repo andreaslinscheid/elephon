@@ -74,7 +74,6 @@ Tetrahedron::get_corner_indices() const
 
 void
 Tetrahedron::compute_corner_vectors(
-		std::vector<double> & p0,
 		std::vector<double> & v123 ) const
 {
 	std::vector<double> p0123(3*4);
@@ -168,7 +167,7 @@ Tetrahedron::check_vectors_inside(
 		// definition : point on the boundary is inside.
 		// We allow a numerical grace zone what we consider "on" the border.
 		// the value below is effectively a threshold on the volume fraction
-		const double borderThr = 1e-6;
+		const double borderThr = extendedGrid_->get_grid_prec();
 
 		barycentricCoordinates[ip*4+0] = d1/d0;
 		barycentricCoordinates[ip*4+1] = d2/d0;

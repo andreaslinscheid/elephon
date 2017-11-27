@@ -381,8 +381,9 @@ Symmetry::get_num_symmetries_no_T_rev() const
 	return numSymmetries_ ;
 }
 
-void
-Symmetry::small_group(std::vector<double> const& point)
+std::vector<int>
+Symmetry::small_group(
+		std::vector<double> const& point)
 {
 	//apply all symmetry operations and discard those who map point somewhere else
 	std::vector<int> dropIndices;
@@ -398,6 +399,7 @@ Symmetry::small_group(std::vector<double> const& point)
 			}
 	}
  	this->symmetry_reduction(dropIndices);
+ 	return dropIndices;
 }
 
 std::vector<Symmetry::SymmetryOperation>
@@ -566,6 +568,7 @@ Symmetry::Sop::rotate_cart( std::vector<double> & v ) const
 	for ( int i = 0; i < 3; ++i)
 		v[i] = ptgCart[i*3+0]*b[0]+ptgCart[i*3+1]*b[1]+ptgCart[i*3+2]*b[2];
 };
+
 
 int
 Symmetry::get_identity_index() const

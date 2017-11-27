@@ -569,5 +569,24 @@ DataRegularGrid<T>::interpolate_bands_along_path(
 	}
 }
 
+template<typename T>
+template<typename VR>
+void
+DataRegularGrid<T>::copy_selected_grid_points(
+		std::vector<int> const & reducibleGridIndices,
+		VR & data) const
+{
+	const int np = reducibleGridIndices.size();
+	const int nD = this->get_nData_gpt();
+
+	std::vector<int> irreducible;
+	grid_.convert_reducible_irreducible(reducibleGridIndices, irreducible);
+
+	data.resize(np*nD);
+	for (int ip = 0; ip < np; ++ip)
+		for (int id = 0 ; id < nD ; ++id)
+			data[ip*nD+id] = dataIrred_[irreducible[ip]*nD+id];
+}
+
 } /* namespace LatticeStructure */
 } /* namespace elephon */

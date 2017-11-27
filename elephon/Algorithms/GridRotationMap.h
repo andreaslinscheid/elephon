@@ -50,6 +50,11 @@ void compute_grid_rotation_map(
 		LatticeStructure::Symmetry const & symmetry,
 		std::vector< std::vector<int> > & rotMap);
 
+void compute_grid_rotation_map_no_shift(
+		LatticeStructure::RegularBareGrid const & grid,
+		LatticeStructure::Symmetry const & symmetry,
+		std::vector< std::vector<int> > & rotMap);
+
 } /* namespace Algorithms */
 } /* namespace elephon */
 

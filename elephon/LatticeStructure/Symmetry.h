@@ -41,6 +41,9 @@ public:
 		void rotate( std::vector<int> & v ) const;
 		void apply( std::vector<double> & v, bool latticePeriodic = true) const;
 		void rotate_cart( std::vector<double> & v ) const;
+
+		template<class VT>
+		void rotate_matrix_cart(VT & m) const;
 	} SymmetryOperation;
 
 	Symmetry();
@@ -92,7 +95,16 @@ public:
 
 	int get_num_symmetries_no_T_rev() const;
 
-	void small_group(std::vector<double> const& point);
+	/**
+	 * Remove symmetry operations from the set that do not leave a vector invariant.
+	 *
+	 * The point is taken without periodicity. This means symmetry operations that transform p->p+G are also
+	 * discarded. TODO consider the case that p -> p+G
+	 *
+	 * @param point		must be 3 component vector with x,y,z components of the vector that will be left invariant.
+	 * @return			a list of symmetry indices of the old group that were removed.
+	 */
+	std::vector<int> small_group(std::vector<double> const& point);
 
 	/**
 	 *

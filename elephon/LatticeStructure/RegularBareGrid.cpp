@@ -109,16 +109,24 @@ RegularBareGrid::get_xyz_to_reducible_periodic(std::vector<int> xyzTouple) const
 std::vector<int>
 RegularBareGrid::get_reducible_to_xyz(int i) const
 {
+	std::vector<int> tuple(3);
+	this->get_reducible_to_xyz(i, tuple);
+	return tuple;
+}
+
+void
+RegularBareGrid::get_reducible_to_xyz(int i, std::vector<int> & xyz) const
+{
+	assert(xyz.size() == 3);
 	//reverse engineer get_xyz_to_reducible using integer division
 	//i = (xyzTouple[2]*pointMesh_[1]+xyzTouple[1])*pointMesh_[0]+xyzTouple[0];
-	std::vector<int> tuple(3,i);
-	tuple[2] /= pointMesh_[1]*pointMesh_[0];
-	tuple[1] -= tuple[2]*pointMesh_[1]*pointMesh_[0];
-	tuple[0] -= tuple[2]*pointMesh_[1]*pointMesh_[0];
-	tuple[1] /= pointMesh_[0];
-	tuple[0] -= tuple[1]*pointMesh_[0];
-	assert( i == tuple[0]+pointMesh_[0]*(tuple[1]+pointMesh_[1]*tuple[2]) );
-	return tuple;
+	std::fill(xyz.begin(), xyz.end(), i);
+	xyz[2] /= pointMesh_[1]*pointMesh_[0];
+	xyz[1] -= xyz[2]*pointMesh_[1]*pointMesh_[0];
+	xyz[0] -= xyz[2]*pointMesh_[1]*pointMesh_[0];
+	xyz[1] /= pointMesh_[0];
+	xyz[0] -= xyz[1]*pointMesh_[0];
+	assert( i == xyz[0]+pointMesh_[0]*(xyz[1]+pointMesh_[1]*xyz[2]) );
 }
 
 void
@@ -169,13 +177,52 @@ RegularBareGrid::get_grid_prec() const
 std::vector<double>
 RegularBareGrid::get_vector_direct(int i) const
 {
-	auto xyz = this->get_reducible_to_xyz(i);
-	std::vector<double> v({ double(xyz[0])/double(pointMesh_[0]) + pointShift_[0],
-							double(xyz[1])/double(pointMesh_[1]) + pointShift_[1],
-							double(xyz[2])/double(pointMesh_[2]) + pointShift_[2] } );
+	std::vector<int> xyz(3);
+	std::vector<double> v(3);
+	this->get_vector_direct(i, xyz, v);
+	return v;
+}
+
+void
+RegularBareGrid::get_vector_direct(
+		int i,
+		std::vector<int> & xyz,
+		std::vector<double> & v) const
+{
+	assert(xyz.size() == 3);
+	assert(v.size() == 3);
+	this->get_reducible_to_xyz(i, xyz);
+	v[0] = double(xyz[0])/double(pointMesh_[0]) + pointShift_[0];
+	v[1] = double(xyz[1])/double(pointMesh_[1]) + pointShift_[1];
+	v[2] = double(xyz[2])/double(pointMesh_[2]) + pointShift_[2];
 	for ( auto &xi : v)
 		xi -= std::floor(xi + 0.5);
-	return v;
+}
+
+std::vector<double>
+RegularBareGrid::get_vectors_direct(
+		std::vector<int> const & reducibleIndices) const
+{
+	const int np = reducibleIndices.size();
+	std::vector<double> vectors(np*3);
+	std::vector<int> xyz(3);
+	std::vector<double> v(3);
+	for (int ip = 0 ; ip < np ; ++ip)
+	{
+		this->get_vector_direct(reducibleIndices[ip], xyz, v);
+		for (int i = 0 ; i < 3 ; ++i)
+			vectors[ip*3+i] = v[i];
+	}
+	return vectors;
+}
+
+std::vector<double>
+RegularBareGrid::get_all_vectors_grid() const
+{
+	std::vector<int> allGridIndices(numPoints_);
+	for (int i = 0 ; i < numPoints_; ++i)
+		allGridIndices[i] = i;
+	return this->get_vectors_direct(allGridIndices);
 }
 
 std::vector<int>

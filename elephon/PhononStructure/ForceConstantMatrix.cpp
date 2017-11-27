@@ -26,6 +26,7 @@
 #include <set>
 #include <map>
 #include <iostream>
+#include <memory>
 
 namespace elephon
 {
@@ -333,8 +334,10 @@ ForceConstantMatrix::get_num_R() const
 }
 
 void
-ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
-		Auxillary::alignedvector::ZV & data) const
+ForceConstantMatrix::fourier_transform_q(
+		std::vector<double> const & qVect,
+		Auxillary::alignedvector::ZV & data,
+		bool symmetrize) const
 {
 	assert( qVect.size()%3 == 0 );
 	int nq = int(qVect.size())/3;
@@ -344,7 +347,6 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 
 	int nAUC = nM/3;
 	int nR = this->get_num_R();
-
 
 	std::vector< std::complex<double> > phases(nR*nAUC*nAUC);
 	for ( int iq = 0 ; iq < nq ; ++iq)
@@ -377,6 +379,127 @@ ForceConstantMatrix::fourier_transform_q(std::vector<double> const & qVect,
 		for ( int mu1 = 0 ; mu1 < nM; ++mu1 )
 			for ( int mu2 = mu1+1 ; mu2 < nM; ++mu2 )
 				data[iq*nM*nM + mu2*nM+mu1] = std::conj(data[iq*nM*nM + mu1*nM+mu2]);
+	}
+
+	//symmetrize if requested
+	if ( symmetrize )
+	{
+		this->symmetrize_q(qVect, data);
+	}
+}
+
+void
+ForceConstantMatrix::symmetrize_q(
+		std::vector<double> const & qpoints,
+		Auxillary::alignedvector::ZV & data,
+		std::shared_ptr<const LatticeStructure::UnitCell> unitCell) const
+{
+	if (! unitCell)
+		unitCell = uc_;
+
+	const int nq = qpoints.size()/3;
+	const int nM = this->get_num_modes();
+	const int nA = nM/3;
+	assert(data.size() == nq*nM*nM);
+
+	auto fullSymmetryGroup = unitCell->get_symmetry();
+
+	Auxillary::alignedvector::ZV rotBuffer(3*3);
+	for ( int iq = 0 ; iq < nq ; ++iq)
+	{
+		std::vector<double> q(&qpoints[iq*3], &qpoints[iq*3]+3);
+		auto smallGroupQ = fullSymmetryGroup;
+		smallGroupQ.set_reciprocal_space_sym(true);
+		auto dropedSymmetries = smallGroupQ.small_group(q);
+		const int nsymQ = smallGroupQ.get_num_symmetries_no_T_rev();
+
+		// for the pure identity symmetry there is nothing to be done.
+		if (nsymQ == 1)
+			continue;
+
+		std::vector<bool> visited(nA*nA, false);
+
+		std::set<int> dropSym(dropedSymmetries.begin(), dropedSymmetries.end());
+
+		std::vector<std::complex<double>> rotPhases(nsymQ);
+
+		for (int ia = 0 ; ia < nA ; ++ia)
+			for (int ib = 0 ; ib < nA ; ++ib)
+			{
+				if ( visited[ia*nA+ib] )
+					continue;
+
+				std::fill(rotBuffer.begin(), rotBuffer.end(), std::complex<double>(0.0));
+
+				// Note: 	we use an inverse logic here with 'dropped', instead of 'kept', symmetries is
+				//			because the initial atom mapping is done for indices of full symmetry group.
+				//			This way, we loop until we find a symmetry that is still present.
+				int isymq = 0;
+				for (int isym = 0 ; isym < fullSymmetryGroup.get_num_symmetries(); ++isym)
+				{
+					if ( dropSym.find(isym) != dropSym.end())
+						continue;
+
+					assert(isymq < nsymQ);
+					auto symOp = fullSymmetryGroup.get_sym_op(isym);
+
+					int mapped_ia = unitCell->atom_rot_map(isym, ia);
+					int mapped_ib = unitCell->atom_rot_map(isym, ib);
+
+					double arg = 0;
+					for (int xi = 0 ; xi < 3 ; ++xi)
+						arg +=  2.0*M_PI*q[xi]*(unitCell->get_atoms_list()[mapped_ia].get_position()[xi]
+									- unitCell->get_atoms_list()[mapped_ib].get_position()[xi]);
+					rotPhases[isymq] = std::complex<double>(std::cos(arg), std::sin(arg));
+
+					for ( int i = 0; i < 3; ++i)
+						for ( int j = 0; j < 3; ++j)
+							for ( int k = 0; k < 3; ++k)
+								for ( int l = 0; l < 3; ++l)
+								{
+									int mu1 = (mapped_ia*3+k);
+									int mu2 = (mapped_ib*3+l);
+									int cnsq = (iq*nM+mu1)*nM+mu2;
+									rotBuffer[i*3+j] += rotPhases[isymq]*
+												symOp.ptgCart[i*3+k]*data[cnsq]*symOp.ptgCart[j*3+l];
+								}
+					++isymq;
+				}
+				assert(isymq == nsymQ);
+
+				// fill the symmetrized matrix in all symmetry equivalent places
+				isymq = 0;
+				for (int isym = 0 ; isym < fullSymmetryGroup.get_num_symmetries(); ++isym)
+				{
+					if ( dropSym.find(isym) != dropSym.end())
+						continue;
+					assert(isymq < nsymQ);
+					auto symOp = fullSymmetryGroup.get_sym_op(isym);
+
+					int mapped_ia = unitCell->atom_rot_map(isym, ia);
+					int mapped_ib = unitCell->atom_rot_map(isym, ib);
+
+					for ( int i = 0; i < 3; ++i)
+						for ( int j = 0; j < 3; ++j)
+						{
+							int mu1 = (mapped_ia*3+i);
+							int mu2 = (mapped_ib*3+j);
+							int cnsq = (iq*nM+mu1)*nM+mu2;
+							data[cnsq] = 0;
+							for ( int k = 0; k < 3; ++k)
+								for ( int l = 0; l < 3; ++l)
+								{
+									// note: symOp.ptgCart is transposed which is the inverse matrix
+									data[cnsq] += std::conj(rotPhases[isymq]) / double(nsymQ)*
+												symOp.ptgCart[k*3+i]*rotBuffer[k*3+l]*symOp.ptgCart[l*3+j];
+								}
+						}
+
+					visited[mapped_ia*nA+mapped_ib] = true;
+					++isymq;
+				}
+				assert(isymq == nsymQ);
+			}
 	}
 }
 

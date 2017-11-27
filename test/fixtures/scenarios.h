@@ -57,6 +57,27 @@ load_Al_fcc_primitive_vasp_sc2x2x2()
 	return dl.create_resource_handler( content );
 }
 
+std::shared_ptr<IOMethods::ResourceHandler>
+load_Al_fcc_primitive_vasp_sc4x4x4()
+{
+	test::fixtures::MockStartup ms;
+	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "sc_4x4x4" ;
+	auto phononDir = rootDir / "el_ph";
+	std::string content = std::string()+
+			"scell=4 4 4\n"
+			"lep = true\n"
+			"lp = true\n"
+			"root_dir="+rootDir.string()+"\n"
+			"dvscfc = 0\n"
+			"elphd="+phononDir.string()+"\n"
+			"eld="+ (phononDir / "electrons").string()+"\n"
+			"f_a2F="+ (phononDir / "a2F.dat").string()+"\n"
+			"phrange = 10\n"
+			"";
+	test::fixtures::DataLoader dl;
+	return dl.create_resource_handler( content );
+}
+
 } /* namespace scenarios */
 } /* namespace fixtures */
 } /* namespace test */

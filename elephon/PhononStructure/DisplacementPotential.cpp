@@ -175,13 +175,7 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 				   &irreducibleDisplPot[irA*3*nrSC]+3*nrSC,
 				   linDVscf.data());
 
-		std::vector<double> gridThisAtom(3*nrSC);
-		for ( int ir = 0 ; ir < nrSC; ++ir)
-		{
-			auto r = supercellGrid.get_vector_direct(ir);
-			for ( int xi = 0 ; xi < 3 ; ++ xi)
-				gridThisAtom[ir*3+xi] = r[xi];
-		}
+		std::vector<double> gridThisAtom = supercellGrid.get_all_vectors_grid();
 
 		//loop the star of the irreducible atom
 		for ( int istar = 0; istar < symIrredToRedAtoms[irA].size(); ++istar )
@@ -276,6 +270,7 @@ DisplacementPotential::compute_dvscf_q(
 		Auxillary::alignedvector::DV const & modes,
 		Auxillary::alignedvector::ZV const & dynamicalMatrices,
 		std::vector<double> const & masses,
+		std::vector<double> const & rVectors,
 		Auxillary::alignedvector::CV & dvscf,
 		std::vector<Auxillary::alignedvector::CV> & buffer,
 		double freqCutoff) const
@@ -288,6 +283,7 @@ DisplacementPotential::compute_dvscf_q(
 	assert( (dynamicalMatrices.size()/nq) / (numModes_*numModes_) == 1 );
 	assert( (masses.size()*3) / numModes_ == 1 );
 	freqCutoff = freqCutoff < 1e-5 ? 1e-5 : freqCutoff;
+	assert( rVectors.size()/3 == nptsRealSpace_ );
 
 	// introduce names for the various buffers
 	buffer.resize(2);
@@ -311,6 +307,7 @@ DisplacementPotential::compute_dvscf_q(
 										+qVect[iq*3+1]*(RVectors_[3*iR+1] + tau[1])
 										+qVect[iq*3+2]*(RVectors_[3*iR+2] + tau[2]));
 				std::complex<float> phase = std::exp( std::complex<float>(0,dprod));
+
 				for (int iDispl = 0 ; iDispl < 3; ++iDispl)
 				{
 					int mu = ia*3+iDispl;
@@ -320,36 +317,38 @@ DisplacementPotential::compute_dvscf_q(
 			}
 		}
 
-		// in case there are only few modes in the system, avoid the calling overhead of
-		// the blas package
-//		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
-//			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
-//				for ( int ir = 0 ; ir < nptsRealSpace_; ++ir )
-//					dvscf[(iq*numModes_+mu1)*nptsRealSpace_+ir] +=
-//							std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3])
-//									  *ftDisplPot[mu2*nptsRealSpace_+ir];
-
 		dynmatMassBuffer.resize(numModes_*numModes_);
 		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
 			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
 				dynmatMassBuffer[mu1*numModes_+mu2] =
-						std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) / float(masses[mu2/3]);
+						std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) /  std::sqrt(float(masses[mu1/3]));
 
 		auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
-		linAlg.call_gemm( 'n', 'n',
+		linAlg.call_gemm( 't', 'n',
 				numModes_, nptsRealSpace_ , numModes_,
 				std::complex<float>(1.0f), dynmatMassBuffer.data(), numModes_,
 				ftDisplPot.data(), nptsRealSpace_,
 				std::complex<float>(0.0f), r_ptr, nptsRealSpace_);
+	}
 
+	// multiply the phase exp(i q*r) to make it lattice periodic
+	this->multiply_phase_qr(qVect, dvscf);
+
+	// symmetrize the lattice periodic displacement potential
+//	this->symmetrize_periodic_dvscf_q(qVect, dvscf);
+
+	// go to units of eV by dividing by the frequency and multiplying the conversion factor
+	for ( int iq = 0 ; iq < nq; ++iq)
 		for ( int mu = 0 ; mu < numModes_; ++mu )
 		{
-			float scale = (std::abs(modes[iq*numModes_+mu]) < freqCutoff ? 0.0f :
+			float scale = (modes[iq*numModes_+mu] < freqCutoff ? 0.0f :
 					static_cast<float>(Auxillary::units::SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM / std::sqrt(modes[iq*numModes_+mu])) );
 			for (int ir = 0 ; ir < nptsRealSpace_; ++ir)
+			{
 				dvscf[(iq*numModes_+mu)*nptsRealSpace_+ir] *= scale;
+				assert(dvscf[(iq*numModes_+mu)*nptsRealSpace_+ir] == dvscf[(iq*numModes_+mu)*nptsRealSpace_+ir]);
+			}
 		}
-	}
 }
 
 void
@@ -516,7 +515,7 @@ DisplacementPotential::write_dvscf_q(
 
 	Auxillary::alignedvector::CV qDataPlus;
 	std::vector<Auxillary::alignedvector::CV> buffers;
-	this->compute_dvscf_q(qVect, modes, dynamicalMatrices, masses, qDataPlus, buffers);
+	this->compute_dvscf_q(qVect, modes, dynamicalMatrices, masses, unitCellGrid_.get_all_vectors_grid(), qDataPlus, buffers);
 
 	int nr = unitCellGrid_.get_num_points();
 	assert(qDataPlus.size() == nq*numModes_*nr);
@@ -534,7 +533,7 @@ DisplacementPotential::write_dvscf_q(
 		for ( auto mu : modeIndices )
 		{
 			assert( (mu >= 0) && (mu < numModes_) );
-			std::string comment = "Displacement potential dvscf(r)/du(q,mu); q = ("
+			std::string comment = "Lattice periodic part of the displacement potential dvscf(r)/du(q,mu); q = ("
 					+std::to_string(qVect[iq*3+0])+" , "+std::to_string(qVect[iq*3+1])+" , "+std::to_string(qVect[iq*3+2])
 					+") mode # "+ std::to_string(mu) +". Units are eV.\n";
 			std::vector<double> data(nr);
@@ -601,7 +600,7 @@ DisplacementPotential::build_supercell_to_primitive(
 				rvecUC *= primitiveCellGrid.get_grid_dim()[i];
 				xyz[i] = std::floor(rvecUC+0.5);
 			}
-			// NOTE: since the atom position shit means we are out of the grid, we have to allow for
+			// NOTE: since the atom position shift means we are out of the grid, we have to allow for
 			// the case where any xyz[i] is equal to primitiveCellGrid.get_grid_dim()[i]. Thus we have to use the
 			// periodic version get_xyz_to_reducible.
 			int cnsq = primitiveCellGrid.get_xyz_to_reducible_periodic(xyz);
@@ -680,6 +679,132 @@ DisplacementPotential::constuct_potential_variation(
 		assert(potentialDispl[ird].size() == nRSC);
 		for (int ir = 0 ; ir < nRSC; ++ir)
 			potentialDispl[ird][ir] -= potentialUC[mapback[ir]];
+	}
+}
+
+void
+DisplacementPotential::symmetrize_periodic_dvscf_q(
+		std::vector<double> const & qpoints,
+		Auxillary::alignedvector::CV & dvscfData) const
+{
+	const int nq = qpoints.size()/3;
+	const int nM = this->get_num_modes();
+	assert(dvscfData.size()==nq*nM*nptsRealSpace_);
+
+	LatticeStructure::Symmetry const & fullSymmetryGroup = unitCell_->get_symmetry();
+	std::vector<std::vector<int>> rotMap;
+	Algorithms::compute_grid_rotation_map_no_shift(
+			unitCellGrid_,
+			fullSymmetryGroup,
+			rotMap);
+
+	Auxillary::alignedvector::CV rotBuffer(3*3);
+	for ( int iq = 0 ; iq < nq ; ++iq)
+	{
+		std::vector<double> q(&qpoints[iq*3], &qpoints[iq*3]+3);
+		auto smallGroupQ = fullSymmetryGroup;
+		smallGroupQ.set_reciprocal_space_sym(true);
+		auto dropedSymmetries = smallGroupQ.small_group(q);
+		const int nsymQ = smallGroupQ.get_num_symmetries_no_T_rev();
+
+		// for the pure identity symmetry there is nothing to be done.
+		if (nsymQ == 1)
+			continue;
+
+		std::set<int> dropSym(dropedSymmetries.begin(), dropedSymmetries.end());
+
+		for (int inu = 0 ; inu < nM; ++inu)
+		{
+			Auxillary::alignedvector::CV dvscfToSym(&dvscfData[(iq*nM+inu)*nptsRealSpace_],
+													&dvscfData[(iq*nM+inu)*nptsRealSpace_]+nptsRealSpace_);
+			for (int isym = 0 ; isym < fullSymmetryGroup.get_num_symmetries(); ++isym)
+			{
+				if ( dropSym.find(isym) != dropSym.end())
+					continue;
+
+				// Identity symmetry is included with the copy above.
+				if (isym == fullSymmetryGroup.get_identity_index())
+					continue;
+
+				for (int ir = 0 ; ir < nptsRealSpace_; ++ir)
+				{
+					const int irRot = rotMap[isym][ir];
+					dvscfToSym[irRot] += dvscfData[(iq*nM+inu)*nptsRealSpace_+ir];
+std::cout <<inu<<'\t'<< ir<<'\t'<<isym<< '\n'
+		<< dvscfData[(iq*nM+inu)*nptsRealSpace_+ir] << '\t'<< dvscfToSym[ir] << std::endl;
+				}
+			}
+			for (int ir = 0 ; ir < nptsRealSpace_; ++ir)
+			{
+				dvscfData[(iq*nM+inu)*nptsRealSpace_+ir] = dvscfToSym[ir]/static_cast<float>(nsymQ);
+			}
+		}
+	}
+}
+
+void
+DisplacementPotential::multiply_phase_qr(
+		std::vector<double> const & qpoints,
+		Auxillary::alignedvector::CV & dvscf_q) const
+{
+	const int nq = qpoints.size()/3;
+	const int nM = this->get_num_modes();
+	assert(dvscf_q.size()==nq*nM*nptsRealSpace_);
+
+	// the code below attempts to reduce expensive complex phase calculations in this performance critical part of the code
+	const int nrx = unitCellGrid_.get_grid_dim()[0];
+	const int nry = unitCellGrid_.get_grid_dim()[1];
+	const int nrz = unitCellGrid_.get_grid_dim()[2];
+
+	for (int iq = 0 ; iq < nq ; ++iq)
+	{
+		auto phaseIncX = std::complex<double>( std::cos(2.0*M_PI*qpoints[iq*3+0]/static_cast<double>(nrx)),
+											   std::sin(2.0*M_PI*qpoints[iq*3+0]/static_cast<double>(nrx)) );
+		auto phaseIncY = std::complex<double>( std::cos(2.0*M_PI*qpoints[iq*3+1]/static_cast<double>(nry)),
+											   std::sin(2.0*M_PI*qpoints[iq*3+1]/static_cast<double>(nry)) );
+		auto phaseIncZ = std::complex<double>( std::cos(2.0*M_PI*qpoints[iq*3+2]/static_cast<double>(nrz)),
+											   std::sin(2.0*M_PI*qpoints[iq*3+2]/static_cast<double>(nrz)) );
+
+		#ifndef NDEBUG
+		auto rVec = unitCellGrid_.get_all_vectors_grid();
+		#endif
+
+		for ( int mu = 0 ; mu < numModes_; ++mu )
+		{
+			std::complex<double> totalPhaseGP(1.0);
+			for (int iz = 0 ; iz < nrz; ++iz)
+			{
+				if (iz == nrz/2)
+					totalPhaseGP *= std::complex<double>(  std::cos(2.0*M_PI*qpoints[iq*3+2]),
+														  -std::sin(2.0*M_PI*qpoints[iq*3+2]) );
+				for (int iy = 0 ; iy < nry; ++iy)
+				{
+					if (iy == nry/2)
+						totalPhaseGP *= std::complex<double>(  std::cos(2.0*M_PI*qpoints[iq*3+1]),
+															  -std::sin(2.0*M_PI*qpoints[iq*3+1]) );
+					for (int ix = 0 ; ix < nrx; ++ix)
+					{
+						if (ix == nrx/2)
+							totalPhaseGP *= std::complex<double>(  std::cos(2.0*M_PI*qpoints[iq*3+0]),
+																  -std::sin(2.0*M_PI*qpoints[iq*3+0]) );
+						const int ir = ix+nrx*(iy+nry*iz);
+#ifndef NDEBUG
+						// in debug mode, we verify that the phase (computed directly) equal the stepping
+						// algorithm used here to avoid expensive trigonometric functions.
+						float arg = 2.0*M_PI*(  qpoints[iq*3+0]*rVec[ir*3+0]
+											  + qpoints[iq*3+1]*rVec[ir*3+1]
+											  +	qpoints[iq*3+2]*rVec[ir*3+2]);
+						auto p = std::complex<float>(std::cos(arg), std::sin(arg));
+						assert(std::abs(std::complex<float>(totalPhaseGP)-p)<1e-6);
+#endif
+						dvscf_q[(iq*numModes_+mu)*nptsRealSpace_+ir] *= static_cast<std::complex<float>>(totalPhaseGP);
+						totalPhaseGP *= phaseIncX;
+					}
+					totalPhaseGP *= phaseIncY;
+				}
+				totalPhaseGP *= phaseIncZ;
+			}
+		}
 	}
 }
 

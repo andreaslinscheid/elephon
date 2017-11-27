@@ -89,7 +89,7 @@ main(int argc, char* argv[])
 				//run electron-phonon calculation
 				PhononStructure::AlphaSquaredF a2FDriver;
 				std::cout << "Calculating a2F ..." << std::endl;
-				a2FDriver.compute_a2F(resources);
+				a2FDriver.compute_a2F_grid(resources);
 
 				if ( not resources->get_optns().get_f_a2F().empty() )
 					a2FDriver.write_a2F_file( resources->get_optns().get_f_a2F() );

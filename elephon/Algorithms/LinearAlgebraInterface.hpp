@@ -117,12 +117,13 @@ LinearAlgebraInterface::null_space(std::vector<T> A, int m, int n,
 		}
 }
 
-template<typename T>
+template<typename VT>
 void
-LinearAlgebraInterface::matrix_matrix_prod(std::vector<T> const & A,
-		std::vector<T> const & B,
-		std::vector<T> & ATimesB, int m, int n) const
+LinearAlgebraInterface::matrix_matrix_prod(VT const & A,
+		VT const & B,
+		VT & ATimesB, int m, int n) const
 {
+	typedef typename VT::value_type T;
 	int k = int(A.size())/m;
 	assert( k == int(B.size())/n );
 	ATimesB.resize( m * n );
@@ -169,23 +170,23 @@ LinearAlgebraInterface::svd(std::vector<T> A, int m, int n,
 			ldvt, work, rwork, lwork, IPIV_.data()  );
 }
 
-template<typename T>
+template<typename VT>
 void
-LinearAlgebraInterface::transpose_square_matrix(std::vector<T> & A) const
+LinearAlgebraInterface::transpose_square_matrix(VT & A) const
 {
 	int dim = this->square_matrix_dim(A);
 	for (int i = 0 ; i < dim ; ++i)
 		for (int j = i+1 ; j < dim ; ++j)
 		{
-			T tmp = A[i*dim+j];
+			typename VT::value_type tmp = A[i*dim+j];
 			A[i*dim+j] = A[j*dim+i];
 			A[j*dim+i] = tmp;
 		}
 }
 
-template<typename T>
+template<typename VT>
 void
-LinearAlgebraInterface::conjugate_square_matrix(std::vector<T> & A) const
+LinearAlgebraInterface::conjugate_square_matrix(VT & A) const
 {
 	this->transpose_square_matrix(A);
 	for (auto & a : A )

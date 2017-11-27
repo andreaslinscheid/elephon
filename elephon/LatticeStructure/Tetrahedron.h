@@ -45,7 +45,6 @@ public:
 	std::vector<int> const & get_corner_indices() const;
 
 	void compute_corner_vectors(
-			std::vector<double> & p0,
 			std::vector<double> & v123 ) const;
 
 	void compute_corner_points(

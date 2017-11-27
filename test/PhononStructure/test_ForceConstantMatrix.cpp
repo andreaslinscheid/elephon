@@ -25,10 +25,26 @@
 #include "IOMethods/VASPInterface.h"
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
+#include "fixtures/scenarios.h"
 #include <assert.h>
 #include <vector>
 #include <fstream>
 #include <string>
+
+
+BOOST_AUTO_TEST_CASE( ForceConstantMatrix_symmetrization )
+{
+	std::vector<double> q = {0.5, 0.0, 0.0};
+	std::complex<double> ii(0,1);
+	std::complex<double> one(1,0);
+	elephon::Auxillary::alignedvector::ZV data{	one, ii, one,
+												one, ii, one,
+												one, ii, one };
+	auto resHndl = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
+	auto uc = resHndl->get_primitive_unitcell_obj();
+	auto phi = resHndl->get_forceConstant_obj();
+	phi->symmetrize_q(q, data, uc);
+}
 
 BOOST_AUTO_TEST_CASE( build_Al_primitive )
 {

@@ -122,6 +122,11 @@ public:
 			std::vector<int> const & bIndices,
 			VR & bands) const;
 
+	template<typename VR>
+	void copy_selected_grid_points(
+			std::vector<int> const & reducibleGridIndices,
+			VR & data) const;
+
 	/**
 	 * compute data for bIndices and interpolate in to the reducible grid.
 	 *

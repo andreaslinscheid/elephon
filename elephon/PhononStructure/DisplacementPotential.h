@@ -51,6 +51,7 @@ public:
 			Auxillary::alignedvector::DV const & modes,
 			Auxillary::alignedvector::ZV const & dynamicalMatrices,
 			std::vector<double> const & masses,
+			std::vector<double> const & rVectors,
 			Auxillary::alignedvector::CV & dvscf,
 			std::vector<Auxillary::alignedvector::CV> & buffer,
 			double freqCutoff = 0.0) const;
@@ -153,6 +154,15 @@ private:
 			LatticeStructure::RegularBareGrid const & unitcellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector< std::vector<double> > & potentialDispl);
+
+	void symmetrize_periodic_dvscf_q(
+			std::vector<double> const & qpoints,
+			Auxillary::alignedvector::CV & dvscfData) const;
+
+	void multiply_phase_qr(
+			std::vector<double> const & qpoints,
+			Auxillary::alignedvector::CV &dvscf_q) const;
+
 };
 
 } /* namespace PhononStructure */

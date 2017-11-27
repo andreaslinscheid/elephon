@@ -69,6 +69,19 @@ public:
 
 	virtual std::vector<int> get_max_fft_dims() = 0;
 
+	/**
+	 * Obtain the wave function data.
+	 *
+	 * Sign convention: The code uses the following sign and normalization convention
+	 * w(G) =      sum(r) w(G) exp(+iG.r)
+	 * w(r) = 1/NG sum(G) w(G) exp(-iG.r)
+	 *
+	 * @param root_directory
+	 * @param kpts
+	 * @param bandIndices
+	 * @param wfctData
+	 * @param npwPerKpt
+	 */
 	virtual void read_wavefunctions(
 			std::string root_directory,
 			std::vector<int> const & kpts,

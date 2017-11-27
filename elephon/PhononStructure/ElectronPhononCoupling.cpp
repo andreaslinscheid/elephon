@@ -33,285 +33,118 @@ namespace PhononStructure
 {
 
 void
-ElectronPhononCoupling::generate_gkkp_and_phonon(
-		std::vector<double> kList,
-		std::vector<double> kpList,
-		std::vector<int> bandList,
-		std::vector<int> bandpList,
-		std::shared_ptr<const Phonon> ph,
-		std::shared_ptr<const DisplacementPotential> dvscf,
-		std::shared_ptr<const ElectronicStructure::Wavefunctions> wfcts)
-{
-	assert(kList.size()%3 == 0);
-	assert(kpList.size()%3 == 0);
-	nK_ = kList.size()/3;
-	nKp_ = kpList.size()/3;
-	if ( (nK_ == 0) or (nKp_ == 0) )
-		return;
-
-	bool report_timings = nKp_ > 100;
-
-	// TODO a system-wide meaure of timings would be desirable
-	std::map<std::string,std::pair< decltype(std::chrono::system_clock::now()), std::chrono::duration<double> >> durations;
-	auto start_m_c = [&durations] (std::string const & tag) {
-		auto it = durations.find(tag) ;
-		if ( it == durations.end())
-			durations[tag] = std::make_pair(std::chrono::system_clock::now(),
-											std::chrono::duration<double>(0.0));
-		else
-			it->second.first = std::chrono::system_clock::now();
-	};
-	auto stop_m_c = [&durations] (std::string const & tag) {
-		auto it = durations.find(tag) ;
-		assert ( it != durations.end());
-		auto time_now = std::chrono::system_clock::now();
-		it->second.second += std::chrono::duration<double>(time_now - it->second.first);
-	};
-
-	if ( report_timings )
-		start_m_c("wfcts_gen");
-
-	//Wave functions are on a regular grid and in G (reciprocal) space
-	std::vector< std::vector<std::complex<float> > > wfcsk, wfcskp;
-	std::vector< std::vector<int> > fftMapsK, fftMapsKp;
-	wfcts->generate_wfcts_at_arbitray_kp( kList, bandList, wfcsk, fftMapsK);
-	wfcts->generate_wfcts_at_arbitray_kp( kpList, bandpList, wfcskp, fftMapsKp );
-
-	// conjugate the left wfct of the scalar product
-	for ( auto & wfk : wfcsk )
-		for ( auto & cg : wfk )
-			cg = std::conj(cg);
-
-	if ( report_timings )
-	{
-		stop_m_c("wfcts_gen");
-		std::cout << "\tGenerating wavefunctions at "<<kList.size()/3+kpList.size()/3
-				<< " k points: "<<durations["wfcts_gen"].second.count()<<"s"<< std::endl;
-		durations.erase("wfcts_gen");
-	}
-
-	std::vector<int> potentialFFTGrid = dvscf->get_real_space_grid().get_grid_dim();
-
-	int nr = potentialFFTGrid[0]*potentialFFTGrid[1]*potentialFFTGrid[2];
-	std::vector<double> rVectors(nr*3);
-	for (int ir = 0 ; ir < nr ; ++ir)
-	{
-		auto rVec = dvscf->get_real_space_grid().get_vector_direct(ir);
-		for (int i = 0 ; i < 3 ; ++i)
-			rVectors[ir*3+i] = rVec[i];
-	}
-
-	nM_ = ph->get_num_modes();
-	nB_ = bandList.size();
-	nBp_ = bandpList.size();
-
-	Algorithms::LinearAlgebraInterface linalg;
-
-	std::vector<double> allQVectors(nK_*nKp_*3);
-	std::vector<std::pair<int,int>> q_to_k_and_kp_map(nK_*nKp_);
-	for ( int ik = 0 ; ik < nK_; ++ik)
-		for ( int ikp = 0 ; ikp < nKp_; ++ikp)
-		{
-			const int ikkp = ik*nKp_+ikp;
-			allQVectors[ikkp*3+0] = kpList[ik*3+0]-kList[ikp*3+0];
-			allQVectors[ikkp*3+1] = kpList[ik*3+1]-kList[ikp*3+1];
-			allQVectors[ikkp*3+2] = kpList[ik*3+2]-kList[ikp*3+2];
-
-			q_to_k_and_kp_map[ikkp].first = ik;
-			q_to_k_and_kp_map[ikkp].second = ikp;
-		}
-
-	// map q vectors back to the 1. BZ
-	for ( auto &qi : allQVectors )
-		qi -= std::floor(qi+0.5);
-
-	std::map<LatticeStructure::RegularBareGrid::GridPoint, std::vector<int>> gp_to_q_index;
-	dvscf->query_q(allQVectors, gp_to_q_index);
-
-	double percentageDone = 0.0;
-	auto start_clock = std::chrono::system_clock::now();
-
-	// for OpenMP, we need random access iterators ...
-	std::vector<std::pair<LatticeStructure::RegularBareGrid::GridPoint, std::vector<int>>> gp_to_q_index_vector;
-	gp_to_q_index_vector.reserve(gp_to_q_index.size());
-	for ( auto const & coarseGP : gp_to_q_index )
-		gp_to_q_index_vector.push_back(coarseGP);
-
-#ifndef NDEBUG
-	// cross check that all q-indices are there once.
-	std::set<int> cross_check_set;
-	for (int igp = 0 ; igp < gp_to_q_index_vector.size(); ++igp)
-		for (int iq : gp_to_q_index_vector[igp].second )
-			cross_check_set.insert(iq);
-	assert(cross_check_set.size() == nK_*nKp_);
-	assert(*cross_check_set.rbegin() == (nK_*nKp_-1));
-#endif
-
-
-	Algorithms::FFTInterface fft1, fft2;
-	fft1.plan_fft(potentialFFTGrid, nB_,  1, false, nK_);
-	fft2.plan_fft(potentialFFTGrid, nBp_, -1, false, nKp_);
-
-	std::vector<int> localQDone(omp_get_max_threads(), 0);
-
-	phononFrequencies_.resize(nK_*nKp_*nM_);
-	data_.resize( nK_*nKp_*nM_*nB_*nBp_ );
-	#pragma omp parallel
-	{
-		// thread private buffer data
-		Auxillary::alignedvector::DV modes;
-		Auxillary::alignedvector::ZV dynmat;
-		Auxillary::alignedvector::CV wfcProdBuffRealSpace(nr), localGkkp, dvscfData, bufferWfct1,bufferWfct2;
-		std::vector<Auxillary::alignedvector::CV> dvscfBuffers;
-
-		#pragma omp for
-		for (int icgp = 0 ; icgp < gp_to_q_index_vector.size(); ++icgp)
-		{
-		    int thread_id = omp_get_thread_num();
-
-			auto const & coarseGP = gp_to_q_index_vector[icgp];
-
-			// set things that go onto the coarse grid
-			std::vector<double> const & gridQ = coarseGP.first.get_coords();
-
-			ph->compute_at_q( gridQ, modes, dynmat );
-
-			dvscf->compute_dvscf_q( gridQ, modes, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
-
-			// now compute things that are handled without a grid
-			for (int iq  : coarseGP.second )
-			{
-				int ik = q_to_k_and_kp_map[iq].first;
-				int ikp = q_to_k_and_kp_map[iq].second;
-
-				fft1.fft_sparse_data(
-						fftMapsK[ik],
-						wfcts->get_max_fft_dims(),
-						wfcsk[ik],
-						1,
-						bufferWfct1);
-
-				fft2.fft_sparse_data(
-						fftMapsKp[ikp],
-						wfcts->get_max_fft_dims(),
-						wfcskp[ikp],
-						-1,
-						bufferWfct2);
-
-				ph->compute_at_q( std::vector<double>(&allQVectors[iq*3], &allQVectors[iq*3]+3), modes, dynmat );
-				std::copy(modes.begin(), modes.end(), &phononFrequencies_[(ik*nKp_+ikp)*nM_]);
-
-				this->compute_gkkp_local(nr, nB_, nBp_, nM_, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
-				std::copy(localGkkp.begin(), localGkkp.end(), &data_[this->tensor_layout(ik,ikp,0,0,0)]);
-			}
-
-			// check if we crossed a cumulative number of njump q points
-			const int njump = 1000;
-			bool report = ((localQDone[thread_id] + coarseGP.second.size())%njump) < (localQDone[thread_id]%njump);
-
-			localQDone[thread_id] += coarseGP.second.size();
-
-			if (report and report_timings and (thread_id == 0))
-			{
-				percentageDone = 0.0;
-				for (auto n : localQDone)
-					percentageDone += static_cast<double>(n)/static_cast<double>(nK_*nKp_);
-				auto thisTime_clock = std::chrono::system_clock::now();
-				std::chrono::duration<double> elapsed_seconds = thisTime_clock-start_clock;
-				std::chrono::duration<double> projectedRuntime_seconds = elapsed_seconds/percentageDone;
-				std::chrono::duration<double> remainingRuntine = projectedRuntime_seconds-elapsed_seconds;
-
-				std::cout << "\r\tPercentage done : " << std::floor(percentageDone*100 + 0.5)
-						<< "; estimated time to finish: " << std::floor(remainingRuntine.count()+0.5) << " s"
-						<<  "                 ";
-				std::cout.flush();
-			}
-		}
-	}//end #pragma omp parallel
-
-	if ( report_timings )
-	{
-		std::cout << std::endl;
-		for (int it = 0 ; it < localQDone.size() ; ++it)
-			std::cout << "Thread: " << it << " finished " << localQDone[it] << " q-points" << std::endl;
-	}
-}
-
-void
-ElectronPhononCoupling::generate_gkkp_energy_units(
-		std::vector<double> const & kList,
-		std::vector<double> const & kpList,
+ElectronPhononCoupling::generate_gkkp_mod_2_of_q(
+		int qVectorIndex,
+		std::vector<std::pair<int,int>> const & reducibleIndicesKandKp,
 		std::vector<int> bandList,
 		std::vector<int> bandpList,
 		std::shared_ptr<const Phonon> ph,
 		std::shared_ptr<const DisplacementPotential> dvscf,
 		std::shared_ptr<const ElectronicStructure::Wavefunctions> wfcts,
-		std::vector<std::complex<float>> & gkkp) const
+		Auxillary::alignedvector::FV & gkkpMod2) const
 {
-	assert(kList.size() == kpList.size());
-	gkkp.clear();
-	assert(ph and dvscf and wfcts);
+	auto kGrid = wfcts->get_k_grid().view_bare_grid();
+	const int nK = reducibleIndicesKandKp.size();
+	const int nB = bandList.size();
+	const int nBp = bandpList.size();
+	const int nM = dvscf->get_num_modes();
+
+#ifndef NDEBUG
+	auto xyzQ = kGrid.get_reducible_to_xyz(qVectorIndex);
+#endif
+	std::vector<double> gridQ = kGrid.get_vector_direct(qVectorIndex);
+
+	// create two vectors from the input k index pairs
+	std::vector<int> reducibleIndicesK(nK);
+	std::vector<int> reducibleIndicesKp(nK);
+	for (int ikp = 0 ; ikp < nK; ++ikp)
+	{
+		reducibleIndicesK[ikp]=reducibleIndicesKandKp[ikp].first;
+		reducibleIndicesKp[ikp]=reducibleIndicesKandKp[ikp].second;
+	}
+
+	std::vector<double> reducibleIndicesG(reducibleIndicesK.size()*3);
+	std::vector<int> xyz(3);
+	std::vector<double> v(3);
+	// q = k' - k + G0
+	for (int ikp = 0 ; ikp < reducibleIndicesK.size(); ++ikp)
+	{
+		// compute k'-k
+		kGrid.get_vector_direct(reducibleIndicesKp[ikp], xyz, v);
+		for (int i = 0 ; i < 3; ++i)
+			reducibleIndicesG[ikp*3+i] = v[i];
+		kGrid.get_vector_direct(reducibleIndicesK[ikp], xyz, v);
+		for (int i = 0 ; i < 3; ++i)
+			reducibleIndicesG[ikp*3+i] -= v[i];
+#ifndef NDEBUG
+		// cross check that k+q = k' modulo a grid vector.
+		kGrid.get_reducible_to_xyz(reducibleIndicesK[ikp], xyz);
+		for (int i = 0 ; i < 3; ++i)
+			xyz[i] += xyzQ[i];
+		const int ikcheck = kGrid.get_xyz_to_reducible_periodic(xyz);
+		assert(reducibleIndicesKp[ikp] == ikcheck);
+#endif
+	}
+	// now reducibleIndicesG holds q + G0. Get G0
+	for( auto &gi : reducibleIndicesG )
+		gi = std::floor(gi+0.5);
 
 	//Wave functions are on a regular grid and in G (reciprocal) space
-	std::vector< std::vector<std::complex<float> > > wfcsk, wfcskp;
-	std::vector< std::vector<int> > fftMapsK, fftMapsKp;
-	wfcts->generate_wfcts_at_arbitray_kp( kList, bandList, wfcsk, fftMapsK);
-	wfcts->generate_wfcts_at_arbitray_kp( kpList, bandpList, wfcskp, fftMapsKp );
+	//TODO: optimization opportunity: consider merging the loads for equivalent k points
+	std::vector< std::vector<std::complex<float> > > wfcskp, wfcsk;
+	std::vector<int> npwPerK, npwPerKp;
+	wfcts->generate_reducible_grid_wfcts(bandList, reducibleIndicesK, wfcsk, npwPerK );
+	wfcts->generate_reducible_grid_wfcts(bandpList, reducibleIndicesKp, wfcskp, npwPerKp);
 
 	// conjugate the left wfct of the scalar product
 	for ( auto & wfk : wfcsk )
 		for ( auto & cg : wfk )
 			cg = std::conj(cg);
 
-	// some abbriviations
-	std::vector<int> potentialFFTGrid = dvscf->get_real_space_grid().get_grid_dim();
-	const int nk = kList.size()/3;
-	const int nr = potentialFFTGrid[0]*potentialFFTGrid[1]*potentialFFTGrid[2];
-	const int nB = bandList.size();
-	const int nBp = bandpList.size();
-	const int nM = dvscf->get_num_modes();
+	std::vector<double> kVectors = kGrid.get_vectors_direct(reducibleIndicesK);
+	std::vector<double> kpVectors = kGrid.get_vectors_direct(reducibleIndicesKp);
 
-	std::vector<double> rVectors(nr*3);
-	for (int ir = 0 ; ir < nr ; ++ir)
-	{
-		auto rVec = dvscf->get_real_space_grid().get_vector_direct(ir);
-		for (int i = 0 ; i < 3 ; ++i)
-			rVectors[ir*3+i] = rVec[i];
-	}
+	std::vector< std::vector<int> > fftMapsKp, fftMapsK;
+	wfcts->compute_Fourier_maps(kpVectors, fftMapsKp);
+	wfcts->compute_Fourier_maps(kVectors, fftMapsK);
+
+	auto const & realSpaceGrid = dvscf->get_real_space_grid();
+	std::vector<int> potentialFFTGrid = realSpaceGrid.get_grid_dim();
+
+	int nr = potentialFFTGrid[0]*potentialFFTGrid[1]*potentialFFTGrid[2];
+	std::vector<double> rVectors = dvscf->get_real_space_grid().get_all_vectors_grid();
 
 	Algorithms::FFTInterface fft1, fft2;
-	fft1.plan_fft(potentialFFTGrid, nB, 1, false, nk);
-	fft2.plan_fft(potentialFFTGrid, nBp, -1, false, nk);
+	fft1.plan_fft(potentialFFTGrid, nB,  1, false, nK);
+	fft2.plan_fft(potentialFFTGrid, nBp, -1, false, nK);
 
-	std::vector<float> buffer(nr);
 	Auxillary::alignedvector::DV modes;
-	Auxillary::alignedvector::ZV dynmat;
-	Auxillary::alignedvector::CV wfcProdBuffRealSpace(nr), localGkkp, dvscfData, bufferWfct1,bufferWfct2;
+	Auxillary::alignedvector::ZV dynmat, conjDynmat;
+	Auxillary::alignedvector::CV localGkkp, dvscfData, bufferWfct1,bufferWfct2, phaseBuffer(nr);
 	std::vector<Auxillary::alignedvector::CV> dvscfBuffers;
+	Auxillary::alignedvector::ZV localGkkpMod2(nM*nM), localGkkpMod2Buffer(nM*nM);
 
-	gkkp.reserve(nk*nB*nBp*nM);
-	for ( int ik = 0 ; ik < nk ; ++ik )
+	ph->compute_at_q( gridQ, modes, dynmat );
+	dvscf->compute_dvscf_q( gridQ, modes, dynmat, ph->get_masses(), rVectors, dvscfData, dvscfBuffers);
+
+	// Pre-compute all the Umklapp phases that occur
+	std::map<int, Auxillary::alignedvector::CV> expG0dot_r_buffer;
+	std::vector<int> bufferMap;
+	this->compute_umklapp_phase(
+			kGrid.get_grid_prec(),
+			reducibleIndicesG,
+			realSpaceGrid,
+			bufferMap,
+			expG0dot_r_buffer);
+
+	gkkpMod2.assign(nK*nB*nBp*nM, 0.0f);
+	for ( int ik = 0 ; ik < nK; ++ik)
 	{
-		// compute q vector in the 1. BZ
-		std::vector<double> q{	kpList[ik*3+0]-kList[ik*3+0],
-								kpList[ik*3+1]-kList[ik*3+1],
-								kpList[ik*3+2]-kList[ik*3+2]};
-		for ( auto &qi : q )
-			qi -= std::floor(qi+0.5);
-
-		// compute phonon modes and dynamical matrix
-		ph->compute_at_q( q, modes, dynmat );
-		dvscf->compute_dvscf_q(q, modes, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
-
-		assert(modes.size() == nM);
-		assert(dvscfData.size() == nr*nM);
-
-		// generate wfcts on the potential grid
 		fft1.fft_sparse_data(
 				fftMapsK[ik],
 				wfcts->get_max_fft_dims(),
 				wfcsk[ik],
-				1, // conjugate wfct
+				1,
 				bufferWfct1);
 
 		fft2.fft_sparse_data(
@@ -321,8 +154,27 @@ ElectronPhononCoupling::generate_gkkp_energy_units(
 				-1,
 				bufferWfct2);
 
-		this->compute_gkkp_local(nr, nB, nBp, nM, dvscfData, bufferWfct1, bufferWfct2, wfcProdBuffRealSpace, localGkkp);
-		gkkp.insert(std::end(gkkp), std::begin(localGkkp), std::end(localGkkp));
+		this->compute_gkkp_local(
+				nr,
+				nB,
+				nBp,
+				nM,
+				dvscfData,
+				bufferWfct1,
+				bufferWfct2,
+				expG0dot_r_buffer[bufferMap[ik]],
+				phaseBuffer,
+				localGkkp);
+
+		for (int ib = 0 ; ib < nB ; ++ib)
+			for (int ibp = 0 ; ibp < nBp ; ++ibp)
+				for (int imu = 0 ; imu < nM ; ++imu)
+				{
+					gkkpMod2[((ik*nB+ib)*nBp+ibp)*nM+imu] =
+							std::real(std::conj(localGkkp[(ib*nBp+ibp)*nM+imu])*localGkkp[(ib*nBp+ibp)*nM+imu]);
+					assert(gkkpMod2[((ik*nB+ib)*nBp+ibp)*nM+imu] == gkkpMod2[((ik*nB+ib)*nBp+ibp)*nM+imu]);
+				}
+
 	}
 }
 
@@ -335,13 +187,15 @@ ElectronPhononCoupling::compute_gkkp_local(
 		Auxillary::alignedvector::CV const & dvscfData,
 		Auxillary::alignedvector::CV const & wfctBufferk,
 		Auxillary::alignedvector::CV const & wfctBufferkp,
-		Auxillary::alignedvector::CV & wfcProdBuffRealSpace,
+		Auxillary::alignedvector::CV const & expGdot_r,
+		Auxillary::alignedvector::CV & prodBuffer,
 		Auxillary::alignedvector::CV & localGkkp) const
 {
 	assert( wfctBufferk.size() == nr*nB );
 	assert( wfctBufferkp.size() == nr*nBp );
 	assert( dvscfData.size() == nr*nM );
-	assert( wfcProdBuffRealSpace.size() == nr);
+	assert( expGdot_r.size() == nr);
+	assert( prodBuffer.size() == nr);
 
 	Algorithms::LinearAlgebraInterface linalg;
 	localGkkp.assign(nB*nBp*nM, std::complex<float>(0.0f));
@@ -352,58 +206,29 @@ ElectronPhononCoupling::compute_gkkp_local(
 			auto ptr_wf1 = wfctBufferk.data() + ib*nr;
 			auto ptr_wf2 = wfctBufferkp.data() + ibp*nr;
 
+			std::copy(expGdot_r.begin(), expGdot_r.end(), prodBuffer.begin());
+
 			for (int ir = 0 ; ir < nr ; ++ir)
-				wfcProdBuffRealSpace[ir] = ptr_wf1[ir]*ptr_wf2[ir]
+				prodBuffer[ir] *= ptr_wf1[ir]*ptr_wf2[ir]
 											/static_cast<float>(nr);
 
 			linalg.call_gemv('n', nM, nr,
 					std::complex<float>(1.0f),
-					dvscfData.data(), nM,
-					wfcProdBuffRealSpace.data(), 1,
+					dvscfData.data(), nr,
+					prodBuffer.data(), 1,
 					std::complex<float>(0.0f),
 					&localGkkp[this->local_tensor_layout(ib, ibp, 0, nB, nBp, nM)], 1);
-
-//			for (int inu = 0 ; inu < nM; ++inu)
-//				for (int ir = 0 ; ir < nr ; ++ir)
-//					localGkkp[this->local_tensor_layout(ib, ibp, inu, nB, nBp, nM)] +=
-//							dvscfData[inu*nM+ir]*wfcProdBuffRealSpace[ir];
 		}
 }
 
-void
-ElectronPhononCoupling::get_local_matrix_range(int ik, int ikp,
-		std::vector< std::complex<float> >::iterator & rangeBegin,
-		std::vector< std::complex<float> >::iterator & rangeEnd,
-		std::vector< float >::iterator & phononFreqBegin,
-		std::vector< float >::iterator & phononFreqEnd )
-{
-	rangeBegin = data_.begin()+this->tensor_layout(ik,ikp,0,0,0);
-	rangeEnd = rangeBegin+nB_*nBp_*nM_;
-	phononFreqBegin = phononFrequencies_.begin() + nM_*(ikp + nKp_*ik);
-	phononFreqEnd = phononFrequencies_.begin() + nM_*(ikp + nKp_*ik) + nM_;
-}
-
-std::complex<float>
-ElectronPhononCoupling::operator() (int ik, int ikp, int ib, int ibp, int imu) const
-{
-	int i = this->tensor_layout(ik, ikp, ib, ibp, imu);
-	assert((data_.size()>i) && (i>=0));
-	return data_[i];
-}
-
 int
-ElectronPhononCoupling::tensor_layout(int ik, int ikp, int ib, int ibp, int imu) const
-{
-	assert( ik < nK_);
-	assert( ikp < nKp_);
-	assert( ib < nB_);
-	assert( ibp < nBp_);
-	assert( imu < nM_);
-	return (((ik*nKp_+ikp)*nB_+ib)*nBp_+ibp)*nM_+imu;
-}
-
-int
-ElectronPhononCoupling::local_tensor_layout( int ib, int ibp, int imu, int nB, int nBp, int nM) const
+ElectronPhononCoupling::local_tensor_layout(
+		int ib,
+		int ibp,
+		int imu,
+		int nB,
+		int nBp,
+		int nM) const
 {
 	assert( ib < nB);
 	assert( ibp < nBp);
@@ -426,6 +251,74 @@ ElectronPhononCoupling::write_gkkp_file(
 	// write the header
 }
 
+void
+ElectronPhononCoupling::compute_umklapp_phase(
+		double gridPrec,
+		std::vector<double> const &gVectors,
+		LatticeStructure::RegularBareGrid const & rsGrid,
+		std::vector<int> & buffMap,
+		std::map<int,Auxillary::alignedvector::CV> & expGdot_r_buffer) const
+{
+	const int nK =  gVectors.size()/3;
+	buffMap.resize(nK);
+
+	assert(*std::max_element(gVectors.begin(), gVectors.end()) < 1+gridPrec);
+	assert(*std::min_element(gVectors.begin(), gVectors.end()) > -1-gridPrec);
+	auto map_int = [&] (double val) {
+		int ival = std::floor(val+0.5);
+		return ival < 0 ? ival+3 : ival;};
+
+	// the phase is trivially 1 if G is zero
+	expGdot_r_buffer[0] = std::move(Auxillary::alignedvector::CV(rsGrid.get_num_points(),std::complex<float>(1.0f)));
+
+	for (int ik = 0 ; ik < nK ; ++ik)
+	{
+		const int iGx =  map_int(gVectors[ik*3+0]);
+		const int iGy =  map_int(gVectors[ik*3+1]);
+		const int iGz =  map_int(gVectors[ik*3+2]);
+		const int buffindex = iGx+2*(iGy+2*iGz);
+		buffMap[ik] = buffindex;
+		if ( expGdot_r_buffer.find(buffindex) == expGdot_r_buffer.end())
+		{
+			// the code below attempts to reduce expensive complex phase calculations in this performance critical part of the code
+			const int nrx = rsGrid.get_grid_dim()[0];
+			const int nry = rsGrid.get_grid_dim()[1];
+			const int nrz = rsGrid.get_grid_dim()[2];
+			auto phaseIncX = std::complex<double>( std::cos(2.0*M_PI*gVectors[ik*3+0]/static_cast<double>(nrx)),
+												   std::sin(2.0*M_PI*gVectors[ik*3+0]/static_cast<double>(nrx)) );
+			auto phaseIncY = std::complex<double>( std::cos(2.0*M_PI*gVectors[ik*3+1]/static_cast<double>(nry)),
+												   std::sin(2.0*M_PI*gVectors[ik*3+1]/static_cast<double>(nry)) );
+			auto phaseIncZ = std::complex<double>( std::cos(2.0*M_PI*gVectors[ik*3+2]/static_cast<double>(nrz)),
+												   std::sin(2.0*M_PI*gVectors[ik*3+2]/static_cast<double>(nrz)) );
+			Auxillary::alignedvector::CV phases(rsGrid.get_num_points());
+
+			std::complex<double> totalPhaseGP(1.0);
+			for (int iz = 0 ; iz < nrz; ++iz)
+			{
+				for (int iy = 0 ; iy < nry; ++iy)
+				{
+					for (int ix = 0 ; ix < nrx; ++ix)
+					{
+						const int ir = ix+nrx*(iy+nry*iz);
+						phases[ir] = static_cast<std::complex<float>>(totalPhaseGP);
+#ifndef NDEBUG
+						// We use explicitly that the grid is x major. This assertion should fail if anybody ever was to change that
+						auto rVec = rsGrid.get_vector_direct(ir);
+						auto pha = std::exp(std::complex<double>(0.0, 2.0*M_PI*(gVectors[ik*3+0]*rVec[0]+
+																				gVectors[ik*3+1]*rVec[1]+
+																				gVectors[ik*3+2]*rVec[2] )));
+						assert(std::abs(totalPhaseGP-pha)<1e-8);
+#endif
+						totalPhaseGP *= phaseIncX;
+					}
+					totalPhaseGP *= phaseIncY;
+				}
+				totalPhaseGP *= phaseIncZ;
+			}
+			expGdot_r_buffer[buffindex] = std::move(phases);
+		}
+	}
+}
 
 } /* namespace PhononStructure */
 } /* namespace elephon */

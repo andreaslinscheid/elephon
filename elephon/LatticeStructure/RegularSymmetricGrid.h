@@ -38,6 +38,7 @@ public:
 	typedef RegularBareGrid::GridPoint GridPoint;
 
 	using RegularBareGrid::get_vector_direct;
+	using RegularBareGrid::get_vectors_direct;
 	using RegularBareGrid::get_grid_prec;
 	using RegularBareGrid::get_xyz_to_reducible;
 	using RegularBareGrid::get_reducible_to_xyz;

@@ -46,7 +46,8 @@ public:
 	double operator() (int Rz, int Ry, int Rx,int mu2, int mu1) const;
 
 	void fourier_transform_q(std::vector<double> const & qVect,
-			Auxillary::alignedvector::ZV & data) const;
+			Auxillary::alignedvector::ZV & data,
+			bool symmetrize = false) const;
 
 	void fourier_transform_derivative(std::vector<double> const & qVect,
 			Auxillary::alignedvector::ZV & data) const;
@@ -58,6 +59,11 @@ public:
 	void symmetrize(
 			bool accusticSumRule,
 			LatticeStructure::Symmetry const & symmetry );
+
+	void symmetrize_q(
+			std::vector<double> const & qpoints,
+			Auxillary::alignedvector::ZV & data,
+			std::shared_ptr<const LatticeStructure::UnitCell> unitCell = nullptr) const;
 private:
 
 	int numModes_ = 0;
