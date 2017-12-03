@@ -6,7 +6,7 @@ elephon requires the Boost libraries, the VTK libary, BLAS / LAPACK, fftw3  and 
 
 load the following modules with the command
 
-$ module load cmake gcc vtk fftw mkl boost/1.54.0
+$ module load cmake gcc vtk fftw mkl boost/1.64.0
 
 ### END HIPERGATOR specific ###
 
