@@ -48,7 +48,8 @@ PhononGrid::write_phonon_dos_file(
 	if ( ! tetra )
 	{
 		if ( ! ph )
-			this->compute_DOS(frequencies, phdos);
+			throw std::runtime_error(std::string("PhononGrid::write_phonon_dos_file: "
+					"Need either matrix of force constants or tetrahedra grid"));
 		else
 			this->compute_DOS_wan(*ph, frequencies, phdos);
 	}

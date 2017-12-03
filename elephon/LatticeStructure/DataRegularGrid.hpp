@@ -271,12 +271,13 @@ DataRegularGrid<T>::compute_derivatives_sqr_polynom(
 		return this->read( grid_.get_maps_red_to_irreducible()[ikr], bandIndices[ib]);
 	};
 
-	Algorithms::localDerivatives::compute_derivatives_sqr_polynom<TD>(
+	Algorithms::localDerivatives::compute_derivatives_sqr_polynom_symmetric<TD>(
 			bandIndices.size(),
 			reducibleKPTIndices,
 			gradientFieldPtr,
 			hessianFieldPtr,
 			grid_.view_bare_grid(),
+			grid_.get_symmetry(),
 			translate_bands );
 }
 
@@ -348,28 +349,6 @@ DataRegularGrid<T>::interpret_range(std::vector<double> range) const
 	if ( (range.size() > 2) or (range[0] >= range[1]) )
 		throw std::runtime_error("DataRegularGrid interpret_range: range empty or incorrect");
 	return std::make_pair(range[0], range[1]);
-}
-
-template<typename T>
-void
-DataRegularGrid<T>::compute_DOS(
-		std::vector<double> const & energies,
-		std::vector<T> & dos) const
-{
-	// create a lambda that loads the right gradient for a requested grid point
-	auto load_derivative_data = [&] (
-			std::vector<int> const & bandIndices,
-			std::vector<int> const & reqGridIndices,
-			std::vector<T> & gradient)
-		{
-		this->compute_derivatives_sqr_polynom<T>(
-				bandIndices,
-				reqGridIndices,
-				&gradient,
-				nullptr);
-		};
-
-	this->compute_DOS_general(load_derivative_data, energies, dos);
 }
 
 template<typename T>

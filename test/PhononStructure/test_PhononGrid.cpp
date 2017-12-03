@@ -83,14 +83,8 @@ BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 
 	std::vector<double> phDos_wan;
 	phgrid.compute_DOS_wan(*ph, frequencies, phDos_wan);
-
-	std::vector<double> phDos_poly;
-	phgrid.compute_DOS(frequencies, phDos_poly);
-
-	BOOST_CHECK_EQUAL( phDos_poly.size() , phDos_wan.size());
-	BOOST_CHECK_EQUAL( phDos_poly.size() , phDos.size());
 	for (int iw = 0 ; iw < phDos.size() ; ++iw )
-		std::cout << frequencies[iw] << '\t' << phDos[iw] << '\t' << phDos_wan[iw] << '\t' << phDos_poly[iw] << '\n';
+		std::cout << frequencies[iw] << '\t' << phDos[iw] << '\t' << phDos_wan[iw] << '\n';
 }
 
 

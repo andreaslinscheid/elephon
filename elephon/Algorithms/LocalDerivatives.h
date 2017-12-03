@@ -40,6 +40,17 @@ compute_derivatives_sqr_polynom(
 		LatticeStructure::RegularBareGrid const & grid,
 		DataLoader const & reducibleData);
 
+template<typename T, class DataLoader>
+void
+compute_derivatives_sqr_polynom_symmetric(
+		int nBnd,
+		std::vector<int> const & reducibleKPTIndices,
+		std::vector<T> * gradientFieldPtr,
+		std::vector<T> * hessianFieldPtr,
+		LatticeStructure::RegularBareGrid const & grid,
+		LatticeStructure::Symmetry const & sym,
+		DataLoader const & reducibleData);
+
 } /* namespace localDerivatives */
 } /* namespace Algorithms */
 } /* namespace elephon */

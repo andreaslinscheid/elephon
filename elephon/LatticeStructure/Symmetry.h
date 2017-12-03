@@ -66,7 +66,7 @@ public:
 	void apply_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
 						std::vector<double>::iterator fieldCartEnd) const;
 
-	template<typename T>
+	template<class T>
 	void rotate(int isym,
 				typename std::vector<T>::iterator fieldDirectSpaceBegin,
 				typename std::vector<T>::iterator fieldDirectSpaceEnd,
