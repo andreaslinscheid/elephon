@@ -921,7 +921,7 @@ where
 \begin_inset Formula $\hbar\varOmega_{\boldsymbol{q}\nu}$
 \end_inset
 
- must have the unit of energy, obviously and thus, converting to SI units
+ must have the unit of energy, obviously, and thus converting to SI units
 \begin_inset Formula 
 \begin{eqnarray}
 \varOmega_{\boldsymbol{q}\nu} & \sim & \sqrt{\frac{{\rm eV}}{{\rm \AA}^{2}{\rm u}}}=\sqrt{\frac{1.6021766208\times10^{-19}{\rm J}}{1.660539040\times10^{-27}\cdot10^{-20}{\rm m}^{2}\cdot{\rm kg}}}\\
@@ -1332,6 +1332,19 @@ The coupling of electrons to the perturbation of the lattice centers is
 \begin_layout Standard
 The Kohn Sham potential and the effect of a displacement is formaly written
  as [Guistino Review]
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+begin{widetext}
+\end_layout
+
+\end_inset
+
+
 \begin_inset Formula 
 \begin{equation}
 v_{{\rm {\scriptscriptstyle scf}}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}\}](\boldsymbol{r})=v_{{\rm {\scriptscriptstyle scf}}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\}](\boldsymbol{r})+\sum_{\kappa\alpha\boldsymbol{R}}\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}[\{\boldsymbol{\tau}_{\kappa\alpha\boldsymbol{R}}\}](\boldsymbol{r})}{\delta\boldsymbol{\tau}_{\kappa\alpha\boldsymbol{R}}}\bigr\vert_{\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\}}\Delta\boldsymbol{\tau}_{\kappa\alpha\boldsymbol{R}}
@@ -1351,6 +1364,19 @@ Equivalently,
 
 
 \series default
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+end{widetext}
+\end_layout
+
+\end_inset
+
 which higheigts that 
 \begin_inset Formula $\delta v_{{\rm {\scriptscriptstyle scf}}}[\{\boldsymbol{\tau}_{\kappa\alpha\boldsymbol{R}}\}](\boldsymbol{r})/\delta\boldsymbol{\tau}_{\kappa\alpha\boldsymbol{R}}$
 \end_inset
@@ -1689,44 +1715,6 @@ reference "eq:SymmetryDisplacementPotential"
 
 \end_layout
 
-\begin_layout Standard
-Let us have a look at the order of numerical complexity.
- 
-\begin_inset Formula $\mathcal{O}(\boldsymbol{M})\sim100$
-\end_inset
-
- since the interactions are usually pretty local and screening is good.
- There are easily 
-\begin_inset Formula $\mathcal{O}(\boldsymbol{r})\sim10^{5}$
-\end_inset
-
- since we need to resolve the atomic potential accurately and the Fourier
- grid is usually very fine.
- Furthermore, we have 
-\begin_inset Formula $3\times N_{{\rm atoms}}$
-\end_inset
-
- modes in the system where 
-\begin_inset Formula $N_{{\rm atoms}}$
-\end_inset
-
- is the number of atoms in the primitive cell.
- Assuming 
-\begin_inset Formula $\mathcal{O}(10^{2})$
-\end_inset
-
- modes, we have to store 
-\begin_inset Formula $10^{8}$
-\end_inset
-
- real (single pricision) values, which is 
-\begin_inset Formula $\mathcal{O}(10)$
-\end_inset
-
-GB of data and easily managable of modern computer hardware.
- This estimation is for a rather large system.
-\end_layout
-
 \begin_layout Subsection
 Coupling to a phonon mode
 \end_layout
@@ -1823,7 +1811,7 @@ C_{g^{-1}\boldsymbol{q}\kappa^{\prime}\alpha^{\prime},\nu}=\sum_{\alpha}g_{\alph
 
 \end_inset
 
-
+which can be extended to form the matrix transformation.
 \end_layout
 
 \begin_layout Subsection
@@ -1835,7 +1823,7 @@ In a normalization convention adopted in many electronic structure codes
  
 \begin_inset Formula 
 \begin{equation}
-\int_{{\rm UC}}{\rm d}\boldsymbol{r}\vert\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\vert^{2}=1
+\int_{{\rm UC}}{\rm d}\boldsymbol{r}\vert\psi_{\boldsymbol{k}i}(\boldsymbol{r})\vert^{2}=1
 \end{equation}
 
 \end_inset
@@ -1845,7 +1833,7 @@ Thus, if we insist on the total normalization of Bloch states, but still
  space
 \begin_inset Formula 
 \begin{equation}
-\frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\vert\psi_{\boldsymbol{k}i}^{\ast}(\boldsymbol{r})\vert^{2}=1
+\frac{1}{N_{\boldsymbol{q}}}\int{\rm d}\boldsymbol{r}\vert\psi_{\boldsymbol{k}i}(\boldsymbol{r})\vert^{2}=1
 \end{equation}
 
 \end_inset
@@ -1957,40 +1945,6 @@ and thus already includes the volume factor
 \end_inset
 
 .
- Note also the following symmetry properties that follow from Eq.
-\begin_inset space ~
-\end_inset
-
-
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:SymmetryDisplacementPotential"
-
-\end_inset
-
-
-\begin_inset Formula 
-\begin{eqnarray}
-{\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\beta}(\boldsymbol{r}-\boldsymbol{R}) & = & {\boldsymbol{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\alpha}\bigl(g^{-1}\cdot(\boldsymbol{r}-\boldsymbol{R})-\tau\bigr)\cdot g\\
-\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}\nu}} & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}C_{\boldsymbol{q}\nu i_{\mu}x_{i}}g_{x_{i}x_{j}}\{\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}[g^{-1}\cdot(\boldsymbol{r}-\boldsymbol{M})-\tau]\}{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}\\
- & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}C_{\boldsymbol{q}\nu i_{\mu}x_{i}}g_{x_{i}x_{j}}\{\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}[g^{-1}\cdot\boldsymbol{r}-\boldsymbol{M}-\tau]\}{\rm e}^{-{\rm i}(g^{-1}\cdot\boldsymbol{q})\cdot\boldsymbol{M}}
-\end{eqnarray}
-
-\end_inset
-
-and thus
-\begin_inset Formula 
-\begin{eqnarray}
-\{g|\tau\}^{-1}\frac{\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})}{\delta u_{\boldsymbol{q}i_{\nu}x_{\nu}}} & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}x_{k}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}g_{x_{\nu}x_{k}}^{-1}C_{g\cdot\boldsymbol{q}i_{\nu}x_{k}i_{\mu}x_{i}}g_{x_{i}x_{j}}[\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{M})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}\\
- & = & \sum_{\boldsymbol{M}i_{\mu}x_{i}x_{j}x_{k}}\sqrt{\frac{{\rm u}}{m_{i_{\mu}}}}C_{\boldsymbol{q}i_{\nu}x_{k}i_{\mu}x_{i}}g_{x_{i}x_{j}}[\nabla_{i_{\mu}x_{j}\boldsymbol{0}}v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r}-\boldsymbol{M})]{\rm e}^{-{\rm i}\boldsymbol{q}\cdot\boldsymbol{M}}
-\end{eqnarray}
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Standard
 \begin_inset ERT
 status open
 
@@ -2050,7 +2004,8 @@ In practice, we will compute
 \end_inset
 
  that enumarte the vectors on the Fermi surface.
- The wavefunctions will be linearly interpolated to the Fermi surface 
+ The wavefunctions will be approximated by what is the closest regular grid
+ vector to the Fermi surface 
 \begin_inset Formula $\boldsymbol{k}_{{\rm F}}^{i}$
 \end_inset
 
@@ -2075,7 +2030,7 @@ reference "eq:MatrixForceConstantsInterpol"
 \end_inset
 
  and obtain 
-\begin_inset Formula $\tilde{C}(\boldsymbol{k}-\boldsymbol{k}^{\prime}\mu_{1},\mu_{2})/\sqrt{m_{\mu_{1}}m_{\mu_{2}}}$
+\begin_inset Formula $\tilde{C}({\rm grid}(\boldsymbol{k}-\boldsymbol{k}^{\prime})\mu_{1},\mu_{2})/\sqrt{m_{\mu_{1}}m_{\mu_{2}}}$
 \end_inset
 
 , diagonalize it to find the dynamical matrix via
@@ -2086,18 +2041,7 @@ reference "eq:MatrixForceConstantsInterpol"
 
 \end_inset
 
-and use Eq.
-\begin_inset space ~
-\end_inset
-
-
-\begin_inset CommandInset ref
-LatexCommand ref
-reference "eq:ModeDisplacementPotential"
-
-\end_inset
-
- to find, first 
+and find, first 
 \begin_inset Formula $\delta v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})/\delta u_{\boldsymbol{q}\nu}$
 \end_inset
 
@@ -2329,8 +2273,549 @@ where we have rearranged the sum over
  and the weights are grid symmetric.
 \end_layout
 
+\begin_layout Section
+(More) Technical aspects
+\end_layout
+
+\begin_layout Subsection
+The displacement potential in a PAW setting
+\end_layout
+
+\begin_layout Standard
+Let us have a look at the order of numerical complexity in determining
+\begin_inset Formula 
+\begin{equation}
+{\delta v_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\mu\alpha}(\boldsymbol{r}-\boldsymbol{R})
+\end{equation}
+
+\end_inset
+
+for 
+\begin_inset Formula $\boldsymbol{R}\in\boldsymbol{M}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\mathcal{O}(\boldsymbol{M})\sim100$
+\end_inset
+
+ since the interactions are usually pretty local and screening is good.
+ If not, every method has problems, DFPT argumbly less than finite displacement,
+ though.
+ 
+\end_layout
+
+\begin_layout Standard
+There are easily 
+\begin_inset Formula $\mathcal{O}(\boldsymbol{r})\sim10^{5}$
+\end_inset
+
+ since we need to resolve the atomic potential accurately and the Fourier
+ grid is usually very fine.
+ Furthermore, we have 
+\begin_inset Formula $3\times N_{{\rm atoms}}$
+\end_inset
+
+ modes in the system where 
+\begin_inset Formula $N_{{\rm atoms}}$
+\end_inset
+
+ is the number of atoms in the primitive cell.
+ Assuming 
+\begin_inset Formula $\mathcal{O}(10^{2})$
+\end_inset
+
+ modes, we have to store 
+\begin_inset Formula $10^{8}$
+\end_inset
+
+ real (single pricision) values, which is 
+\begin_inset Formula $\mathcal{O}(10)$
+\end_inset
+
+GB of data and easily managable of modern computer hardware.
+ This estimation is for a rather large system.
+\end_layout
+
+\begin_layout Standard
+[TODO/ Dec 8: ] Consulting with G.
+ Kresse, we have to include the atomic site contributions because LOCPOT
+ is only the plane-wave part, not the AE part fittet to the plane wave mesh.
+\end_layout
+
+\begin_layout Standard
+In the derivation, we have used the all electron Kohn-Sham potential.
+ The full AE potential is given by the Hartree plus exchange correlation
+ potential 
+\begin_inset Formula 
+\begin{equation}
+v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})=v_{{\rm {\scriptscriptstyle H}}}[n+n_{Z}](\boldsymbol{r})+v_{{\rm {\scriptscriptstyle xc}}}[n](\boldsymbol{r})
+\end{equation}
+
+\end_inset
+
+Here, here, 
+\begin_inset Formula $n$
+\end_inset
+
+ is the full electronic charge density and 
+\begin_inset Formula $n_{Z}$
+\end_inset
+
+ is point charge density of the cores.
+ In its standard implementation, VASP uses the frozen core approximation.
+ That means it uses the following quantities
+\begin_inset Formula 
+\begin{eqnarray}
+\tilde{n} & : & \text{regular grid valence pseudo charge}\\
+n^{1} & : & \text{radial grid valence AE charge}\\
+\tilde{n}^{1} & : & \text{radial grid valence pseudo charge}\\
+n_{c} & : & \text{radial grid frozen core charge density}\\
+\tilde{n}_{c} & : & \text{radial grid frozen core partial charge density}\nonumber \\
+ &  & \tilde{n}_{c}=n_{c}\;{\rm for}\;r>r_{pc}\\
+n_{Zc} & : & n_{Z}+n_{c}\\
+\hat{n} & : & \text{smooth compensation charge density}
+\end{eqnarray}
+
+\end_inset
+
+The calcaution are done on two seperate grids, a regular plane wave grid
+ and a radial support grid around each atom.
+ In order to seperate terms in the Hartree potential, 
+\begin_inset Formula $\tilde{n}$
+\end_inset
+
+ and 
+\begin_inset Formula $\tilde{n}^{1}$
+\end_inset
+
+ are treated as equaivalent, which is only exact for a complete set of projector
+ functions.
+ [Kresse and Joubert, P.
+ Bloechel].
+ Fortunately, the AE potential can be reconstructed in the PAW method via
+ the equation [P.
+ Bloechel Eq.
+ 41]
+\begin_inset Formula 
+\begin{equation}
+v_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})=\tilde{v}_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})+v_{{\rm {\scriptscriptstyle scf}}}^{1}(\boldsymbol{r})-\tilde{v}_{{\rm {\scriptscriptstyle scf}}}^{1}(\boldsymbol{r})
+\end{equation}
+
+\end_inset
+
+The 
+\begin_inset Formula $\tilde{v}_{{\rm {\scriptscriptstyle scf}}}(\boldsymbol{r})$
+\end_inset
+
+ is the pseudo potential on the regular Fourier grid, 
+\begin_inset Formula $v_{{\rm {\scriptscriptstyle scf}}}^{1}(\boldsymbol{r})$
+\end_inset
+
+ is the AE one center contribution and 
+\begin_inset Formula $\tilde{v}_{{\rm {\scriptscriptstyle scf}}}^{1}(\boldsymbol{r})$
+\end_inset
+
+ is the one center pseudo potential contribution both stored on a radial
+ grid around an atomic sphere.
+ The effective Hamiltonian, VASP solves is
+\begin_inset Formula 
+\begin{equation}
+\hat{H}_{{\rm VASP}}=-\frac{\hbar^{2}}{2m_{e}}\boldsymbol{\nabla}^{2}+\tilde{v}_{{\rm eff}}(\boldsymbol{r})+\sum_{(i,j)}\vert\tilde{p}_{i}\rangle(\hat{D}_{ij}+D_{ij}^{1}-\tilde{D}_{ij}^{1})\langle\tilde{p}_{j}\vert
+\end{equation}
+
+\end_inset
+
+with
+\begin_inset Formula 
+\begin{equation}
+\tilde{v}_{{\rm eff}}(\boldsymbol{r})=\tilde{v}_{{\rm H}}[\tilde{n}+\hat{n}+\tilde{n}_{Zc}](\boldsymbol{r})+\tilde{v}_{{\rm xc}}[\tilde{n}+\hat{n}+\tilde{n}_{c}](\boldsymbol{r})
+\end{equation}
+
+\end_inset
+
+while we, on the other hand, are interested in the AE potential.
+ First, if we are in the interstitial region, 
+\begin_inset Formula $\tilde{v}_{{\rm eff}}(\boldsymbol{r})$
+\end_inset
+
+ is the correct AE Kohn-Sham potential.
+ This is not immediately obvious, since we have added the smooth compensation
+ charge density, but the compensation charge density is constructed to reproduce
+ the AE multipole moments of the charge distribution localized in the core.
+ The non-local parts of the Hamiltonian are mostly irrelevant for our purposes,
+ since we work with the AE reconstructed quantities, except that 
+\begin_inset Formula $D_{ij}^{1}$
+\end_inset
+
+ contains the AE potential in the atomic radial grid.
+ At the same time 
+\begin_inset Formula $\tilde{D}_{ij}^{1}$
+\end_inset
+
+ removes the local pseudo potential 
+\begin_inset Formula $\tilde{v}_{{\rm eff}}(\boldsymbol{r})$
+\end_inset
+
+ and the effect of the compensation charge in the augumentation region (for
+ a complete set of partial waves).
+\end_layout
+
+\begin_layout Standard
+In VASP quantities on the radial grid, such as the AE potential, are handled
+ as expansion coefficients of real spherical harmonics.
+ In order to handle the data in elephon, we have to 1) be able to integrate
+ potential and wavefunction on the radial plus regular grid 2) apply symmetry
+ operations also on the radial support grid.
+ The rotation on the radial support grid is described by a Wigner matrix,
+ that transforms the spherical harmonics and thereby the coefficients.
+\end_layout
+
+\begin_layout Standard
+The first point is not trivial, since it involves a regular plus spherical
+ grid that intersect, making the integration weights on the grid difficult
+ to determine.
+ The integration on the regular grid is performed as
+\begin_inset Formula 
+\begin{equation}
+\int_{{\rm UC}}{\rm d}\boldsymbol{r}f(\boldsymbol{r})\approx\frac{V}{N_{{\rm FFT}}}\sum_{i=0}^{N_{{\rm FFT}}-1}f(\boldsymbol{r}_{i})
+\end{equation}
+
+\end_inset
+
+thus within each grid cube, where by convention 
+\begin_inset Formula $\boldsymbol{r}_{i}$
+\end_inset
+
+ is the lower left bottom, the function is approximated as constant.
+ We can thus combine different grids by
+\begin_inset Formula 
+\begin{equation}
+\int_{{\rm UC}}{\rm d}\boldsymbol{r}f(\boldsymbol{r})\approx\sum_{i=0}^{N_{{\rm FFT}}-1}\frac{V}{N_{{\rm FFT}}}f(\boldsymbol{r}_{i})+\sum_{j}w_{j}\{f(\boldsymbol{r}_{j})-f[M_{{\rm FFT}}(\boldsymbol{r}_{j})]\}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $M_{{\rm FFT}}(\boldsymbol{r}_{j})$
+\end_inset
+
+ selects the grid cube 
+\begin_inset Formula $\boldsymbol{r}_{j}$
+\end_inset
+
+ is in and returns the lower left bottom 
+\begin_inset Formula $\boldsymbol{r}_{i}$
+\end_inset
+
+ of that grid cube.
+ 
+\begin_inset Formula $w_{j}$
+\end_inset
+
+ are the weights of the arbitray additional intersecting grid.
+ Since the coarse sampling of the regular mesh may actually describe a different
+ function 
+\begin_inset Formula $\tilde{f}$
+\end_inset
+
+ within the region where the additional grid is as in the PAW method, we
+ can write
+\begin_inset Formula 
+\begin{equation}
+\int_{{\rm UC}}{\rm d}\boldsymbol{r}f(\boldsymbol{r})\approx\sum_{i=0}^{N_{{\rm FFT}}-1}\frac{V}{N_{{\rm FFT}}}\tilde{f}(\boldsymbol{r}_{i})+\sum_{j}w_{j}\{f(\boldsymbol{r}_{j})-\tilde{f}[M_{{\rm FFT}}(\boldsymbol{r}_{j})]\}
+\end{equation}
+
+\end_inset
+
+since the integral does depend on 
+\begin_inset Formula $\tilde{f}$
+\end_inset
+
+ given that 
+\begin_inset Formula $\tilde{f}=f$
+\end_inset
+
+ outside of the additional grid region.
+ Since 
+\begin_inset Formula $f$
+\end_inset
+
+ is supposed to be continous within the PAW method, this means we can cross
+ check that 
+\begin_inset Formula $\sum_{j\in{\rm Border}}w_{j}\{f(\boldsymbol{r}_{j})-\tilde{f}[M_{{\rm FFT}}(\boldsymbol{r}_{j})]\}\approx0$
+\end_inset
+
+ because of the constrained 
+\begin_inset Formula $\tilde{f}=f$
+\end_inset
+
+.
+ Furthermore, it will be impossible to compute derivates w.r.t.
+ the atomic position for extremely sharp contributions to the total AE potential
+ originating from the core delta peak charge using finite displacements.
+ Thus we single out these contribution (
+\begin_inset Formula $\boldsymbol{v}_{\kappa\boldsymbol{R}}=(\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}})/\vert\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}\vert$
+\end_inset
+
+)
+\begin_inset Formula 
+\begin{eqnarray}
+V^{{\rm frozen}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\}](\boldsymbol{r}) & = & \sum_{\kappa\boldsymbol{R}}\frac{Z_{\kappa}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert}\\
+\frac{\delta V^{{\rm frozen}}}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\biggr\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}(\boldsymbol{r}) & = & Z_{\kappa}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\frac{\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert^{3}}
+\end{eqnarray}
+
+\end_inset
+
+On a radial grid with 
+\begin_inset Formula $\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}=0$
+\end_inset
+
+, we have thus
+\begin_inset Formula 
+\begin{equation}
+\frac{\delta V^{{\rm frozen}}}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\biggr\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}(\boldsymbol{r})=\frac{Z_{\kappa}}{\vert\boldsymbol{r}\vert^{2}}{\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r})]
+\end{equation}
+
+\end_inset
+
+Note that 
+\begin_inset Formula $\delta V^{{\rm frozen}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}\}](\boldsymbol{r})/\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}$
+\end_inset
+
+ must only be applied to the core region, since it is implicitely already
+ contained in the screened potential of the interstitial region.
+ The frozen core Hartree contribution is zero, since the electronic density
+ is not displaced with the nuclear position.
+ However, since we assume that self-consistent screening is provied, we
+ may alternatively assume, that the frozen Hartree follows the core peak
+ instantaniously, this means 
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \lim_{\Delta\rightarrow0}\int{\rm d}\boldsymbol{r}^{\prime}[\frac{n_{c}(\boldsymbol{r}^{\prime}+\boldsymbol{v}_{\kappa\boldsymbol{R}}\Delta)}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}-\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}]\\
+ & = & \lim_{\Delta\rightarrow0}\int{\rm d}\boldsymbol{r}^{\prime}[\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}+\boldsymbol{v}_{\kappa\boldsymbol{R}}\Delta)\vert}-\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}]\\
+ & = & \boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}
+\end{eqnarray}
+
+\end_inset
+
+using the Laplace expansion
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\sum_{l=0}^{\infty}\int{\rm d}\vert\boldsymbol{r}^{\prime}\vert^{2}\bigl(\frac{{r^{\prime}}^{l}}{r^{l+1}}\uptheta(r-r^{\prime})+\frac{r^{l}}{{r^{\prime}}^{l+1}}\uptheta(r^{\prime}-r)\bigr)\times\nonumber \\
+ &  & \times\int_{0}^{\pi}{\rm d}\theta^{\prime}\int_{0}^{2\pi}{\rm d}\phi^{\prime}{\rm sin}(\theta^{\prime})\sum_{m=-l}^{l}\frac{Y_{lm}(\theta,\phi)Y_{lm}^{\ast}(\theta^{\prime},\phi^{\prime})}{\sqrt{2l+1}}n_{c}(r^{\prime},\theta^{\prime},\phi^{\prime})
+\end{eqnarray}
+
+\end_inset
+
+since the frozen core charge is spherical and the integral over the angle
+ of
+\begin_inset Formula 
+\begin{eqnarray}
+ &  & \int_{0}^{\pi}{\rm d}\theta\int_{0}^{2\pi}{\rm d}\phi{\rm sin}(\theta)Y_{lm}(\theta,\phi)\\
+ & = & 2\sqrt{\pi}\int_{0}^{\pi}{\rm d}\theta\int_{0}^{2\pi}{\rm d}\phi{\rm sin}(\theta)Y_{lm}(\theta,\phi)Y_{00}^{\ast}(\theta,\phi)\\
+ & = & 2\sqrt{\pi}\delta_{l,0}\delta_{m,0}
+\end{eqnarray}
+
+\end_inset
+
+we find
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\bigl(\int_{0}^{r}\frac{1}{r}+\int_{r}^{\infty}\frac{1}{r^{\prime}}\bigr)n_{c}(r^{\prime}){r^{\prime}}^{2}{\rm d}r^{\prime}\\
+ & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\int_{0}^{\infty}\bigl(\frac{{r^{\prime}}^{2}}{r}\theta(r-r^{\prime})+r^{\prime}\theta(r^{\prime}-r)\bigr)n_{c}(r^{\prime}){\rm d}r^{\prime}\\
+ & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\bigl(-\frac{\boldsymbol{r}}{r^{3}}\int_{0}^{r}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}+rn_{c}(r)-rn_{c}(r)\bigr)\\
+ & = & -\frac{1}{\varepsilon}\frac{{\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r})]}{r^{2}}\int_{0}^{r}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}
+\end{eqnarray}
+
+\end_inset
+
+such that the amount of core electronic charge density in a sphere smaller
+ than the current position of an electron screens the core displacement.
+ This makes sense.
+\end_layout
+
+\begin_layout Standard
+In the following, we want to represent the displacement potential on the
+ radial grid using spherical harmonics.
+ This is easy, since the spherical harmonic
+\begin_inset Formula 
+\begin{equation}
+Y_{10}(\theta,\phi)=\sqrt{\frac{3}{4\pi}}{\rm cos}(\theta)
+\end{equation}
+
+\end_inset
+
+can already be used to represent the cosine.
+ However, we need to align the displacement direction 
+\begin_inset Formula $\boldsymbol{v}_{\kappa\boldsymbol{R}}$
+\end_inset
+
+ with the coordinate system so that in general these contributions will
+ be some linear combination in the space of 
+\begin_inset Formula $l=1$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+Transformation of real spherical harmonics
+\end_layout
+
+\begin_layout Standard
+The potential is described in VASP in terms of real spherical harmonics
+\begin_inset Formula 
+\begin{equation}
+\tilde{Y}_{l}^{m}(\theta,\phi)=\begin{cases}
+\frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)] & m<0\\
+Y_{l}^{m}(\theta,\phi) & m=0\\
+\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)] & m>0
+\end{cases}
+\end{equation}
+
+\end_inset
+
+as the series
+\begin_inset Formula 
+\begin{equation}
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})=\sum_{lm}\tilde{Y}_{l}^{m}(\boldsymbol{r}/\vert\boldsymbol{r}\vert)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)
+\end{equation}
+
+\end_inset
+
+which can be written again in terms of the complex spherical harmonics as
+\begin_inset Formula 
+\begin{eqnarray}
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}) & = & \sum_{l,m<0}\frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)]v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)\nonumber \\
+ &  & +\sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)]v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)\\
+ & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi){\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-(-1)^{-m}Y_{l}^{m}(\theta,\phi){\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)\nonumber \\
+ &  & +Y_{l}^{-m}(\theta,\phi)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+(-1)^{m}Y_{l}^{m}(\theta,\phi)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\\
+ & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m<0}Y_{l}^{m}(\theta,\phi)\frac{1}{\sqrt{2}}[v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+{\rm i}v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\nonumber \\
+ &  & +\sum_{l,m>0}Y_{l}^{m}(\theta,\phi)\frac{(-1)^{m}}{\sqrt{2}}[v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-{\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\\
+ & = & \sum_{l}Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(\boldsymbol{\vert\boldsymbol{r}}\vert)
+\end{eqnarray}
+
+\end_inset
+
+with
+\begin_inset Formula 
+\begin{equation}
+v_{l,m}^{{\rm AE}}(\boldsymbol{\vert\boldsymbol{r}}\vert)=\begin{cases}
+\frac{1}{\sqrt{2}}[v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+{\rm i}v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)] & m<0\\
+v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert) & m=0\\
+\frac{(-1)^{m}}{\sqrt{2}}[v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-{\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)] & m>0
+\end{cases}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Rotations of spherical harmonics
+\end_layout
+
+\begin_layout Standard
+A rotatiation of the 
+\begin_inset Formula $Y_{l}^{m}(\theta,\phi)$
+\end_inset
+
+ in the active sense is described by the Wigner matrix
+\begin_inset Formula 
+\begin{eqnarray}
+D_{mm^{\prime}}^{l}(\alpha,\beta,\gamma) & = & {\rm e}^{-{\rm i}m^{\prime}\alpha}d_{m^{\prime}m}^{l}(\beta){\rm e}^{-{\rm i}m\gamma}\\
+d_{m^{\prime}m}^{l}(\beta) & = & [(l+m)!(l-m)!(l+m^{\prime})!(l-m^{\prime})!]^{\frac{1}{2}}\times\nonumber \\
+ &  & \times\sum_{s}\frac{(-1)^{s}}{(l+m-s)!(l-m^{\prime}-s)!s!(m^{\prime}-m+s)!}\times\nonumber \\
+ &  & \times[{\rm cos}(\frac{\beta}{2})]^{2l+m-m^{\prime}-2s}[{\rm sin}(\frac{\beta}{2})]^{m^{\prime}-m+2s}
+\end{eqnarray}
+
+\end_inset
+
+where 
+\begin_inset Formula $s$
+\end_inset
+
+ is summed over all factorials beeing non-negative, 
+\begin_inset Formula $\alpha,\beta,\gamma$
+\end_inset
+
+ are the 3 Euler angles taking the unit vector 
+\begin_inset Formula $\boldsymbol{r}(\theta,\phi)$
+\end_inset
+
+ to 
+\begin_inset Formula $\boldsymbol{r}(\theta^{\prime},\phi^{\prime})$
+\end_inset
+
+.
+ The formula is
+\begin_inset Formula 
+\begin{equation}
+Y_{l}^{m}(\boldsymbol{r}^{\prime})=\sum_{m^{\prime}}D_{mm^{\prime}}^{l\ast}(\alpha,\beta,\gamma)Y_{l}^{m^{\prime}}(\boldsymbol{r})
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Integral of three spherical harmonics
+\end_layout
+
+\begin_layout Standard
+Since we will compute overlap integrals of functions expanded in spherical
+ harmonics, we need evaluations of the form
+\begin_inset Formula 
+\begin{equation}
+\int{\rm d}\phi\int{\rm d}\theta{\rm sin}(\theta)Y_{l_{1}}^{m_{1}}(\theta,\phi)Y_{l_{2}}^{m_{2}}(\theta,\phi)Y_{l_{3}}^{m_{3}}(\theta,\phi)=\sqrt{\frac{(2l_{1}+1)(2l_{2}+1)(2l_{3}+1)}{4\pi}}\left(\begin{array}{ccc}
+l_{1} & l_{2} & l_{3}\\
+0 & 0 & 0
+\end{array}\right)\left(\begin{array}{ccc}
+l_{1} & l_{2} & l_{3}\\
+m_{1} & m_{2} & m_{3}
+\end{array}\right)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\left(\begin{array}{ccc}
+l_{1} & l_{2} & l_{3}\\
+m_{1} & m_{2} & m_{3}
+\end{array}\right)$
+\end_inset
+
+ is the Wigner-3j symbol.
+ The integral is thus zero, if
+\begin_inset Formula 
+\begin{eqnarray}
+1. &  & (l_{1}+l_{2}+l_{3})\;{\rm mod}\;2\neq0\\
+2. &  & (m_{1}+m_{2}+m_{3})\neq0\\
+3. &  & l_{3}\;{\rm not}\;{\rm such}\;{\rm that}\vert l_{1}-l_{2}\vert\leq l_{3}\leq\vert l_{1}+l_{2}\vert
+\end{eqnarray}
+
+\end_inset
+
+The value can be computed using the package https://github.com/valandil/wignerSym
+bols.
+\end_layout
+
+\begin_layout Subsection
+The electron-phonon matrix elements
+\end_layout
+
 \begin_layout Subsubsection
 Numerical formulation in terms of matrix multiplications
+\end_layout
+
+\begin_layout Standard
+[TODO: has to be revised for spherical support grid]
 \end_layout
 
 \begin_layout Standard
