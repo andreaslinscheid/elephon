@@ -16,7 +16,6 @@
  *  Created on: Jun 16, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include "Algorithms/LinearAlgebraInterface.h"
 #include <iostream>
@@ -24,6 +23,8 @@
 #include <complex>
 #include <stdlib.h>
 #include <time.h>
+
+BOOST_AUTO_TEST_SUITE( LinearAlgebraInterface )
 
 void print_mat( std::vector<double> const & v, int n , int m)
 {
@@ -231,3 +232,5 @@ BOOST_AUTO_TEST_CASE( Matrix_Multiplication )
 
 	check_mm<std::complex<float>>(n, m, k, A, B);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

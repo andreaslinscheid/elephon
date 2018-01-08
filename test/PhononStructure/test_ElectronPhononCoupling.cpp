@@ -16,8 +16,6 @@
  *  Created on: Jul 4, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE PhononStructure
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "PhononStructure/ElectronPhononCoupling.h"
@@ -28,6 +26,8 @@
 #include <vector>
 #include <math.h>
 #include <algorithm>
+
+BOOST_AUTO_TEST_SUITE( ElectronPhononCoupling )
 
 void
 load_reference_data(boost::filesystem::path filename,
@@ -197,3 +197,5 @@ BOOST_AUTO_TEST_CASE( Gkkp_generate_regular_k_grid_q_zero )
 //			<<integralRef <<" (modified espresso)"<<std::endl;
 //	BOOST_CHECK_CLOSE(integral, integralRef, 50);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

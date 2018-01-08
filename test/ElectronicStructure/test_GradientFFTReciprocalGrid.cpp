@@ -16,12 +16,12 @@
  *  Created on: Apr 30, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include "ElectronicStructure/GradientFFTReciprocalGrid.h"
 #include <assert.h>
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( GradientFFTReciprocalGrid )
 
 BOOST_AUTO_TEST_CASE( Gradient_Cos_Sin )
 {
@@ -142,3 +142,5 @@ BOOST_AUTO_TEST_CASE( Gradient_Cos_BndModel )
 		sum += a/double(gridnum);
 	BOOST_REQUIRE_SMALL( sum , 1e-5 );
 }
+
+BOOST_AUTO_TEST_SUITE_END()

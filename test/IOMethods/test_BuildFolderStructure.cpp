@@ -16,8 +16,6 @@
  *  Created on: May 17, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/BuildFolderStructure.h"
@@ -26,6 +24,8 @@
 #include "IOMethods/InputOptions.h"
 #include "fixtures/MockStartup.h"
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( BuildFolderStructure )
 
 BOOST_AUTO_TEST_CASE( Build_Al_primitive_folderstructure_VASP )
 {
@@ -119,3 +119,5 @@ BOOST_AUTO_TEST_CASE( Build_Al_folderstructure_VASP )
 	BOOST_REQUIRE( exists(targetDir / "displ_4" )  == false );
 	remove_all(targetDir);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

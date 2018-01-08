@@ -16,8 +16,6 @@
  *  Created on: May 21, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPWaveFunction.h"
@@ -37,6 +35,8 @@
 #include <set>
 #include <stdlib.h>
 #include <time.h>
+
+BOOST_AUTO_TEST_SUITE( Wavefunctions )
 
 elephon::ElectronicStructure::Wavefunctions
 get_MgB2_vasp_wfct()
@@ -973,3 +973,4 @@ BOOST_AUTO_TEST_CASE( Al_vasp_wfct_star_k )
 	}
 }
 
+BOOST_AUTO_TEST_SUITE_END()

@@ -16,8 +16,6 @@
  *  Created on: Sep 27, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/LatticeModule.h"
@@ -26,6 +24,8 @@
 #include "IOMethods/ReadVASPKpoints.h"
 #include "fixtures/MockStartup.h"
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( RegularBareGrid )
 
 BOOST_AUTO_TEST_CASE( G2S2_vasp_bare_kpoint_grid )
 {
@@ -49,3 +49,4 @@ BOOST_AUTO_TEST_CASE( G2S2_vasp_bare_kpoint_grid )
 	kgrid.initialize(kpointsReader.get_grid_dim(), true, 1e-6, kpointsReader.get_grid_shift(), lattice);
 }
 
+BOOST_AUTO_TEST_SUITE_END()

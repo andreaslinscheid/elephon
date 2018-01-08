@@ -60,6 +60,14 @@ public:
 	 */
 	std::complex<double> operator() (int m, int mp) const;
 
+	/**
+	 * View the internal (2l+1)x(2l+1) data.
+	 *
+	 * @return constant reference the internal (2l+1)x(2l+1) data
+	 */
+	std::vector<std::complex<double>> const &
+	view_as_matrix() const;
+
 private:
 
 	/// The angular quantum number

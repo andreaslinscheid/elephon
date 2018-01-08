@@ -16,8 +16,6 @@
  *  Created on: Jun 18, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/SymmetryReduction.h"
@@ -25,6 +23,8 @@
 #include "LatticeStructure/Atom.h"
 #include "fixtures/MockStartup.h"
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( SymmetryReductionSuite )
 
 BOOST_AUTO_TEST_CASE( irreducible_zones )
 {
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE( irreducible_zones )
 	std::vector<int> symRedToIrred;
 	std::vector< std::vector<int> > irredToRed;
 	std::vector< std::vector<int> > symIrredToRed;
-	SymmetryReduction<Atom> symmReduce(sym, reducible,
+	SymmetryReduction<elephon::LatticeStructure::Atom> symmReduce(sym, reducible,
 			irreducible, redToIrred, symRedToIrred,
 			irredToRed, symIrredToRed);
 
@@ -82,3 +82,5 @@ BOOST_AUTO_TEST_CASE( irreducible_zones )
 		BOOST_REQUIRE( p == pr );
 	}
 }
+
+BOOST_AUTO_TEST_SUITE_END()

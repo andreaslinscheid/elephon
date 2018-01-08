@@ -16,11 +16,11 @@
  *  Created on: May 16, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/LatticeModule.h"
+
+BOOST_AUTO_TEST_SUITE( LatticeModule )
 
 BOOST_AUTO_TEST_CASE( LatticeModule_BasisRelation )
 {
@@ -44,3 +44,4 @@ BOOST_AUTO_TEST_CASE( LatticeModule_BasisRelation )
 		for ( int j = 0 ; j < 3; ++j)
 			BOOST_REQUIRE( std::fabs(prod[i*3+j] - (i==j?1.0:0)) < 1e-6 );
 }
+BOOST_AUTO_TEST_SUITE_END()

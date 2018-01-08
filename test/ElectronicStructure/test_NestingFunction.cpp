@@ -16,8 +16,6 @@
  *  Created on: Oct 22, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE NestingFunction
 #include <boost/test/unit_test.hpp>
 #include "ElectronicStructure/NestingFunction.h"
 #include "IOMethods/ResourceHandler.h"
@@ -26,6 +24,8 @@
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( NestingFunction )
 
 BOOST_AUTO_TEST_CASE( Al_fcc_vasp_nesting_function )
 {
@@ -69,3 +69,5 @@ BOOST_AUTO_TEST_CASE( Al_fcc_vasp_nesting_function )
 			<< integralNest << "(integral) vs " << dosEf[0]*dosEf[0] << "(DOS^2)"  << std::endl;
 	BOOST_CHECK_CLOSE(integralNest, dosEf[0]*dosEf[0], 20 );
 }
+
+BOOST_AUTO_TEST_SUITE_END()

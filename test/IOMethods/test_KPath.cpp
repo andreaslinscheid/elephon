@@ -16,14 +16,14 @@
  *  Created on: Nov 1, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Kpath_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/VASPInterface.h"
 #include "IOMethods/ResourceHandler.h"
 #include "fixtures/MockStartup.h"
 #include "IOMethods/KPath.h"
+
+BOOST_AUTO_TEST_SUITE( KPath )
 
 BOOST_AUTO_TEST_CASE( KPath_simple )
 {
@@ -52,3 +52,4 @@ BOOST_AUTO_TEST_CASE( KPath_simple )
 	boost::filesystem::remove(fkpath);
 }
 
+BOOST_AUTO_TEST_SUITE_END()

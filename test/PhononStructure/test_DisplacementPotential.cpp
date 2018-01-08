@@ -16,8 +16,6 @@
  *  Created on: Jul 1, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE PhononStructure
 #include <boost/test/unit_test.hpp>
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
@@ -25,6 +23,7 @@
 #include "PhononStructure/Phonon.h"
 #include "fixtures/scenarios.h"
 
+BOOST_AUTO_TEST_SUITE( DisplacementPotential )
 
 BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 {
@@ -67,3 +66,4 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 		}
 	}
 }
+BOOST_AUTO_TEST_SUITE_END()

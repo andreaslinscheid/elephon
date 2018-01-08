@@ -16,13 +16,13 @@
  *  Created on: Oct 3, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE PhononStructure
 #include <boost/test/unit_test.hpp>
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
 #include "PhononStructure/PhononGrid.h"
 #include "fixtures/scenarios.h"
+
+BOOST_AUTO_TEST_SUITE( PhononGrid )
 
 BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 {
@@ -87,5 +87,5 @@ BOOST_AUTO_TEST_CASE( phononDOS_write_file_vasp_fcc_primitive )
 		std::cout << frequencies[iw] << '\t' << phDos[iw] << '\t' << phDos_wan[iw] << '\n';
 }
 
-
+BOOST_AUTO_TEST_SUITE_END()
 

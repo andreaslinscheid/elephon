@@ -96,8 +96,8 @@ public:
 	void null_space(std::vector<T> A, int n, int m,
 			int & kerDim, std::vector<T> & nullA, double tol = 1e-5);
 
-	template<typename T>
-	void inverse(std::vector<T> A, std::vector<T> & invA );
+	template<class C>
+	void inverse(C A, C & invA );
 
 	template<typename T>
 	void diagonalize_hermitian(bool data_upper, bool comEV,

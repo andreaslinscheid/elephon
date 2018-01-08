@@ -1,4 +1,4 @@
-/*	This file test_RegularGrid.cpp is part of elephon.
+/*	This file test_RegularSymmetricGrid.cpp is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,8 +16,6 @@
  *  Created on: May 23, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/VASPInterface.h"
@@ -25,6 +23,8 @@
 #include <LatticeStructure/RegularSymmetricGrid.h>
 #include "fixtures/MockStartup.h"
 #include <iostream>
+
+BOOST_AUTO_TEST_SUITE( RegularSymmetricGrid )
 
 BOOST_AUTO_TEST_CASE( FeSe_vasp_k_points_file_reference )
 {
@@ -357,4 +357,4 @@ BOOST_AUTO_TEST_CASE( MgB2_k_points )
 		}
 	}
 }
-
+BOOST_AUTO_TEST_SUITE_END()

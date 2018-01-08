@@ -16,8 +16,6 @@
  *  Created on: Nov 1, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <string>
@@ -25,6 +23,8 @@
 #include "IOMethods/ResourceHandler.h"
 #include "IOMethods/Input.h"
 #include "fixtures/MockStartup.h"
+
+BOOST_AUTO_TEST_SUITE( DataRegularGrid )
 
 BOOST_AUTO_TEST_CASE( Si_vasp_electron_bands )
 {
@@ -76,3 +76,4 @@ BOOST_AUTO_TEST_CASE( Si_vasp_electron_bands )
 	boost::filesystem::remove(fbands);
 }
 
+BOOST_AUTO_TEST_SUITE_END()

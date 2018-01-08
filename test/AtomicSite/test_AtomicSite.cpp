@@ -16,13 +16,14 @@
  *  Created on: Jan 2, 2018
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "fixtures/MockStartup.h"
 #include "AtomicSite/EulerAngles.h"
 #include "AtomicSite/WignerDMatrix.h"
+#include "AtomicSite/SphericalHarmonicExpansion.h"
+#include "Auxillary/AlignedVector.h"
+#include "AtomicSite/RadialGrid.h"
 #include <vector>
 #include <complex>
 #include <iostream>
@@ -187,6 +188,42 @@ BOOST_AUTO_TEST_CASE( test_wigner_d_matrix )
 	BOOST_TEST_MESSAGE("Testing angles (alpha, beta, gamma) = ("
 			<< alpha << "," << beta << "," << gamma << ")");
 	test_wigner_D_angles(alpha, beta, gamma);
+}
+
+BOOST_AUTO_TEST_CASE( test_spherical_harmonic_expansion )
+{
+	// first check if the data layout is correct.
+	elephon::AtomicSite::RadialGrid rgrid;
+	elephon::AtomicSite::SphericalHarmonicExpansion layout_test;
+	elephon::Auxillary::alignedvector::ZV compareData;
+	for (int l = 0; l<=5 ; ++l)
+		for (int m = -l; m <= l; ++m)
+			compareData.push_back(std::complex<double>(l,m));
+	layout_test.initialize(5, 1, compareData, rgrid);
+
+	for (int l = 0; l<=5 ; ++l)
+		for (int m = -l; m <= l; ++m)
+			BOOST_CHECK_SMALL(std::abs(layout_test(0,m,l)-std::complex<double>(l,m)), 1e-10);
+
+	// now check that we recover a simple cos(2pi*x) function if we specify an expansion
+	// that has only a component in Y_l=1,m=0 channel and a constant radial component.
+	std::vector<double> points(50);
+	double radius = 2.0*M_PI/std::pow(3.0,1.0/3.0);
+	for (int ip = 0 ; ip < 50 ; ++ip)
+		points[ip] = radius*static_cast<double>(ip)/static_cast<double>(50);
+	rgrid.initialize({0.0, 0.0, 0.0}, radius, std::move(points));
+	int lmax = 5;
+	int nElem = (lmax+1)*(lmax+1)*rgrid.get_num_R();
+	elephon::Auxillary::alignedvector::ZV constant_data(nElem, 0.0);
+	elephon::AtomicSite::SphericalHarmonicExpansion cos_x_test;
+	// now, only fill the radial data for l=1 and m=0 with 1.
+	std::fill(constant_data.begin() + cos_x_test.angular_momentum_layout(/*l =*/1, /*m =*/0),
+			constant_data.begin() + cos_x_test.angular_momentum_layout(/*l =*/1, /*m =*/0) + points.size(),
+			1.0);
+
+	cos_x_test.initialize(5, 50.0, std::move(constant_data), std::move(rgrid));
+
+	// todo test cos x
 }
 
 BOOST_AUTO_TEST_SUITE_END()

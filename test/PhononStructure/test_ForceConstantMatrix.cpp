@@ -16,8 +16,6 @@
  *  Created on: Jun 1, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "PhononStructure/ForceConstantMatrix.h"
@@ -31,6 +29,7 @@
 #include <fstream>
 #include <string>
 
+BOOST_AUTO_TEST_SUITE( ForceConstantMatrix )
 
 BOOST_AUTO_TEST_CASE( ForceConstantMatrix_symmetrization )
 {
@@ -169,3 +168,4 @@ BOOST_AUTO_TEST_CASE( build_Al_primitive )
 	BOOST_CHECK_SMALL( phi(0, 1, 0, 2, 1) - referenceFC[ 25] , 0.001 );
 	BOOST_CHECK_SMALL( phi(0, 1, 0, 2, 2) - referenceFC[ 26] , 0.001 );
 }
+BOOST_AUTO_TEST_SUITE_END()

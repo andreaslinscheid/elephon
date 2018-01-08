@@ -16,8 +16,6 @@
  *  Created on: Sep 30, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE PhononStructure
 #include <boost/test/unit_test.hpp>
 #include "PhononStructure/AlphaSquaredF.h"
 #include "IOMethods/ResourceHandler.h"
@@ -25,6 +23,8 @@
 #include "fixtures/DataLoader.h"
 #include "fixtures/scenarios.h"
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( AlphaSquaredF )
 
 BOOST_AUTO_TEST_CASE( a2F_write_file_vasp_fcc_primitive )
 {
@@ -39,3 +39,5 @@ BOOST_AUTO_TEST_CASE( a2F_write_file_vasp_fcc_primitive )
 //	a2F.write_a2F_file( a2FFilename.string() );
 //	boost::filesystem::remove(a2FFilename);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

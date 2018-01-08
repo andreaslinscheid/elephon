@@ -16,14 +16,14 @@
  *  Created on: May 31, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPxmlFile.h"
 #include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( ReadVASPxmlFile )
 
 BOOST_AUTO_TEST_CASE( Read_VASP_xml )
 {
@@ -92,3 +92,5 @@ BOOST_AUTO_TEST_CASE( Read_VASP_xml_kpoints_fcc_Al )
 	BOOST_CHECK( (*p.first >= -0.5) and (*p.second < 0.5) );
 
 }
+
+BOOST_AUTO_TEST_SUITE_END()

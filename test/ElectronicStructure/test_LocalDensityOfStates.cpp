@@ -16,8 +16,6 @@
  *  Created on: Jul 26, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/VASPInterface.h"
@@ -27,6 +25,8 @@
 #include <vector>
 #include <complex>
 #include <cmath>
+
+BOOST_AUTO_TEST_SUITE( LocalDensityOfStates )
 
 BOOST_AUTO_TEST_CASE( ldos_MgB2_vasp )
 {
@@ -85,3 +85,5 @@ BOOST_AUTO_TEST_CASE( ldos_Al_vasp )
 	BOOST_REQUIRE( boost::filesystem::exists(outfile) );
 	boost::filesystem::remove(outfile);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

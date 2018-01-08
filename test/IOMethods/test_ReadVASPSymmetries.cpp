@@ -16,14 +16,14 @@
  *  Created on: May 16, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPSymmetries.h"
 #include "fixtures/MockStartup.h"
 #include <string>
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( ReadVASPSymmetries )
 
 BOOST_AUTO_TEST_CASE( Read_symmetries )
 {
@@ -42,3 +42,5 @@ BOOST_AUTO_TEST_CASE( Read_symmetries )
 
 	BOOST_REQUIRE( symReader.get_fractionTranslations().size() == 48*3 );
 }
+
+BOOST_AUTO_TEST_SUITE_END()

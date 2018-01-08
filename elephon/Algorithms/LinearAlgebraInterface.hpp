@@ -193,10 +193,11 @@ LinearAlgebraInterface::conjugate_square_matrix(VT & A) const
 		a = std::conj(a);
 }
 
-template<typename T>
+template<class C>
 void
-LinearAlgebraInterface::inverse(std::vector<T> A, std::vector<T> & invA )
+LinearAlgebraInterface::inverse(C A, C & invA )
 {
+	typedef typename C::value_type T;
 	invA = std::move(A);
 	int dim = this->square_matrix_dim(invA);
 	int info;

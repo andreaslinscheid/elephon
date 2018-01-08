@@ -16,14 +16,14 @@
  *  Created on: May 31, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <IOMethods/ReadVASPLocpot.h>
 #include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( ReadVASPPotcar )
 
 BOOST_AUTO_TEST_CASE( Read_potcar )
 {
@@ -50,3 +50,5 @@ BOOST_AUTO_TEST_CASE( Read_potcar )
 	double testVal = *(++potential.rbegin());
 	BOOST_REQUIRE( std::abs( testVal - butLastVal) < 1e-8 );
 }
+
+BOOST_AUTO_TEST_SUITE_END()

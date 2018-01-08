@@ -16,8 +16,6 @@
  *  Created on: Oct 8, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE TetraGrids
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/TetrahedraGrid.h"
@@ -25,6 +23,8 @@
 #include "fixtures/DataLoader.h"
 #include "fixtures/MockStartup.h"
 #include <memory>
+
+BOOST_AUTO_TEST_SUITE( TetrahedraGrid )
 
 void output_wire_frame(elephon::LatticeStructure::TetrahedraGrid const & tetra)
 {
@@ -323,3 +323,4 @@ BOOST_AUTO_TEST_CASE( Tetrahedra_fcc_Al_vasp_tetra_dos )
 		BOOST_CHECK_CLOSE(redDos[ie], irredDos[ie], 1e-2);
 	}
 }
+BOOST_AUTO_TEST_SUITE_END()

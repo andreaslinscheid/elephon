@@ -16,12 +16,13 @@
  *  Created on: Apr 25, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include <string>
 #include "IOMethods/Input.h"
 #include "fixtures/MockStartup.h"
+
+BOOST_AUTO_TEST_SUITE( Input )
 
 BOOST_AUTO_TEST_CASE( Print_Manual )
 {
@@ -50,3 +51,5 @@ BOOST_AUTO_TEST_CASE( Default_Args )
 
 	BOOST_CHECK( options.get_numFS() == 2000 );
 }
+
+BOOST_AUTO_TEST_SUITE_END()

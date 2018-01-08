@@ -16,8 +16,6 @@
  *  Created on: May 20, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPWaveFunction.h"
@@ -33,6 +31,8 @@
 #include <vector>
 #include <complex>
 #include <cmath>
+
+BOOST_AUTO_TEST_SUITE( ElectronicBands )
 
 BOOST_AUTO_TEST_CASE( Bands_Symmetry_reconstruction )
 {
@@ -262,3 +262,5 @@ BOOST_AUTO_TEST_CASE( fcc_Al_vasp_dos )
 	std::cout << "Integrated DOS : "<< nB << " with a number of bands " << bands->get_nBnd() << std::endl;
 	BOOST_CHECK_CLOSE( nB, bands->get_nData_gpt() , 1);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

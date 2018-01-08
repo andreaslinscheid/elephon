@@ -16,8 +16,6 @@
  *  Created on: Apr 27, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "ElectronicStructure/FermiSurface.h"
@@ -32,6 +30,8 @@
 #include <algorithm>
 #include <iostream>
 #include <memory>
+
+BOOST_AUTO_TEST_SUITE( FermiSurface )
 
 /**
  * This test checks if the surface area of a sphere is correctly approximated
@@ -480,3 +480,5 @@ BOOST_AUTO_TEST_CASE( Check_DOS_LiFeAs )
 
 	BOOST_REQUIRE( std::fabs(Nelec-Nelec_ref)/(Nelec+Nelec_ref) < 1e-1);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

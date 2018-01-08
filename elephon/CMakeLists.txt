@@ -29,12 +29,9 @@ list(REMOVE_ITEM VTK_LIBRARIES "vtkproj4")
 
 #Break up the test sources from test fixtures
 set(sources_test)
-set(fixtures_test)
 file(GLOB_RECURSE testModules ../test/*.cpp)
 foreach(testSrc ${testModules})
-	if ( ${testSrc} MATCHES "/fixtures/" )
-		list(APPEND fixtures_test ${testSrc})
-	else()
+	if ( NOT (${testSrc} MATCHES "test_main.cpp") )
 		list(APPEND sources_test ${testSrc})
 	endif()
 endforeach(testSrc)
@@ -72,7 +69,7 @@ list(INSERT elephon_LD_LIBS 0 ${elephonLibraryNames})
 list(INSERT elephon_INCLUDE 0 ${elephon_src_tree})
 
 #add a library with the tests
-add_library( libTest ${fixtures_test} )
+add_library( libTest ${sources_test} )
 
 target_compile_options(libTest PUBLIC ${elephon_OPTS} )
 target_include_directories(libTest PUBLIC ${elephon_src_tree} "${PROJECT_SOURCE_DIR}/../test/" ${elephon_INCLUDE})
@@ -89,25 +86,20 @@ target_link_libraries(elephon PUBLIC -Wl,--start-group ${elephon_LD_LIBS} -Wl,--
 
 include(CTest)
 
-foreach(testSrc ${sources_test})
-       	#Extract the filename without an extension (NAME_WE)
-       	get_filename_component(testName ${testSrc} NAME_WE)
+#Add compile target
+add_executable(test_main "${PROJECT_SOURCE_DIR}/../test/test_main.cpp")
 
-       	#Add compile target
-       	add_executable(${testName} ${testSrc})
+#link to Boost libraries AND your targets and dependencies
+target_link_libraries(test_main PUBLIC libTest -Wl,--start-group ${elephon_LD_LIBS} -Wl,--end-group )
 
-       	#link to Boost libraries AND your targets and dependencies
-       	target_link_libraries(${testName} PUBLIC libTest -Wl,--start-group ${elephon_LD_LIBS} -Wl,--end-group )
+#I like to move testing binaries into a test/bin directory
+set_target_properties(test_main PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin)
+target_compile_options(test_main PUBLIC ${elephon_OPTS})
+target_include_directories(test_main PUBLIC ${elephon_INCLUDE} "${PROJECT_SOURCE_DIR}/../test/")
 
-       	#I like to move testing binaries into a test/bin directory
-       	set_target_properties(${testName} PROPERTIES 
-       	    RUNTIME_OUTPUT_DIRECTORY  ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin)
-       	target_compile_options(${testName} PUBLIC ${elephon_OPTS})
-       	target_include_directories(${testName} PUBLIC ${elephon_INCLUDE} "${PROJECT_SOURCE_DIR}/../test/")
-
-       	#Finally add it to test execution - 
-       	#Notice the WORKING_DIRECTORY and COMMAND
-       	add_test(NAME ${testName} 
-       	         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin 
-       	         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin/${testName} )
-endforeach(testSrc)
+#Finally add it to test execution - 
+#Notice the WORKING_DIRECTORY and COMMAND
+add_test(NAME test_main 
+         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin 
+         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin/test_main )

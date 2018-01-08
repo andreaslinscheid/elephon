@@ -16,8 +16,6 @@
  *  Created on: Oct 10, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE TetraGrids
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "ElectronicStructure/TetrahedraIsosurface.h"
@@ -29,6 +27,8 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
+
+BOOST_AUTO_TEST_SUITE( TetrahedraIsosurface )
 
 void plot_iso_surface(
 		std::shared_ptr<const elephon::ElectronicStructure::TetrahedraIsosurface> iso,
@@ -272,3 +272,5 @@ BOOST_AUTO_TEST_CASE( TetrahedraIsosurface_Al_sc444 )
 	boost::filesystem::remove(surfDataFile);
 //	plot_iso_surface(tetraSurf, 0);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

@@ -30,12 +30,11 @@ namespace Auxillary
 {
 namespace alignedvector
 {
+const int architecture_align = 128;
 
-template<class T, std::size_t Alignment = 1>
+template<class T, std::size_t Alignment = architecture_align>
 using aligned_vector = std::vector<T,
     boost::alignment::aligned_allocator<T, Alignment> >;
-
-const int architecture_align = 128;
 
 typedef aligned_vector<char, architecture_align> BV;
 

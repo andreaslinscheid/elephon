@@ -16,8 +16,6 @@
  *  Created on: Jun 21, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "fixtures/DataLoader.h"
@@ -25,6 +23,8 @@
 #include "PhononStructure/Phonon.h"
 #include "fixtures/scenarios.h"
 #include <fstream>
+
+BOOST_AUTO_TEST_SUITE( Phonon )
 
 BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 {
@@ -128,3 +128,5 @@ BOOST_AUTO_TEST_CASE( Al_phonon_derivative )
 
 	BOOST_CHECK_SMALL(diff, 1e-2);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

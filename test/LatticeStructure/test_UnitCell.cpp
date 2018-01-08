@@ -16,14 +16,14 @@
  *  Created on: May 15, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "LatticeStructure/UnitCell.h"
 #include "IOMethods/VASPInterface.h"
 #include "fixtures/MockStartup.h"
 #include "fixtures/DataLoader.h"
+
+BOOST_AUTO_TEST_SUITE( UnitCell )
 
 elephon::LatticeStructure::UnitCell
 load_unit_cell_Al_vasp_conventional()
@@ -96,3 +96,4 @@ BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
 
 	//how to test this?
 }
+BOOST_AUTO_TEST_SUITE_END()

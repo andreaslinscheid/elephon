@@ -16,11 +16,12 @@
  *  Created on: Jul 8, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_MODULE Algorithms
 #include <boost/test/unit_test.hpp>
 #include "Algorithms/FFTInterface.h"
 #include <vector>
 #include <complex>
+
+BOOST_AUTO_TEST_SUITE( FFTInterface )
 
 BOOST_AUTO_TEST_CASE( fft_interpolate_cos_shift_1D )
 {
@@ -451,3 +452,4 @@ BOOST_AUTO_TEST_CASE( sparse_data_parallel_test )
 	BOOST_CHECK_SMALL( diff , 1e-6);
 }
 
+BOOST_AUTO_TEST_SUITE_END()

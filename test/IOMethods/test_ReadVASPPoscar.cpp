@@ -16,14 +16,14 @@
  *  Created on: May 14, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPPoscar.h"
 #include "fixtures/MockStartup.h"
 #include <assert.h>
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( ReadVASPPoscar )
 
 BOOST_AUTO_TEST_CASE( Read_postcar )
 {
@@ -73,3 +73,6 @@ BOOST_AUTO_TEST_CASE( Read_Al_fcc_primitive_vasp )
 		for ( int j = 0 ; j < 3; ++j)
 			BOOST_CHECK_SMALL( A[i*3+j] - latmatRef[i*3+j], 0.0000001 );
 }
+
+
+BOOST_AUTO_TEST_SUITE_END()

@@ -17,7 +17,6 @@
  *  Created on: Apr 28, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include "Algorithms/TrilinearInterpolation.h"
 #include <LatticeStructure/RegularSymmetricGrid.h>
@@ -25,6 +24,8 @@
 #include "LatticeStructure/LatticeModule.h"
 #include <vector>
 #include <iostream>
+
+BOOST_AUTO_TEST_SUITE( TrilinearInterpolation )
 
 BOOST_AUTO_TEST_CASE( Linear_Interpolation_Exact )
 {
@@ -252,3 +253,5 @@ BOOST_AUTO_TEST_CASE( Linear_Interpolation_IntegralTest )
 	BOOST_REQUIRE( std::fabs(integral2 - integralBlock2) < accuracy);
 	BOOST_REQUIRE( std::fabs(integral3 - integralBlock3) < accuracy);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

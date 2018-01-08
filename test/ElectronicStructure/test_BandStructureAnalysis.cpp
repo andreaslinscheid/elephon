@@ -16,7 +16,6 @@
  *  Created on: Sep 8, 2017
  *      Author: A. Linscheid
  */
-#define BOOST_TEST_MODULE ElectronicStructure
 #include <boost/test/unit_test.hpp>
 #include "Auxillary/UnitConversion.h"
 #include "IOMethods/VASPInterface.h"
@@ -27,6 +26,8 @@
 #include <memory>
 #include <fstream>
 #include <limits>
+
+BOOST_AUTO_TEST_SUITE( BandStructureAnalysis )
 
 BOOST_AUTO_TEST_CASE( write_mass_tensor )
 {
@@ -279,3 +280,5 @@ BOOST_AUTO_TEST_CASE( Si_vasp_mass_tensor )
 
 	boost::filesystem::remove(massTens);
 }
+
+BOOST_AUTO_TEST_SUITE_END()

@@ -16,8 +16,6 @@
  *  Created on: Jul 3, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE output_VASP
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/WriteVASPRealSpaceData.h"
@@ -26,6 +24,8 @@
 #include "fixtures/DataLoader.h"
 #include <string>
 #include <vector>
+
+BOOST_AUTO_TEST_SUITE( WriteVASPRealSpaceData )
 
 BOOST_AUTO_TEST_CASE( MgB2_realspace_data_format )
 {
@@ -73,3 +73,5 @@ BOOST_AUTO_TEST_CASE( write_VASP_realspace_output )
 	boost::filesystem::remove( testf );
 }
 
+
+BOOST_AUTO_TEST_SUITE_END()

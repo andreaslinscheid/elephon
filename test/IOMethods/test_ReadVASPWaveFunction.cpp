@@ -16,14 +16,14 @@
  *  Created on: May 18, 2017
  *      Author: A. Linscheid
  */
-
-#define BOOST_TEST_MODULE Input_test
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "IOMethods/ReadVASPWaveFunction.h"
 #include "fixtures/MockStartup.h"
 #include <vector>
 #include <complex>
+
+BOOST_AUTO_TEST_SUITE( ReadVASPWaveFunction )
 
 BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 {
@@ -104,3 +104,5 @@ BOOST_AUTO_TEST_CASE( Read_VASP_Al_wavefunctions )
 
 	BOOST_REQUIRE( diffMap == 0);
 }
+
+BOOST_AUTO_TEST_SUITE_END()
