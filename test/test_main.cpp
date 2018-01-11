@@ -5,9 +5,13 @@
 #include "Algorithms/test_FFTInterface.cpp"
 #include "Algorithms/test_LinearAlgebraInterface.cpp"
 #include "Algorithms/test_TrilinearInterpolation.cpp"
+#include "Algorithms/test_CubeSplineInterpolation.cpp"
 
 // include all test suits for namespace AtomicSite
 #include "AtomicSite/test_AtomicSite.cpp"
+
+// include all test suits for namespace Auxillary
+#include "Auxillary/test_CubicPolynomial.cpp"
 
 // include all test suits for namespace ElectronicStructure
 #include "ElectronicStructure/test_BandStructureAnalysis.cpp"

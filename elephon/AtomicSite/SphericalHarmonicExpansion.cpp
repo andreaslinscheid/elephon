@@ -88,6 +88,7 @@ SphericalHarmonicExpansion::interpolate(
 		{
 			spherical_phi[ip] = 0.0;
 			spherical_theta[ip] = 0.0;
+			continue;
 		}
 		double theta = std::acos(z/r);
 		double phi = std::atan2(y,x);
@@ -101,11 +102,13 @@ SphericalHarmonicExpansion::interpolate(
 	for (int l = 0 ; l < lmax_; ++l)
 		for (int m = -l ; m < l; ++m)
 		{
+			auto itBegin = data_.begin() + this->angular_momentum_layout(l,m)*rMax_;
+			auto itEnd = itBegin + rMax_;
 			rgrid_.interpolate(
 					spherical_r,
 					1,
-					data_.begin(),
-					data_.end(),
+					itBegin,
+					itEnd,
 					radial_interpol.begin());
 
 			for (int ip = 0 ; ip < numPts; ++ip)

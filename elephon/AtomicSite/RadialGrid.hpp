@@ -40,9 +40,8 @@ RadialGrid::interpolate(
 {
 	const int nPInterpol = rValues.size();
 	const int nPData = radialPoints_.size();
-	assert(std::distance(gridDataBegin, gridDataEnd) == nPData);
+	assert(std::distance(gridDataBegin, gridDataEnd) == nDataPerRValue*nPData);
 	assert(numR_%nPData == 0);
-	assert(nDataPerRValue == nPInterpol/nPData);
 
 	// perform spline interpolation, we keep the spline matrix for efficiency
 	auto splineMatrixPtr = std::make_shared<Auxillary::alignedvector::aligned_vector<double>>();

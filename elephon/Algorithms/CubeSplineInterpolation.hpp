@@ -94,6 +94,22 @@ CubeSplineInterpolation<TMesh, TData>::prime(
 
 template<typename TMesh,
 		typename TData>
+TMesh
+CubeSplineInterpolation<TMesh, TData>::min_range() const
+{
+	return this->rangeOfDefinitionBegin;
+}
+
+template<typename TMesh,
+		typename TData>
+TMesh
+CubeSplineInterpolation<TMesh, TData>::max_range() const
+{
+	return this->rangeOfDefinitionEnd;
+}
+
+template<typename TMesh,
+		typename TData>
 template<class RandomAccessIteratorData, class RandomAccessIteratorMesh>
 void
 CubeSplineInterpolation<TMesh, TData>::initialize(
@@ -137,12 +153,12 @@ CubeSplineInterpolation<TMesh, TData>::initialize(
 	auto mesh_1 = *(meshBegin + 1);
 	auto mesh_N_m_1 = *(meshBegin + splineMatrixDim - 1);
 	auto mesh_N_m_2 = *(meshBegin + splineMatrixDim - 2);
-	auto data_0 = *(meshBegin + 0);
-	auto data_1 = *(meshBegin + 1);
-	auto data_N_m_1 = *(meshBegin + splineMatrixDim - 1);
-	auto data_N_m_2 = *(meshBegin + splineMatrixDim - 2);
+	auto data_0 = *(dataBegin + 0);
+	auto data_1 = *(dataBegin + 1);
+	auto data_N_m_1 = *(dataBegin + splineMatrixDim - 1);
+	auto data_N_m_2 = *(dataBegin + splineMatrixDim - 2);
 	Auxillary::alignedvector::aligned_vector<TData> splineVector(splineMatrixDim,0.0);
-	splineVector[0] = 3.0*(data_1-data_0)/pow(mesh_1 - mesh_0 ,2);
+	splineVector[0] = TData(3.0)*(data_1-data_0)*TData(1.0/pow(mesh_1 - mesh_0 ,2));
 	for (int i=1;i<splineMatrixDim-1; ++i)
 	{
 		auto data_i = *(dataBegin + i);
@@ -151,16 +167,16 @@ CubeSplineInterpolation<TMesh, TData>::initialize(
 		auto mesh_i = *(meshBegin + i);
 		auto mesh_i_m_1 = *(meshBegin + i - 1);
 		auto mesh_i_p_1 = *(meshBegin + i + 1);
-		splineVector[i] = 3.0*((data_i-data_i_m_1)/pow(mesh_i-mesh_i_m_1,2)
-				+(data_i_p_1-data_i)/pow(mesh_i_p_1-mesh_i,2));
+		splineVector[i] = TData(3.0)*((data_i-data_i_m_1)*TData(1.0/pow(mesh_i-mesh_i_m_1,2))
+				+(data_i_p_1-data_i)*TData(1.0/pow(mesh_i_p_1-mesh_i,2)));
 	}
-	splineVector[splineMatrixDim-1] = 3.0*(data_N_m_1-data_N_m_2)
-			/pow(mesh_N_m_1-mesh_N_m_2,2);
+	splineVector[splineMatrixDim-1] = TData(3.0)*(data_N_m_1-data_N_m_2)
+		*TData(1.0/pow(mesh_N_m_1-mesh_N_m_2,2));
 
 	std::vector<TData> vectorOfDerivatives(splineMatrixDim,0.0);
 	for (int i=0;i<splineMatrixDim;i++){
 		for (int j=0;j<splineMatrixDim;j++)
-			vectorOfDerivatives[i] += inverseSplineMatrix[i*splineMatrixDim + j]*splineVector[j];
+			vectorOfDerivatives[i] += splineVector[j]*TData(inverseSplineMatrix[i*splineMatrixDim + j]);
 	}
 
 	polys_.reserve(splineMatrixDim - 1);
@@ -186,6 +202,20 @@ CubeSplineInterpolation<TMesh, TData>::initialize(
 
 template<typename TMesh,
 		typename TData>
+template<class VTMesh, class VTData>
+void
+CubeSplineInterpolation<TMesh, TData>::initialize(
+		VTMesh const & mesh,
+		VTData const & data)
+{
+	auto minMaxRange = std::minmax_element(mesh.begin(), mesh.end());
+	this->initialize(data.begin(), data.end(),
+			mesh.begin(), mesh.end(),
+			*minMaxRange.first, *minMaxRange.second);
+}
+
+template<typename TMesh,
+		typename TData>
 template<class RandomAccessIteratorMesh>
 void
 CubeSplineInterpolation<TMesh, TData>::compute_inverse_spline_matrix(
@@ -202,7 +232,7 @@ CubeSplineInterpolation<TMesh, TData>::compute_inverse_spline_matrix(
 
 	Auxillary::alignedvector::aligned_vector<TMesh>
 		splineMatrix(splineMatrixDim*splineMatrixDim,0.0);
-	for (int i=1;i<splineMatrixDim-1;i++)
+	for (int i=1; i<splineMatrixDim-1; ++i)
 	{
 		auto mesh_i = *(meshBegin + i);
 		auto mesh_i_m_1 = *(meshBegin + i - 1);

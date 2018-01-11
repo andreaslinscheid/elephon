@@ -170,9 +170,48 @@ LinearAlgebraInterface::call_getri(
 }
 
 int
+LinearAlgebraInterface::call_getri( int matrix_order, int n, float * a, int lda,
+		const int * ipiv, float * work, int lwork)
+{
+	return LAPACKE_sgetri_work(matrix_order,n,a,lda,ipiv,work,lwork);
+}
+
+int
+LinearAlgebraInterface::call_getri( int matrix_order, int n, std::complex<double> * a, int lda,
+		const int * ipiv, std::complex<double> * work, int lwork)
+{
+	return LAPACKE_zgetri_work(matrix_order,n,a,lda,ipiv,work,lwork);
+}
+
+int
+LinearAlgebraInterface::call_getri( int matrix_order, int n, std::complex<float> * a, int lda,
+		const int * ipiv, std::complex<float> * work, int lwork)
+{
+	return LAPACKE_cgetri_work(matrix_order,n,a,lda,ipiv,work,lwork);
+}
+
+int
 LinearAlgebraInterface::call_getrf( int matrix_order, int m, int n, double * a, int lda, int * ipiv )
 {
 	return LAPACKE_dgetrf_work(matrix_order,m,n,a,lda,ipiv);
+}
+
+int
+LinearAlgebraInterface::call_getrf( int matrix_order, int m, int n, float * a, int lda, int * ipiv )
+{
+	return LAPACKE_sgetrf_work(matrix_order,m,n,a,lda,ipiv);
+}
+
+int
+LinearAlgebraInterface::call_getrf( int matrix_order, int m, int n, std::complex<double> * a, int lda, int * ipiv )
+{
+	return LAPACKE_zgetrf_work(matrix_order,m,n,a,lda,ipiv);
+}
+
+int
+LinearAlgebraInterface::call_getrf( int matrix_order, int m, int n, std::complex<float> * a, int lda, int * ipiv )
+{
+	return LAPACKE_cgetrf_work(matrix_order,m,n,a,lda,ipiv);
 }
 
 int

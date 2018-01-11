@@ -45,8 +45,8 @@ CubicPolynomial<TMesh, TData>::initialize(
 	rangeMin_ = x1;
 	rangeMax_ = x2;
 	assert(rangeMin_ <= rangeMax_);
-	a_ = k1*( x2 - x1 ) - ( y2 - y1 );
-	b_ = -k2*( x2 - x1 ) + ( y2 - y1 );
+	a_ = k1*TData( x2 - x1 ) - ( y2 - y1 );
+	b_ = -k2*TData( x2 - x1 ) + ( y2 - y1 );
 	y1_ = y1;
 	y2_ = y2;
 }
@@ -57,7 +57,7 @@ CubicPolynomial<TMesh, TData>::evaluate(
 		TMesh x, TData &value) const
 {
 	TMesh t = ( x - rangeMin_ ) / this->interval_length() ;
-	value = y1_*(1-t)+y2_*t+(a_*(1-t)+b_*t)*t*(1-t);
+	value = y1_*TData(1-t)+y2_*TData(t)+(a_*TData(1-t)+b_*TData(t))*TData(t*(1-t));
 }
 
 template<typename TMesh, typename TData>
@@ -66,8 +66,8 @@ CubicPolynomial<TMesh, TData>::evaluate_derivative(
 		TMesh x, TData &value) const
 {
 	TMesh t = ( x - rangeMin_ ) / this->interval_length() ;
-	value = (y2_-y1_)*(1.0/this->interval_length())+(a_*(1-t)+b_*t)*(1-2*t)
-			/this->interval_length() + (b_-a_)*(t*(1-t)/this->interval_length());
+	value = (y2_-y1_)*TData(1.0/this->interval_length())+(a_*TData(1-t)+b_*TData(t))*TData(1-2*t)
+			*TData(1.0/this->interval_length()) + (b_-a_)*TData(t*(1-t)/this->interval_length());
 }
 
 template<typename TMesh, typename TData>
@@ -76,7 +76,7 @@ CubicPolynomial<TMesh, TData>::evaluate_second_derivative(
 		TMesh x, TData &value) const
 {
 	TMesh t = ( x - rangeMin_ ) / this->interval_length();
-	value = (b_-2*a_+(a_-b_)*3*t)(2.0/std::pow(this->interval_length(),2));
+	value = (b_-2*a_+(a_-b_)*TData(3*t))*TData(2.0/std::pow(this->interval_length(),2));
 }
 
 template<typename TMesh, typename TData>

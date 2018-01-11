@@ -49,25 +49,20 @@ public:
 	CubeSplineInterpolation();
 
 	/**
-	 * Constructor that calls CubeSplineInterpolation::initialize.
-	 *
-	 *	See CubeSplineInterpolation::initialize.
-	 */
-	template<class RandomAccessIteratorData, class RandomAccessIteratorMesh>
-	CubeSplineInterpolation(
-			RandomAccessIteratorData dataBegin,
-			RandomAccessIteratorData dataEnd,
-			RandomAccessIteratorMesh meshBegin,
-			RandomAccessIteratorMesh meshEnd,
-			TMesh intervalBegin,
-			TMesh intervalEnd);
-
-	/**
 	 * Initialize the spline.
 	 *
-	 * @param data 	Function values i at mesh point i respectively.
+	 * The formula is according to wikipedia [https://en.wikipedia.org/wiki/Spline_interpolation]
 	 *
-	 * @param mesh 	Position values i at mesh point i respectively.
+	 * @param dataBegin		Random access iterator pointing to the beginning of the range support function values f_i
+	 * @param dataEnd		Random acces iterator pointing to the end of the range for support function values f_i
+	 * @param meshBegin		Positions x_i where the function values are defined.
+	 * @param meshEnd		Positions x_i where the function values are defined.
+	 * @param intervalBegin		Beginning of the range of definition
+	 * @param intervalEnd		End of the range of definition
+	 * @param splineMatrixPtr	A shared pointer. If not null, but the vector type pointed to is empty,
+	 * 							 the inverse spline matrix will place behind the pointer
+	 * 							 for reuse. If not null and the data pointed has size not empty, it must be the
+	 * 							 correct inverse spline matrix for that problem.
 	 */
 	template<class RandomAccessIteratorData, class RandomAccessIteratorMesh>
 	void initialize(
@@ -78,6 +73,17 @@ public:
 			TMesh intervalBegin,
 			TMesh intervalEnd,
 			std::shared_ptr<Auxillary::alignedvector::aligned_vector<TMesh>> splineMatrixPtr = nullptr);
+
+	/**
+	 * Initialize the spline though the high level interface.
+	 *
+	 * @param mesh 		A vector type with the mesh data.
+	 * @param data		A vector type with function values at the corresponding mesh point.
+	 */
+	template<class VTMesh, class VTData>
+	void initialize(
+			VTMesh const & mesh,
+			VTData const & data);
 
 	/**
 	 * Removes the content of the object and sets it to its initial state.
@@ -100,6 +106,15 @@ public:
 	 */
 	TData prime(TMesh x) const;
 
+	/**
+	 * @return The minimum of the defined range.
+	 */
+	TMesh min_range() const;
+
+	/**
+	 * @return The maximum of the defined range.
+	 */
+	TMesh max_range() const;
 private:
 
 	std::vector<Auxillary::CubicPolynomial<TMesh,TData>> polys_;

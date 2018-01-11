@@ -24,6 +24,7 @@
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include "Auxillary/AlignedVector.h"
 #include "AtomicSite/RadialGrid.h"
+#include "LatticeStructure/RegularBareGrid.h"
 #include <vector>
 #include <complex>
 #include <iostream>
@@ -216,14 +217,30 @@ BOOST_AUTO_TEST_CASE( test_spherical_harmonic_expansion )
 	int nElem = (lmax+1)*(lmax+1)*rgrid.get_num_R();
 	elephon::Auxillary::alignedvector::ZV constant_data(nElem, 0.0);
 	elephon::AtomicSite::SphericalHarmonicExpansion cos_x_test;
-	// now, only fill the radial data for l=1 and m=0 with 1.
+	// now, only fill the radial data of constant '1' for l=1 and m=0 with 1.
 	std::fill(constant_data.begin() + cos_x_test.angular_momentum_layout(/*l =*/1, /*m =*/0),
 			constant_data.begin() + cos_x_test.angular_momentum_layout(/*l =*/1, /*m =*/0) + points.size(),
 			1.0);
 
 	cos_x_test.initialize(5, 50.0, std::move(constant_data), std::move(rgrid));
 
-	// todo test cos x
+	// The above is fancy way of representing a cos(2pi*z) function in 3D. Check that indeed this is what we get.
+	elephon::LatticeStructure::RegularBareGrid testGrid;
+	testGrid.initialize({50, 50, 50});
+	auto gridVectors = testGrid.get_all_vectors_grid();
+	elephon::Auxillary::alignedvector::ZV interpolatedData;
+	cos_x_test.interpolate(gridVectors, interpolatedData);
+	assert(interpolatedData.size() == testGrid.get_num_points());
+	double diff = 0.0;
+	for (int iGP = 0 ; iGP < testGrid.get_num_points(); ++iGP)
+	{
+		auto thisVector = testGrid.get_vector_direct(iGP);
+		double z = thisVector[3];
+		auto cos_z = std::sqrt(3.0/4.0/M_PI)*std::complex<double>(2.0*M_PI*z);
+		diff += std::abs(cos_z-interpolatedData[iGP])
+				/static_cast<double>(testGrid.get_num_points());
+	}
+	BOOST_CHECK_SMALL(diff, 1e-5);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

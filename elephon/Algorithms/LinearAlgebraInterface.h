@@ -174,7 +174,22 @@ public:
 	int call_getri( int matrix_order, int n, double * a, int lda,
 			const int * ipiv, double * work, int lwork);
 
+	int call_getri( int matrix_order, int n, float * a, int lda,
+			const int * ipiv, float * work, int lwork);
+
+	int call_getri( int matrix_order, int n, std::complex<double> * a, int lda,
+			const int * ipiv, std::complex<double> * work, int lwork);
+
+	int call_getri( int matrix_order, int n, std::complex<float> * a, int lda,
+			const int * ipiv, std::complex<float> * work, int lwork);
+
 	int call_getrf( int matrix_order, int m, int n, double * a, int lda, int * ipiv );
+
+	int call_getrf( int matrix_order, int m, int n, float * a, int lda, int * ipiv );
+
+	int call_getrf( int matrix_order, int m, int n, std::complex<double> * a, int lda, int * ipiv );
+
+	int call_getrf( int matrix_order, int m, int n, std::complex<float> * a, int lda, int * ipiv );
 
 	int call_heev( int matrix_order, char jobz, char uplo,
 			   int n, std::complex<double> * a,
