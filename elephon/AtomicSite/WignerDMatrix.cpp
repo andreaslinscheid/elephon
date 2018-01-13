@@ -174,5 +174,11 @@ WignerDMatrix::power_minus_1 (int m) const
 	return m%2 == 0 ? 1.0 : -1.0;
 };
 
+Auxillary::alignedvector::ZV const &
+WignerDMatrix::view_as_matrix() const
+{
+	return matrix_;
+}
+
 } /* namespace AtomicSite */
 } /* namespace elephon */

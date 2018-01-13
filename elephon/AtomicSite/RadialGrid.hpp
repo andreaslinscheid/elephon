@@ -58,9 +58,10 @@ RadialGrid::interpolate(
 				0.0, radius_,
 				splineMatrixPtr);
 
-		for (auto r : rValues)
+		for (int ip = 0 ; ip < rValues.size() ; ++ip)
 		{
-			*(interpolDataBegin + nPInterpol*iBlock) = csinterpol(r);
+			auto r = rValues[ip];
+			*(interpolDataBegin + nPInterpol*iBlock+ip) = csinterpol(r);
 		}
 	}
 }

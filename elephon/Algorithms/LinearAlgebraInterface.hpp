@@ -130,6 +130,21 @@ LinearAlgebraInterface::matrix_matrix_prod(VT const & A,
 	this->call_gemm('n','n',m,n,k,T(1.0),A.data(),k,B.data(),n,T(0.0),ATimesB.data(),n);
 }
 
+template<typename VT>
+void
+LinearAlgebraInterface::matrix_vector_prod(
+		VT const & A,
+		VT const & B,
+		VT & ATimesB) const
+{
+	typedef typename VT::value_type T;
+	int n = static_cast<int>(B.size());
+	int m = static_cast<int>(A.size())/n;
+	assert( static_cast<int>(A.size()) == m * n );
+	ATimesB.resize( n );
+	this->call_gemv('n',m,n,T(1.0),A.data(),m,B.data(),1,T(0.0),ATimesB.data(),1);
+}
+
 template<typename T>
 void
 LinearAlgebraInterface::svd(std::vector<T> A, int m, int n,

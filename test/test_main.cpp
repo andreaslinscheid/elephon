@@ -1,3 +1,4 @@
+
 #define BOOST_TEST_MODULE "Unit Tests for Elephon"
 #include <boost/test/included/unit_test.hpp>
 
@@ -8,7 +9,9 @@
 #include "Algorithms/test_CubeSplineInterpolation.cpp"
 
 // include all test suits for namespace AtomicSite
-#include "AtomicSite/test_AtomicSite.cpp"
+#include "AtomicSite/test_SphericalHarmonicExpansion.cpp"
+#include "AtomicSite/test_WignerDMatrix.cpp"
+#include "AtomicSite/test_EulerAngles.cpp"
 
 // include all test suits for namespace Auxillary
 #include "Auxillary/test_CubicPolynomial.cpp"

@@ -20,6 +20,7 @@
 #ifndef ELEPHON_ATOMICSITE_WIGNERDMATRIX_H_
 #define ELEPHON_ATOMICSITE_WIGNERDMATRIX_H_
 
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <complex>
 
@@ -65,7 +66,7 @@ public:
 	 *
 	 * @return constant reference the internal (2l+1)x(2l+1) data
 	 */
-	std::vector<std::complex<double>> const &
+	Auxillary::alignedvector::ZV const &
 	view_as_matrix() const;
 
 private:
@@ -78,7 +79,7 @@ private:
 	int dim_ = 0;
 
 	/// Storage of the full Wigner D matrix
-	std::vector<std::complex<double>> matrix_;
+	Auxillary::alignedvector::ZV matrix_;
 
 	void wigner_small_d(
 			double beta,

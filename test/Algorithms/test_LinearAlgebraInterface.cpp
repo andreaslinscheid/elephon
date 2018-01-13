@@ -233,4 +233,39 @@ BOOST_AUTO_TEST_CASE( Matrix_Multiplication )
 	check_mm<std::complex<float>>(n, m, k, A, B);
 }
 
+template<typename T>
+void
+check_mv(std::vector<T> const & A, std::vector<T> const & B)
+{
+	elephon::Algorithms::LinearAlgebraInterface linalg;
+	int n = B.size();
+	int m = A.size()/n;
+	std::vector<T> C(n);
+	linalg.call_gemv('n', n,m, T(1.0), A.data(), m, B.data(), 1, T(0.0), C.data(), 1 );
+
+	std::vector<T> C_check(n, T(0.0));
+	for (int in = 0 ; in < n; ++in )
+		for (int im = 0 ; im < m; ++im )
+			C_check[in] += A[in*m+im]*B[im];
+
+	for (int in = 0 ; in < n; ++in )
+		BOOST_CHECK_SMALL( std::abs(C_check[in] - C[in]),
+					typename ComplexTypeTrait<T>::type(0.0001) );
+};
+
+BOOST_AUTO_TEST_CASE( Matrix_Vector_prod )
+{
+	srand (time(NULL));
+	int n = rand()%100;
+	int m = rand()%100;
+	std::vector<std::complex<float>> A(m*n), B(n);
+
+	for (auto &a : A)
+		a = std::complex<float>(rand()%10, rand()%10);
+	for (auto &b : B)
+		b = std::complex<float>(rand()%10, rand()%10);
+
+	check_mv<std::complex<float>>(A, B);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

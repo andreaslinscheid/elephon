@@ -99,8 +99,8 @@ SphericalHarmonicExpansion::interpolate(
 	// for each l and m interpolate the radial data to the r-values and multiply the spherical harmonics
 	interpolated_data.assign(numPts, std::complex<double>(0.0));
 	auto radial_interpol = interpolated_data;
-	for (int l = 0 ; l < lmax_; ++l)
-		for (int m = -l ; m < l; ++m)
+	for (int l = 0 ; l <= lmax_; ++l)
+		for (int m = -l ; m <= l; ++m)
 		{
 			auto itBegin = data_.begin() + this->angular_momentum_layout(l,m)*rMax_;
 			auto itEnd = itBegin + rMax_;
@@ -117,6 +117,30 @@ SphericalHarmonicExpansion::interpolate(
 				interpolated_data[ip] += ylm*radial_interpol[ip];
 			}
 		}
+}
+
+void
+SphericalHarmonicExpansion::apply_wigner_D_rotation(
+		std::vector<WignerDMatrix> const & wignerD)
+{
+	Algorithms::LinearAlgebraInterface linalg;
+	assert(wignerD.size() > lmax_);
+
+	elephon::Auxillary::alignedvector::ZV buffer(rMax_*(2*lmax_+1));
+	for (int l = 0 ; l <= lmax_ ; ++l)
+	{
+		int nl = 2*l+1;
+		assert(wignerD[l].view_as_matrix().size() == nl*nl);
+		auto wignerD_ptr = wignerD[l].view_as_matrix().data();
+		auto expansionData_ptr = data_.data() + this->angular_momentum_layout(l,-l)*rMax_;
+		linalg.call_gemm('n', 'n',
+				nl, rMax_, nl, // W is a (2*l+1) x (2*l+1) matrix, the expansion data we interpret as a (2*l+1) x rMax_ matrix.
+				decltype(*wignerD_ptr)(1.0), wignerD_ptr, nl,
+				expansionData_ptr, rMax_,
+				decltype(*wignerD_ptr)(0.0), buffer.data(), rMax_ );
+
+		std::copy(buffer.begin(), buffer.begin()+rMax_*nl, expansionData_ptr);
+	}
 }
 
 } /* namespace AtomicSite */

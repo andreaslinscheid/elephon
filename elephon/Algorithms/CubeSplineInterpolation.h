@@ -21,6 +21,7 @@
 #define ELEPHON_ALGORITHMS_CUBESPLINEINTERPOLATION_H_
 
 #include "Auxillary/CubicPolynomial.h"
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <limits>
 #include <memory>

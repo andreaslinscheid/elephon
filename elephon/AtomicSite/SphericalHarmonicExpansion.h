@@ -23,6 +23,7 @@
 #include "Auxillary/AlignedVector.h"
 #include "LatticeStructure/Symmetry.h"
 #include "AtomicSite/RadialGrid.h"
+#include "AtomicSite/WignerDMatrix.h"
 
 namespace elephon
 {
@@ -39,7 +40,7 @@ public:
 	/**
 	 * Set the internal data.
 	 *
-	 * @param lmax	maximal angular momentum
+	 * @param lmax	maximal angular momentum that occurs l=(0,...,lmax)
 	 * @param rMax	dimension of the data per l and m
 	 * @param data	list of data. Must be of exactly the size determined by lmax and rMax.
 	 * 				The layout of the data must be r fastest and l slowest, such that
@@ -75,12 +76,22 @@ public:
 	std::complex<double> operator() (int r, int m, int l) const;
 
 	/**
+	 *	Defines the memory layout of angular momentum channels.
 	 *
-	 * @param l
-	 * @param m
-	 * @return
+	 * @param l		The main angular momentum quantum number.
+	 * @param m		The magnetic quantum number, m is in the range [-l,l]
+	 * @return		The position of the element (l,m)
 	 */
 	int angular_momentum_layout(int l, int m) const;
+
+	/**
+	 * Perform a rotation of the data in this object according Wigner rotation matrices.
+	 *
+	 * @param wignerD	A vector with the rotation matrices for l=0,1,...,Lmax in this order.
+	 * 					The maximal Lmax must be larger or equal than the internal range of the
+	 * 					data in this object.
+	 */
+	void apply_wigner_D_rotation(std::vector<WignerDMatrix> const & wignerD);
 
 	void transform(LatticeStructure::Symmetry::SymmetryOperation const & sop);
 

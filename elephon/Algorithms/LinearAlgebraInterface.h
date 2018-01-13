@@ -105,11 +105,6 @@ public:
 			std::vector< std::complex<T> > & eigenvectors,
 			std::vector<T> & eigenvalues );
 
-	template<typename VT>
-	void matrix_matrix_prod(VT const & A,
-			VT const & B,
-			VT & ATimesB, int m, int n) const;
-
 	template<typename T>
 	void svd(std::vector<T> A, int m, int n,
 			std::vector<T> & U,
@@ -122,6 +117,15 @@ public:
 	template<typename VT>
 	void conjugate_square_matrix(VT & A) const;
 
+	template<typename VT>
+	void matrix_matrix_prod(VT const & A,
+			VT const & B,
+			VT & ATimesB, int m, int n) const;
+
+	template<typename VT>
+	void matrix_vector_prod(VT const & A,
+			VT const & B,
+			VT & ATimesB) const;
 
 	//Here come the low level routines
 
