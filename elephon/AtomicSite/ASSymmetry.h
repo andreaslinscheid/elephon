@@ -32,7 +32,7 @@ namespace AtomicSite
 {
 
 /**
- *
+ *	Representation of the symmetry operations on the radial grid.
  */
 class ASSymmetry
 {

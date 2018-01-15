@@ -30,11 +30,25 @@ namespace elephon
 namespace PhononStructure
 {
 
+/**
+ * Object to compute the Phonon modes from a matrix of force constants and atom masses.
+ *
+ * This object does not directly pre-compute Phonon data, but it stores information to compute
+ * it (or its momentum derivative) at any given reciprocal lattice vector.
+ */
 class Phonon
 {
 public:
 
-	void initialize(std::shared_ptr<const ForceConstantMatrix> fc,
+	/**
+	 * Set up the with the data required to compute phonon dispersions.
+	 *
+	 * @param fc		Pointer to the force constant data.
+	 * @param masses	Vector of size of the number of atoms in the primitive unit cell with their respective masses.
+	 * 					Must be in the same order as the atoms occur in LatticeStructure::UnitCell
+	 */
+	void initialize(
+			std::shared_ptr<const ForceConstantMatrix> fc,
 			std::vector<double> masses);
 
 	/**
@@ -50,6 +64,12 @@ public:
 			Auxillary::alignedvector::DV & w2,
 			Auxillary::alignedvector::ZV & eigenModes) const;
 
+	/**
+	 * Similar to compute_at_q except that not the phonon mode, but its derivative.
+	 *
+	 * @param q			List of q vectors in the layout q1x, q1y, q1z, q2x ...
+	 * @param dwdq		A vector that will be resized to fit the gradient of the phonon frequencies in units of THz.
+	 */
 	void evaluate_derivative(
 			std::vector<double> const & q,
 			Auxillary::alignedvector::DV & dwdq) const;
@@ -61,10 +81,25 @@ public:
 			Auxillary::alignedvector::DV & w2,
 			Auxillary::alignedvector::ZV & eigenModes) const;
 
+	/**
+	 * Get number of modes.
+	 * @return	The number of modes.
+	 */
 	int get_num_modes() const;
 
+	/**
+	 * Get a list of the masses of atoms.
+	 *
+	 * @return	A vector with the masses of the atoms
+	 */
 	std::vector<double> const & get_masses() const;
 
+	/**
+	 * Produce a plot of the phonons along a path in reciprocal space.
+	 *
+	 * @param filename		Base name of the file. Will also produce a file <filename>.gp with a gnuplot script to plot it.
+	 * @param kpath			The reciprocal path object.
+	 */
 	void write_bands_path(
 			std::string const & filename,
 			std::shared_ptr<const IOMethods::KPath> kpath ) const;

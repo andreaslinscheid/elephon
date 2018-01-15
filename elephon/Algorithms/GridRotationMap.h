@@ -29,6 +29,8 @@ namespace elephon
 namespace Algorithms
 {
 
+/** @file */
+
 /**
  * Compute an index map for each symmetry operation.
  *

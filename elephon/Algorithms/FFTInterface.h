@@ -30,13 +30,38 @@ namespace elephon
 namespace Algorithms
 {
 
+/**
+ * Interface to the fftw3 library that implements the fast Fourier transform (FFT).
+ *
+ * This interface not only provides the high level methods to compute the FFT is also buffers
+ * the storage used by the FFTW library for fast calculation of multiple similar FFTs.
+ * This class is thread-safe for OMP threaded applications.
+ * NOTE: For other methods, this interface is NOT thread safe.
+ */
 class FFTInterface
 {
 public:
-	FFTInterface();
 
+	/**
+	 * Clears the internal storage.
+	 */
 	~FFTInterface();
 
+	/**
+	 * Compute a regular grid Fourier transform from a packed storage scheme.
+	 *
+	 * @tparam VI	must be vectors with possibly custom allocators. Linear consecutive memory layout of the data
+	 * 				is necessary as required by the underlying fftw library..
+	 * @tparam VR	must be vectors with possibly custom allocators. Linear consecutive memory layout of the data
+	 * 				is necessary as required by the underlying fftw library..
+	 *
+	 * @param[in] mapFFTCoeff			A list of 3N elements gx1,gy1,gz1,gx2,...,gzN specifying the G vector of
+	 * 								the respective data values in \ref sparseInputData
+	 * @param[in] gridDimsInputData		The 3 element vector (NGX, NGY, NGZ) with the regular grid dimensions that the \p sparseInputData refers to.
+	 * @param[in] sparseInputData		The data values V1, V2 ... VN corresponding to the G vectors in \p mapFFTCoeff
+	 * @param[in] exponentSign			The sign of the complex exponent.
+	 * @param[out] dataResult			A list of transformed data on the grid and data layout as specified in the call to plan_fft()
+	 */
 	template<typename VI, typename VR>
 	void fft_sparse_data(
 			std::vector<int> const & mapFFTCoeff,

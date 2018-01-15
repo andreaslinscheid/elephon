@@ -30,7 +30,7 @@ namespace IOMethods
 {
 
 /**
- * 	\brief Read input to the scallop code and parse it into a key/value map.
+ * 	\brief Read input to the elephon code and parse it into a key/value map.
  *
  *	\ref parse_input performs that key value parsing of a string that contains the input.
  * 	Using the \ref get_input_config_value method one can check the input file for the value string that

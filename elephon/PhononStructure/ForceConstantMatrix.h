@@ -34,10 +34,27 @@ namespace elephon
 namespace PhononStructure
 {
 
+/**
+ *	Collection of methods and storage for the matrix of force constants.
+ *
+ */
 class ForceConstantMatrix
 {
 public:
 
+	/**
+	 * Build the matrix of force constants from finite displacement data.
+	 *
+	 * @todo This is a monolithic and quite complicated function. Furthermore it shares code with DisplacementPotential.
+	 * 		  It is working but has to be the first target of refactoring one the electron-phonon coupling is completely working...
+	 *
+	 * @param unitCell		The physical primitive unit cell.
+	 * @param superCell		The supercell. Currently the supercell must be a multiple of Nx, Ny and Nz
+	 * 						of the primitive cell. No more complicated relation is allowed. The symmetry must be the same.
+	 * @param irredDispl	A pointer to the list of irreducible displacements where the forces where obtained from.
+	 * @param forces		For each irreducible displacement, a vector of forces on each atom as obtained by the
+	 * 						electronic structure backend.
+	 */
 	void build( std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
 			std::shared_ptr<const LatticeStructure::UnitCell> superCell,
 			std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement> > irredDispl,
@@ -75,7 +92,7 @@ private:
 	std::shared_ptr<const LatticeStructure::UnitCell> uc_;
 
 	///For all atoms 'a' in the unit cell, tau_ contains for all atoms 'b' in the unit cell
-	// and the set of R vectors [(tau_a-tau_b)*numR+ir] a set with vectors of atom positions
+	/// and the set of R vectors [(tau_a-tau_b)*numR+ir] a set with vectors of atom positions
 	std::vector< std::vector<double> > tau_;
 
 	void determine_lattice_vector(LatticeStructure::AtomDisplacement const & displ,

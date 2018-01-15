@@ -29,7 +29,7 @@ namespace IOMethods
 {
 
 std::shared_ptr<ElectronicStructureCodeInterface>
-choose_interface( InputOptions inputOPts )
+choose_interface( InputOptions const & inputOPts )
 {
 	namespace fs = boost::filesystem;
 	auto d = inputOPts.get_root_dir();

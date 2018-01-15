@@ -27,12 +27,28 @@ namespace elephon
 namespace IOMethods
 {
 
+/**
+ * The main program configuration is obtained via this class.
+ *
+ * It reads an input file and allows to give constant read access to the resulting program options.
+ */
 class Input
 {
 public:
 
+	/**
+	 * Based on program startup options from the command line, obtain the configuration options.
+	 *
+	 * @param argc	Number of arguments passed via the command line.
+	 * @param argv	The arguments passed to the command line.
+	 */
 	Input( int argc, char* argv[] );
 
+	/**
+	 * Obtain read acces to the internally stored program options.
+	 *
+	 * @return	A constant reference to the InputOptions class.
+	 */
 	InputOptions const & get_opts() const;
 
 private:

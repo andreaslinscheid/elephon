@@ -33,6 +33,12 @@ namespace elephon
 namespace PhononStructure
 {
 
+/**
+ * Structure to store the data and provide methods related to the linear displacement potential due to a lattice perturbation.
+ *
+ * @todo This function is in some sense similar to ForceConstantMatrix.
+ * 		 These two must be the first target of a refactor once the general logic is working ...
+ */
 class DisplacementPotential
 {
 public:

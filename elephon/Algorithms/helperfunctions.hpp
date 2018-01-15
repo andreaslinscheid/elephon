@@ -111,6 +111,9 @@ void gradient_interpolation_single_cube_relative(
 		f111*x*y;
 }
 
+/** @file Contains simple templated functions that do not fit into a particular category.
+ */
+
 template<typename T>
 T
 triangle_area(std::vector<T> const & p1,
@@ -126,6 +129,15 @@ triangle_area(std::vector<T> const & p1,
 		       p1[1]*p3[2] + p2[1]*p3[2],2));
 }
 
+/**
+ * Given data values on the 4 corner values, linearly interpolate to points within a tetrahedron.
+ *
+ * @param ptsInTetra	List of x,y,z coordinates for 1 or more points within a tetrahedron. Layout is x1,y1,z1,x2,...,zN.
+ * @param tetra			The tetrahedron object. The coordinates \ref ptsInTetra are transformed into Barycentric coordinates.
+ * @param cornerData	Vector of 4 vectors with each an equal size of data values.
+ * 						The 4 ith elements are interpolated to the ith element of \ref interpolData
+ * @param interpolData
+ */
 template<typename T>
 void
 interpolate_within_single_tetrahedron(

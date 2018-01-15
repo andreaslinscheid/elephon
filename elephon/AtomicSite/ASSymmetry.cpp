@@ -24,5 +24,17 @@ namespace elephon
 namespace AtomicSite
 {
 
+
+void
+ASSymmetry::initialize(
+		int lmax,
+		std::vector<int> symmetryOperations,
+		std::vector<double> fractionalTranslations,
+		LatticeStructure::LatticeModule lattice,
+		std::vector<LatticeStructure::Atom> const & atoms)
+{
+
+}
+
 } /* namespace AtomicSite */
 } /* namespace elephon */

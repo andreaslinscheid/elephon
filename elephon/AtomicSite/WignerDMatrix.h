@@ -29,6 +29,9 @@ namespace elephon
 namespace AtomicSite
 {
 
+/**
+ * A rotation matrix for spherical harmonics.
+ */
 class WignerDMatrix
 {
 public:

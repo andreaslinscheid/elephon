@@ -26,11 +26,6 @@ namespace elephon
 namespace Algorithms
 {
 
-FFTInterface::FFTInterface()
-{
-
-}
-
 void
 FFTInterface::plan_fft_local(
 		std::vector<int> const & gridDims,

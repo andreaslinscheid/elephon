@@ -27,7 +27,16 @@ namespace elephon
 {
 namespace IOMethods
 {
+/** @file */
 
+/**
+ * Based on heuristics, this function guesses the electronic structure calculator the user took for the ground state run.
+ *
+ * @todo Currently, this is either VASP or the function exits the program. Other backend calculations will be added later ...
+ *
+ * @param inputOPts	Constant reference to the input options.
+ * @return	A pointer to the abstracted electronic structure calculator interface.
+ */
 std::shared_ptr<ElectronicStructureCodeInterface>
 choose_interface( InputOptions inputOPts );
 

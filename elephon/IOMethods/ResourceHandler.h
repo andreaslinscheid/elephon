@@ -39,7 +39,7 @@ namespace IOMethods
 {
 
 /**
- * This class is the main interface to the required entities in the code.
+ * This class is the main interface to load to the required entities in the code only when/if needed.
  *
  * It stores the phonon, force constant, displacement potential, electronic grid and so on
  * if they have been computed and triggers their calculation if they are needed. The logic is
@@ -51,14 +51,45 @@ class ResourceHandler
 {
 public:
 
+	/**
+	 * Construct up the ResourceHandler without loaded data.
+	 *
+	 * @param dataLoader	The abstracted electronic structure interface that knows how to load specific
+	 * 						data dependent to the particular code.
+	 */
 	ResourceHandler( std::shared_ptr<ElectronicStructureCodeInterface> dataLoader);
 
+	/**
+	 * Get access to ElectronicStructureCodeInterface internally stored.
+	 * @return	A copy of the pointer to the ElectronicStructureCodeInterface.
+	 */
 	std::shared_ptr<ElectronicStructureCodeInterface> get_electronic_structure_interface();
 
+	/**
+	 * Directly access the input options.
+	 *
+	 * This is equivalent to ElectronicStructureCodeInterface::get_optns()
+	 *
+	 * @return	A constant reference to the input options.
+	 */
 	IOMethods::InputOptions const & get_optns() const;
 
+	/**
+	 * obtain the phonon object.
+	 *
+	 * The object will be initialized to the data as specified via the input options.
+	 *
+	 * @return Pointer to a constant phonon object.
+	 */
 	std::shared_ptr<const PhononStructure::Phonon> get_phonon_obj();
 
+	/**
+	 * obtain phonon data on a regular grid.
+	 *
+	 * The object will be initialized to the data as specified via the input options.
+	 *
+	 * @return Pointer to a constant phonon object.
+	 */
 	std::shared_ptr<const PhononStructure::PhononGrid> get_phonon_grid_obj();
 
 	std::shared_ptr<const PhononStructure::ForceConstantMatrix> get_forceConstant_obj();

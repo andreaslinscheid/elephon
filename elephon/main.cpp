@@ -27,6 +27,18 @@
 
 using namespace elephon;
 
+/** @file */
+
+/**
+ * This is the main driver of the elephon package.
+ *
+ * This function loads the input configuration file and starts the resource loader.
+ * Dependent on user request, it calls sub-drivers specific to that major task such
+ * as computing the electron-phonon coupling matrix elements, then calling the a2F routine to
+ * compute the isotropic coupling function.
+ *
+ * @return	0 on success.
+ */
 int
 main(int argc, char* argv[])
 {

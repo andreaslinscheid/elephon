@@ -31,9 +31,20 @@ namespace elephon
 namespace LatticeStructure
 {
 
+/**
+ * A collection of data and methods that describes the physical system in a periodic lattice.
+ *
+ */
 class UnitCell
 {
 public:
+	/**
+	 * Define the system.
+	 *
+	 * @param atoms		List of atoms in the unit cell specifing the basis of the lattice.
+	 * @param lattice	A lattice structure specifying the cell.
+	 * @param sym		The symmetry of the system.
+	 */
 	void initialize(
 			std::vector<LatticeStructure::Atom> atoms,
 			LatticeStructure::LatticeModule lattice,
