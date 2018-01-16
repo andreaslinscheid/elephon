@@ -400,7 +400,7 @@ GridPt::initialize(std::vector<double> coords, double gridPrec)
 }
 
 void
-GridPt::transform( Symmetry::Sop const & sop )
+GridPt::transform( symmetry::SymmetryOperation const & sop )
 {
 	for (auto &xi : coords_)
 		xi -= std::floor(xi+0.5);

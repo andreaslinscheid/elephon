@@ -70,7 +70,7 @@ std::vector<bool> Atom::get_movement_fixed() const
 };
 
 void
-Atom::transform( Symmetry::SymmetryOperation const & sop  )
+Atom::transform( symmetry::SymmetryOperation const & sop  )
 {
 	sop.apply(pos_,true);
 }

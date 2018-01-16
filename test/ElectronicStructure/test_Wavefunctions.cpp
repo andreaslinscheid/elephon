@@ -387,9 +387,9 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 					}
 				std::vector<double> Grot = {0,0,0};
 				for ( int i = 0 ; i < 3 ; ++i)
-					Grot[i] = symOp.ptgroup[i*3+0]*fftMapIrred[0][mpw*3]
-							  + symOp.ptgroup[i*3+1]*fftMapIrred[0][mpw*3+1]
-							 + symOp.ptgroup[i*3+2]*fftMapIrred[0][mpw*3+2];
+					Grot[i] = symOp.get_lat_rot_matrix(i,0)*fftMapIrred[0][mpw*3]
+							  + symOp.get_lat_rot_matrix(i,1)*fftMapIrred[0][mpw*3+1]
+							 + symOp.get_lat_rot_matrix(i,2)*fftMapIrred[0][mpw*3+2];
 				for ( int i = 0 ; i < 3 ; ++i)
 					Grot[i] = Grot[i] < 0 ? Grot[i]+fftMax[i] : Grot[i];
 				int csq = Grot[0] + fftMax[0]*(Grot[1]+fftMax[1]*Grot[2]);
@@ -415,9 +415,9 @@ BOOST_AUTO_TEST_CASE( FeSe_Wfct_Symmetry_reconstruction )
 				{
 					auto Grot = kIrred;
 					for ( int i = 0 ; i < 3 ; ++i)
-						Grot[i] = symOp.ptgroup[i*3+0]*fftMapIrred[0][ipw*3]
-								  + symOp.ptgroup[i*3+1]*fftMapIrred[0][ipw*3+1]
-								 + symOp.ptgroup[i*3+2]*fftMapIrred[0][ipw*3+2];
+						Grot[i] = symOp.get_lat_rot_matrix(i,0)*fftMapIrred[0][ipw*3]
+								  + symOp.get_lat_rot_matrix(i,1)*fftMapIrred[0][ipw*3+1]
+								 + symOp.get_lat_rot_matrix(i,2)*fftMapIrred[0][ipw*3+2];
 					for ( int i = 0 ; i < 3 ; ++i)
 						Grot[i] = Grot[i] < 0 ? Grot[i]+fftMax[i] : Grot[i];
 					int csq = Grot[0] + fftMax[0]*(Grot[1]+fftMax[1]*Grot[2]);

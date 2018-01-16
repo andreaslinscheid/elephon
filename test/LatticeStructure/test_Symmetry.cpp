@@ -98,8 +98,8 @@ BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 	for ( int i = 0; i < 3 ; ++i)
 	{
 		for ( int j = 0; j < 3 ; ++j)
-			BOOST_REQUIRE(sop.ptgroup[i*3+j] == ref_sym_22[i*3+j]);
-		BOOST_REQUIRE( std::fabs(sop.fracTrans[i]) < 1e-16);
+			BOOST_REQUIRE(sop.get_lat_rot_matrix(i,j) == ref_sym_22[i*3+j]);
+		BOOST_REQUIRE( std::fabs(sop.get_lat_frac_trans(i)) < 1e-16);
 	}
 
 	//We check the multiplication of irot 4 with 17 which matches irot 41
@@ -115,9 +115,9 @@ BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 	for ( int i = 0; i < 3 ; ++i)
 		for ( int j = 0; j < 3 ; ++j)
 		{
-			BOOST_REQUIRE(sop4.ptgroup[i*3+j] == ref_sym_4[i*3+j]);
-			BOOST_REQUIRE(sop17.ptgroup[i*3+j] == ref_sym_17[i*3+j]);
-			BOOST_REQUIRE(sop41.ptgroup[i*3+j] == ref_sym_41[i*3+j]);
+			BOOST_REQUIRE(sop4.get_lat_rot_matrix(i,j) == ref_sym_4[i*3+j]);
+			BOOST_REQUIRE(sop17.get_lat_rot_matrix(i,j) == ref_sym_17[i*3+j]);
+			BOOST_REQUIRE(sop41.get_lat_rot_matrix(i,j) == ref_sym_41[i*3+j]);
 		}
 	BOOST_REQUIRE(sym.get_group_product(4,17) == 41 );
 
@@ -139,8 +139,8 @@ BOOST_AUTO_TEST_CASE( Build_Al_symmetries )
 	for ( int i = 0; i < 3 ; ++i)
 	{
 		for ( int j = 0; j < 3 ; ++j)
-			BOOST_REQUIRE(sopInv.ptgroup[i*3+j] == ref_sym_2[i*3+j]);
-		BOOST_REQUIRE( std::fabs(sopInv.fracTrans[i]) < 1e-16);
+			BOOST_REQUIRE(sopInv.get_carth_rot_matrix(i,j) == ref_sym_2[i*3+j]);
+		BOOST_REQUIRE( std::fabs(sopInv.get_lat_frac_trans(i)) < 1e-16);
 	}
 }
 

@@ -22,6 +22,7 @@
 
 #include "LatticeModule.h"
 #include "AtomicSite/ASSymmetry.h"
+#include "symmetry/SymmetryOperation.h"
 #include <vector>
 #include <assert.h>
 
@@ -29,7 +30,6 @@ namespace elephon
 {
 namespace LatticeStructure
 {
-
 /**
  * Class to handle the symmetry group of the system.
  *
@@ -41,19 +41,6 @@ namespace LatticeStructure
 class Symmetry
 {
 public:
-
-	typedef struct Sop
-	{
-		int ptgroup[9];
-		double ptgCart[9];
-		double fracTrans[3];
-		void rotate( std::vector<int> & v ) const;
-		void apply( std::vector<double> & v, bool latticePeriodic = true) const;
-		void rotate_cart( std::vector<double> & v ) const;
-
-		template<class VT>
-		void rotate_matrix_cart(VT & m) const;
-	} SymmetryOperation;
 
 	Symmetry();
 
@@ -126,13 +113,13 @@ public:
 	 *
 	 * @return	A vector with Symmetry operations that generate the star of this \p point.
 	 */
-	std::vector<SymmetryOperation> star_operations(std::vector<double> const& point) const;
+	std::vector<symmetry::SymmetryOperation> star_operations(std::vector<double> const& point) const;
 
 	void small_group_cart(std::vector<double> const& pointCartCoords);
 
 	void symmetry_reduction( std::vector<int> indicesDropped);
 
-	SymmetryOperation get_sym_op( int isym ) const;
+	symmetry::SymmetryOperation get_sym_op( int isym ) const;
 
 	int get_identity_index() const;
 

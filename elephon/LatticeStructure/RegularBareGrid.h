@@ -22,6 +22,7 @@
 
 #include "LatticeStructure/LatticeModule.h"
 #include "LatticeStructure/Symmetry.h"
+#include "symmetry/SymmetryOperation.h"
 #include <vector>
 #include <map>
 
@@ -149,7 +150,7 @@ public:
 
 	void initialize(std::vector<double> coords, double gridPrec = 1e-6);
 
-	void transform( Symmetry::Sop const & sop );
+	void transform( symmetry::SymmetryOperation const & sop );
 
 	std::vector<double> get_coords() const;
 

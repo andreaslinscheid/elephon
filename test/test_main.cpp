@@ -55,3 +55,6 @@
 #include "PhononStructure/test_ForceConstantMatrix.cpp"
 #include "PhononStructure/test_Phonon.cpp"
 #include "PhononStructure/test_PhononGrid.cpp"
+
+// include all test suits for namespace symmetry
+#include "symmetry/test_SymmetryOperation.cpp"

@@ -412,12 +412,12 @@ Symmetry::small_group(
  	return dropIndices;
 }
 
-std::vector<Symmetry::SymmetryOperation>
+std::vector<symmetry::SymmetryOperation>
 Symmetry::star_operations(std::vector<double> const& point) const
 {
 	//apply all symmetry operations and discard those who leave the point invariant
 	std::set<typename RegularBareGrid::GridPoint> pointStar;
-	std::vector<Symmetry::SymmetryOperation> ops;
+	std::vector<symmetry::SymmetryOperation> ops;
  	for (int isym = 0 ; isym < numRotations_; ++isym)
 	{
 		auto rotcpy = point;
@@ -526,59 +526,34 @@ Symmetry::symmetry_reduction( std::vector<int> indicesDropped)
 	this->initialize( symmPrec_, newPtGrpSym, newFractSym, lattice_ , hasTimeReversal_);
 }
 
-Symmetry::SymmetryOperation
+symmetry::SymmetryOperation
 Symmetry::get_sym_op( int isym ) const
 {
 	assert( isym < numRotations_ );
-	Symmetry::SymmetryOperation res;
+	std::vector<int> ptgroup(9);
+	std::vector<double> fracTrans(3), fracTransCart(3), symmCart(9);
 	for ( int i = 0 ; i < 3 ; ++ i)
 	{
-		res.fracTrans[i] = (isReciprocalSpace_ ? -1.0 : 1.0)*fractTrans_[isym*3+i];
+		fracTrans[i] = (isReciprocalSpace_ ? -1.0 : 1.0)*fractTrans_[isym*3+i];
 		for ( int j = 0 ; j < 3 ; ++j)
 		{
 			int index = (isym*3+i)*3+j;
-			res.ptgroup[i*3+j] = isReciprocalSpace_ ? symmetriesReciprocal_[index] : symmetries_[index];
+			ptgroup[i*3+j] = isReciprocalSpace_ ? symmetriesReciprocal_[index] : symmetries_[index];
 		}
 	}
 
+	//in cartesian space, symmetries are unitary
 	if ( isReciprocalSpace_ )
-		//in cartesian space, symmetries are unitary
 		isym = this->get_index_inverse(isym);
-	std::copy( &symmetriesCartesian_[isym*9],&symmetriesCartesian_[isym*9]+9,res.ptgCart);
+	std::copy( &symmetriesCartesian_[isym*9],&symmetriesCartesian_[isym*9]+9,symmCart.begin());
+
+	symmetry::SymmetryOperation res(
+			ptgroup.begin(), ptgroup.end(),
+			fracTrans.begin(), fracTrans.end(),
+			symmCart.begin(), symmCart.end(),
+			fracTransCart.begin(), fracTransCart.end() );
 	return res;
 }
-
-void
-Symmetry::Sop::rotate( std::vector<int> & v ) const
-{
-	assert(v.size()==3);
-	auto b = v;
-	for ( int i = 0; i < 3; ++i)
-		v[i] = ptgroup[i*3+0]*b[0]+ptgroup[i*3+1]*b[1]+ptgroup[i*3+2]*b[2];
-}
-
-void
-Symmetry::Sop::apply( std::vector<double> & v, bool latticePeriodic ) const
-{
-	assert(v.size()==3);
-	auto b = v;
-	for ( int i = 0; i < 3; ++i)
-	{
-		v[i] = ptgroup[i*3+0]*b[0]+ptgroup[i*3+1]*b[1]+ptgroup[i*3+2]*b[2]+fracTrans[i];
-		if ( latticePeriodic )
-			v[i] -= std::floor(v[i]+0.5);
-	}
-};
-
-void
-Symmetry::Sop::rotate_cart( std::vector<double> & v ) const
-{
-	assert(v.size()==3);
-	auto b = v;
-	for ( int i = 0; i < 3; ++i)
-		v[i] = ptgCart[i*3+0]*b[0]+ptgCart[i*3+1]*b[1]+ptgCart[i*3+2]*b[2];
-};
-
 
 int
 Symmetry::get_identity_index() const

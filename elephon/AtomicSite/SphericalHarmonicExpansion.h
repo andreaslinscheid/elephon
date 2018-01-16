@@ -24,6 +24,7 @@
 #include "LatticeStructure/Symmetry.h"
 #include "AtomicSite/RadialGrid.h"
 #include "AtomicSite/WignerDMatrix.h"
+#include "symmetry/SymmetryOperation.h"
 
 namespace elephon
 {
@@ -93,7 +94,7 @@ public:
 	 */
 	void apply_wigner_D_rotation(std::vector<WignerDMatrix> const & wignerD);
 
-	void transform(LatticeStructure::Symmetry::SymmetryOperation const & sop);
+	void transform(symmetry::SymmetryOperation const & sop);
 
 	void interpolate(
 			std::vector<double> const & coordinates,

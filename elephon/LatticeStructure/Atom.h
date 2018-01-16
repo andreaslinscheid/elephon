@@ -21,6 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_ATOM_H_
 
 #include "LatticeStructure/Symmetry.h"
+#include "symmetry/SymmetryOperation.h"
 #include <string>
 #include <vector>
 
@@ -44,7 +45,7 @@ public:
 
 	std::vector<bool> get_movement_fixed() const;
 
-	void transform( Symmetry::SymmetryOperation const & sop  );
+	void transform( symmetry::SymmetryOperation const & sop  );
 
 	friend bool operator< (Atom const & a1, Atom const & a2);
 private:

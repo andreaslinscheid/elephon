@@ -71,14 +71,14 @@ AtomDisplacement::scale_position(double scaleX, double scaleY, double scaleZ)
 	position_[2] *= scaleZ;
 }
 
-void AtomDisplacement::transform(Symmetry::SymmetryOperation const& sop)
+void AtomDisplacement::transform(symmetry::SymmetryOperation const& sop)
 {
 	sop.apply( position_ );
 	this->transform_direction(sop);
 }
 
 void
-AtomDisplacement::transform_direction(Symmetry::SymmetryOperation const& sop)
+AtomDisplacement::transform_direction(symmetry::SymmetryOperation const& sop)
 {
 	sop.rotate_cart( direction_ );
 	this->normalize_direction(); //symmetry operations in direct coordinates are not necessary unitary

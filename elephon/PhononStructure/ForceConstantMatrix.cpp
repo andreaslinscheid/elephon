@@ -459,7 +459,7 @@ ForceConstantMatrix::symmetrize_q(
 									int mu2 = (mapped_ib*3+l);
 									int cnsq = (iq*nM+mu1)*nM+mu2;
 									rotBuffer[i*3+j] += rotPhases[isymq]*
-												symOp.ptgCart[i*3+k]*data[cnsq]*symOp.ptgCart[j*3+l];
+												symOp.get_carth_rot_matrix(i,k)*data[cnsq]*symOp.get_carth_rot_matrix(j,l);
 								}
 					++isymq;
 				}
@@ -489,7 +489,7 @@ ForceConstantMatrix::symmetrize_q(
 								{
 									// note: symOp.ptgCart is transposed which is the inverse matrix
 									data[cnsq] += std::conj(rotPhases[isymq]) / double(nsymQ)*
-												symOp.ptgCart[k*3+i]*rotBuffer[k*3+l]*symOp.ptgCart[l*3+j];
+												symOp.get_carth_rot_matrix(k,i)*rotBuffer[k*3+l]*symOp.get_carth_rot_matrix(l,j);
 								}
 						}
 

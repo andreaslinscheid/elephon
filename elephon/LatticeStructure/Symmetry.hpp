@@ -66,20 +66,5 @@ Symmetry::rotate(
 	}
 }
 
-template<class VT>
-void
-Symmetry::Sop::rotate_matrix_cart(VT & m) const
-{
-	typedef typename VT::value_type T;
-	assert(m.size()==9);
-	auto buffer = m;
-	std::fill(buffer.begin(), buffer.end(), T(0));
-	for ( int i = 0; i < 3; ++i)
-		for ( int j = 0; j < 3; ++j)
-			for ( int k = 0; k < 3; ++k)
-				for ( int l = 0; l < 3; ++l)
-					buffer[i*3+j] += ptgCart[i*3+k]*m[k*3+l]*ptgCart[j*3+l];
-}
-
 } /* namespace LatticeStructure */
 } /* namespace elephon */

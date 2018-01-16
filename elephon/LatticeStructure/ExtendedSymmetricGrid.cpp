@@ -144,7 +144,7 @@ GridPoint::initialize(std::vector<double> coords, std::vector<double> extended, 
 }
 
 void
-GridPoint::transform( Symmetry::Sop const & sop )
+GridPoint::transform( symmetry::SymmetryOperation const & sop )
 {
 	sop.apply( coords_ , false );
 	this->map_back();

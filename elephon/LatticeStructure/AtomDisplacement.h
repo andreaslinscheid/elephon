@@ -21,6 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_ATOMDISPLACEMENT_H_
 
 #include "Symmetry.h"
+#include "symmetry/SymmetryOperation.h"
 #include <vector>
 #include <string>
 
@@ -53,9 +54,9 @@ public:
 
 	void scale_position(double scaleX, double scaleY, double scaleZ);
 
-	void transform(Symmetry::SymmetryOperation const& sop);
+	void transform(symmetry::SymmetryOperation const& sop);
 
-	void transform_direction(Symmetry::SymmetryOperation const& sop);
+	void transform_direction(symmetry::SymmetryOperation const& sop);
 
 	double get_prec() const;
 

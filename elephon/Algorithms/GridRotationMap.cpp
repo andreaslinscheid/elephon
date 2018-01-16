@@ -88,7 +88,7 @@ void compute_grid_rotation_map_no_shift(
 		std::vector<int> symOpShift(3);
 		for (int i = 0 ; i < 3; ++i)
 		{
-			symOpShift[i] = sop.fracTrans[i]*grid.get_grid_dim()[i];
+			symOpShift[i] = sop.get_lat_frac_trans(i)*grid.get_grid_dim()[i];
 			symOpShift[i] -= std::floor(symOpShift[i]+0.5);
 		}
 
@@ -107,7 +107,7 @@ void compute_grid_rotation_map_no_shift(
 					{
 						xyzRot[i] = symOpShift[i];
 						for (int j = 0 ; j < 3 ; ++j)
-							xyzRot[i] += sop.ptgroup[i*3+j]*xyz[j];
+							xyzRot[i] += sop.get_lat_rot_matrix(i, j)*xyz[j];
 						xyzRot[i] = xyzRot[i] % grid.get_grid_dim()[i];
 					}
 					int cnsq = grid.get_xyz_to_reducible_periodic(xyzRot);

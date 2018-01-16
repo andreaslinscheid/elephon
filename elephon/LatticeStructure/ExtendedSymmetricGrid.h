@@ -93,7 +93,7 @@ public:
 
 	void initialize(std::vector<double> coords, std::vector<double> extended, double gridPrec = 1e-6);
 
-	void transform( Symmetry::Sop const & sop );
+	void transform( symmetry::SymmetryOperation const & sop );
 
 	friend bool operator< (GridPoint const& d1, GridPoint const& d2);
 
