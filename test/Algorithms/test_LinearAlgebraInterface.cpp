@@ -256,8 +256,8 @@ check_mv(std::vector<T> const & A, std::vector<T> const & B)
 BOOST_AUTO_TEST_CASE( Matrix_Vector_prod )
 {
 	srand (time(NULL));
-	int n = rand()%100;
-	int m = rand()%100;
+	int n = rand()%100+1;
+	int m = rand()%100+1;
 	std::vector<std::complex<float>> A(m*n), B(n);
 
 	for (auto &a : A)

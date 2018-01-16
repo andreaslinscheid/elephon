@@ -98,8 +98,11 @@ set_target_properties(test_main PROPERTIES
 target_compile_options(test_main PUBLIC ${elephon_OPTS})
 target_include_directories(test_main PUBLIC ${elephon_INCLUDE} "${PROJECT_SOURCE_DIR}/../test/")
 
+SET(BOOST_TEST_LOG_LEVEL=test_suite)
+
 #Finally add it to test execution - 
 #Notice the WORKING_DIRECTORY and COMMAND
 add_test(NAME test_main 
          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin 
-         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin/test_main )
+         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../test/bin/test_main
+         ARGUMENT --log_level=test_suite)

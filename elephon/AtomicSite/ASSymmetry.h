@@ -20,8 +20,6 @@
 #ifndef ELEPHON_ATOMICSITE_ASSYMMETRY_H_
 #define ELEPHON_ATOMICSITE_ASSYMMETRY_H_
 
-#include "LatticeStructure/LatticeModule.h"
-#include "LatticeStructure/Atom.h"
 #include "AtomicSite/WignerDMatrix.h"
 #include <vector>
 #include <memory>
@@ -38,24 +36,20 @@ class ASSymmetry
 {
 public:
 
+	/**
+	 * Type of a symmetry operation on a radial expansion.
+	 */
+	typedef std::vector<AtomicSite::WignerDMatrix> RadSym;
+
+	/**
+	 * Set the symmetry operations for up to within lmax based on the carthesian rotation matrices.
+	 *
+	 * @param lmax							Maximal angular moment that will be considered. Thus we have a range of [0,lmax] rotation matrices.
+	 * @param carthesianSymmetryOperations	List of rotation matrices. Each block of 9 elements is interpreted as one C-layout matrix.
+	 */
 	void initialize(
 			int lmax,
-			std::vector<int> symmetryOperations,
-			std::vector<double> fractionalTranslations,
-			LatticeStructure::LatticeModule lattice,
-			std::vector<LatticeStructure::Atom> const & atoms);
-
-	int get_num_sym_ops() const;
-
-//	void transform(
-//			int isym,
-//			SphericalHarmonicExpansion & data) const;
-
-	void get_euler_angles(
-			int isym,
-			double & alpha,
-			double & beta,
-			double & gamma) const;
+			std::vector<double> carthesianSymmetryOperations);
 
 	/**
 	 * Obtain a pointer to the set of Wigner D matrices for a symmetry operation.
@@ -74,19 +68,15 @@ private:
 
 	int numSymOps_ = 0;
 
-	/// For each symmetry, the position in the list of
-	/// atomic sites a given atom is moved to under application of this symmetry.
-	/// Example: siteMapSymmetry_[1][0] == 1 means under symmetry op no. 1
-	///          atom 0 is moved to the site of atom 1
-	std::vector<std::vector<int>> siteMapSymmetry_;
-
 	/// For each symmetry, the 3 Euler angles of the associated rotation
 	/// The convention is z-y-z, as used for the Wigner D matrix
 	/// See https://www.geometrictools.com/Documentation/EulerAngles.pdf
 	/// and https://en.wikipedia.org/wiki/Wigner_D-matrix
 	std::vector<double> eulerAngles_;
 
-	std::vector<std::shared_ptr<std::vector<AtomicSite::WignerDMatrix>>> rotMatricesPtr_;
+	/// For each symmetry operation, the representation in the space of
+	/// spherical harmonics.
+	std::vector<std::shared_ptr<RadSym>> rotMatricesPtr_;
 };
 
 } /* namespace AtomicSite */

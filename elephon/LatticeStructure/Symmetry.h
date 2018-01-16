@@ -21,6 +21,7 @@
 #define ELEPHON_LATTICESTRUCTURE_SYMMETRY_H_
 
 #include "LatticeModule.h"
+#include "AtomicSite/ASSymmetry.h"
 #include <vector>
 #include <assert.h>
 
@@ -29,6 +30,14 @@ namespace elephon
 namespace LatticeStructure
 {
 
+/**
+ * Class to handle the symmetry group of the system.
+ *
+ * It implements rotations (and shifts) in real and reciprocal space.
+ * @todo This is probably best refactored into base class and two independent
+ * 		 real space and reciprocal space symmetry modules. The branches for
+ * 		 the two currently make this somewhat messy.
+ */
 class Symmetry
 {
 public:
@@ -53,7 +62,8 @@ public:
 			std::vector<int> symmetries,
 			std::vector<double> fractionalTranslations,
 			LatticeStructure::LatticeModule lattice,
-			bool hasTimeReversal);
+			bool hasTimeReversal,
+			int maxAngularMoment = 10);
 
 	void set_reciprocal_space_sym(bool param = true);
 
@@ -168,6 +178,8 @@ private:
 	std::vector<double> fractTransStore_;
 
 	LatticeStructure::LatticeModule lattice_;
+
+	AtomicSite::ASSymmetry radialSiteSymmetry_;
 };
 
 } /* namespace LatticeStructure */

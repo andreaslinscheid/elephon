@@ -40,7 +40,12 @@ Symmetry::Symmetry()
 					0 , 0 , 1};
 	fractTrans_ = std::vector<double>({0.0, 0.0, 0.0});
 	lattice_.initialize( std::vector<double>({1,0,0,0,1,0,0,0,1}) );
-	this->initialize(1e-6,symmetries_,fractTrans_,lattice_,false);
+	this->initialize(
+			1e-6,
+			symmetries_,
+			fractTrans_,
+			lattice_,
+			false);
 }
 
 void
@@ -49,7 +54,8 @@ Symmetry::initialize(
 		std::vector<int> symmetries,
 		std::vector<double> fractionalTranslations,
 		LatticeStructure::LatticeModule lattice,
-		bool hasTimeReversal)
+		bool hasTimeReversal,
+		int maxAngularMoment)
 {
 	assert( symmetries.size() % 9 == 0 );
 	assert( fractionalTranslations.size() % 3 == 0 );
@@ -222,6 +228,10 @@ Symmetry::initialize(
 							"Please verify that the (final) structure has the correct symmetry and possibly reduce gPrec on input!");
 			}
 	//TODO We should make sure that the lattice and the symmetries are compatible
+
+	radialSiteSymmetry_.initialize(
+			maxAngularMoment,
+			symmetriesCartesian_);
 }
 
 void

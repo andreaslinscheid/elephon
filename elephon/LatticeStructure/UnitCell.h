@@ -81,8 +81,6 @@ public:
 
 	void set_symmetry_to_lattice(LatticeStructure::Symmetry & symmetry) const;
 
-	void generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const;
-
 	void compute_supercell_dim(std::shared_ptr<const UnitCell> supercell, std::vector<int> & supercellDim ) const;
 
 	int atom_rot_map(int symIndex, int atomIndex) const;

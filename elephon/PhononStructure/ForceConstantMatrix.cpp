@@ -21,12 +21,14 @@
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "LatticeStructure/Atom.h"
 #include "LatticeStructure/SymmetryReduction.h"
+#include "symmetry/atom_transform_map.h"
 #include <assert.h>
 #include <cmath>
 #include <set>
 #include <map>
 #include <iostream>
 #include <memory>
+#include "../symmetry/atom_transform_map.h"
 
 namespace elephon
 {
@@ -190,10 +192,11 @@ ForceConstantMatrix::build(std::shared_ptr<const LatticeStructure::UnitCell> uni
 	//Fill the reducible atomic sites using the equation
 	//	C( beta1 T, beta2 0 ) = g . C( S(alpha1,T), S(alpha2,0) ) . g^-1
 	//where S is a symmetry operation connecting alpha(1,2) with beta(1,2) and g is the point group part.
-
-	std::map< LatticeStructure::Atom, int > superCellLookup;
-	for ( int ia = 0 ; ia < superCell->get_atoms_list().size(); ++ia )
-		superCellLookup.insert(std::move( std::make_pair( superCell->get_atoms_list()[ia], ia ) ) );
+	std::vector<std::vector<int>> supercellRotMap;
+	symmetry::atom_transform_map(
+			superCell->get_atoms_list(),
+			superCell->get_symmetry(),
+			supercellRotMap);
 
 	data_.resize( this->get_num_R()*std::pow(3*unitCell->get_atoms_list().size(),2) );
 	std::vector<double> matForceSlice( 9*naSC );
@@ -212,12 +215,7 @@ ForceConstantMatrix::build(std::shared_ptr<const LatticeStructure::UnitCell> uni
 			//		the one of the supercell
 			for ( int iaSC = 0 ; iaSC < naSC ; ++iaSC )
 			{
-				auto a = superCell->get_atoms_list()[iaSC];
-				a.transform(unitCell->get_symmetry().get_sym_op(isym));
-				auto it = superCellLookup.find(a);
-				if ( it == superCellLookup.end() )
-					throw std::logic_error("Unable to locate rotates atom!");
-				int iredA1 = it->second;
+				int iredA1 = supercellRotMap[isym][iaSC];
 				std::copy(&irreducibleMatrixOfForceConstants[(irA*naSC+iaSC)*9],
 						  &irreducibleMatrixOfForceConstants[(irA*naSC+iaSC)*9]+9,
 						&matForceSlice[iredA1*9] );
@@ -556,38 +554,16 @@ ForceConstantMatrix::transform_map(
 		LatticeStructure::Symmetry const & siteSymmetry,
 		std::vector< std::vector<int> > & rotAtomsMap) const
 {
-	int iA = atoms.size();
-	int iS = siteSymmetry.get_num_symmetries();
-	//We shift and create a lookup for atoms, then we apply the rotation and
-	//try to discover the transformed position in the set
-	std::map<LatticeStructure::Atom,int> loopup;
-	for ( int i = 0 ; i < iA ; ++i)
+	// apply the shift
+	for (auto &a : atoms)
 	{
-		auto pr = atoms[i].get_position();
+		auto pr = a.get_position();
 		for ( int xi = 0 ; xi < 3; ++xi)
 			pr[xi] -= shift[xi];
-		atoms[i].set_position(pr);
-		loopup.insert( std::move(std::make_pair(atoms[i],i)) );
+		a.set_position(pr);
 	}
 
-	rotAtomsMap = std::vector< std::vector<int> >(iS, std::vector<int>(iA) );
-	for ( int isym = 0 ; isym < iS; ++isym)
-	{
-		//rotate all atoms
-		auto rotAtoms = atoms;
-		for ( auto &a : rotAtoms )
-			a.transform(siteSymmetry.get_sym_op(isym));
-
-		for ( int i = 0 ; i < iA ; ++i )
-		{
-			auto it = loopup.find( rotAtoms[i] );
-			if ( it == loopup.end() )
-				throw std::logic_error("The set of atoms is not closed "
-						"under symmetry operations which can't be.");
-			//rotAtomsMap tells for a given atom where it ends up after application of the inverse symmetry
-			rotAtomsMap[isym][it->second] = i;
-		}
-	}
+	symmetry::atom_transform_map_inverse(atoms, siteSymmetry, rotAtomsMap);
 }
 
 void

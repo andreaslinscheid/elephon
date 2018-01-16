@@ -18,22 +18,47 @@
  */
 
 #include "AtomicSite/ASSymmetry.h"
+#include "AtomicSite/EulerAngles.h"
+#include <cassert>
 
 namespace elephon
 {
 namespace AtomicSite
 {
 
-
 void
 ASSymmetry::initialize(
 		int lmax,
-		std::vector<int> symmetryOperations,
-		std::vector<double> fractionalTranslations,
-		LatticeStructure::LatticeModule lattice,
-		std::vector<LatticeStructure::Atom> const & atoms)
+		std::vector<double> carthesianSymmetryOperations)
 {
+	assert(carthesianSymmetryOperations.size() % 9 == 0);
+	lMax_ = lmax;
+	numSymOps_= carthesianSymmetryOperations.size()/9;
+	eulerAngles_.resize(numSymOps_*3);
+	rotMatricesPtr_.reserve(numSymOps_);
+	for (int isym = 0 ; isym < numSymOps_; ++isym)
+	{
+		auto thisMat_ptr = carthesianSymmetryOperations.begin()+isym*9;
+		auto rotMat = std::vector<double>(thisMat_ptr, thisMat_ptr + 9);
+		eulerAngles(rotMat, eulerAngles_[isym*3+0], eulerAngles_[isym*3+1], eulerAngles_[isym*3+2]);
+		RadSym rotationOperator;
+		rotationOperator.reserve(lMax_+1);
+		for (int l = 0; l <= lMax_; ++l)
+		{
+			WignerDMatrix wd;
+			wd.initialize(l, eulerAngles_[isym*3+0], eulerAngles_[isym*3+1], eulerAngles_[isym*3+2]);
+			rotationOperator.push_back(std::move(wd));
+		}
+		rotMatricesPtr_.push_back(std::make_shared<RadSym>(std::move(rotationOperator)));
+	}
+}
 
+std::shared_ptr<const std::vector<AtomicSite::WignerDMatrix>>
+ASSymmetry::get_wigner_rotation_matrices_symop(
+		int isymop) const
+{
+	assert((isymop >= 0)&&(isymop<rotMatricesPtr_.size()));
+	return rotMatricesPtr_[isymop];
 }
 
 } /* namespace AtomicSite */

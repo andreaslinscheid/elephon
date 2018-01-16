@@ -20,6 +20,7 @@
 #include "UnitCell.h"
 #include "SymmetryReduction.h"
 #include "Algorithms/LinearAlgebraInterface.h"
+#include "symmetry/atom_transform_map.h"
 #include <map>
 #include <cmath>
 #include <stdexcept>
@@ -46,26 +47,7 @@ void UnitCell::initialize(
 	this->set_symmetry_to_lattice( symmetry_);
 	this->generate_site_symmetries(atoms_,symmetry_,siteSymmetries_);
 
-	atomSymMap_.resize(atoms_.size());
-	std::map<Atom, int> atomSet;
-	for (int ia = 0 ; ia < atoms_.size(); ++ia)
-		atomSet[atoms_[ia]] = ia;
-
-	for (int ia = 0 ; ia < atoms_.size(); ++ia)
-	{
-		auto const & a = atoms_[ia];
-		atomSymMap_[ia].resize(symmetry_.get_num_symmetries());
-		for (int isym = 0 ; isym < symmetry_.get_num_symmetries(); ++isym)
-		{
-			auto aTransform = a;
-			aTransform.transform(symmetry_.get_sym_op(isym));
-			auto it = atomSet.find(aTransform);
-			if (it==atomSet.end())
-				throw std::logic_error(std::string("Symmetry operation ")+
-						std::to_string(isym)+" not a symmetry of the lattice");
-			atomSymMap_[ia][isym] = it->second;
-		}
-	}
+	symmetry::atom_transform_map(atoms_, symmetry_, atomSymMap_);
 }
 
 void
@@ -433,29 +415,6 @@ UnitCell::get_site_symmetry(int atomIndex) const
 }
 
 void
-UnitCell::generate_rotation_maps(std::vector<std::vector<int> > & rotationMap) const
-{
-	std::map< Atom, int > cmpMap;
-	for ( int ia = 0 ; ia < atoms_.size() ; ++ia)
-		cmpMap.insert( std::make_pair( atoms_[ia], ia ) );
-
-	rotationMap.resize( symmetry_.get_num_symmetries() );
-	for (int isym = 0 ; isym < symmetry_.get_num_symmetries(); ++isym)
-	{
-		rotationMap[isym].resize( atoms_.size() );
-		for ( int ia = 0 ; ia < atoms_.size() ; ++ia)
-		{
-			auto a = atoms_[ia];
-			a.transform( symmetry_.get_sym_op(isym) );
-			auto ret = cmpMap.find(a);
-			if ( ret == cmpMap.end() )
-				throw std::logic_error("Cannot find rotated atom: set of atoms not closed under rotations!");
-			rotationMap[isym][ia] = ret->second;
-		}
-	}
-}
-
-void
 UnitCell::compute_supercell_dim(
 		std::shared_ptr<const UnitCell> superCell,
 		std::vector<int> & supercellDim ) const
@@ -490,7 +449,7 @@ UnitCell::atom_rot_map(int symIndex, int atomIndex) const
 {
 	assert((symIndex >= 0) && (symIndex < symmetry_.get_num_symmetries()));
 	assert((atomIndex >= 0) && (atomIndex < atoms_.size()));
-	return atomSymMap_[atomIndex][symIndex];
+	return atomSymMap_[symIndex][atomIndex];
 }
 
 } /* namespace LatticeStructure */

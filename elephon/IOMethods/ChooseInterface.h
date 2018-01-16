@@ -38,7 +38,7 @@ namespace IOMethods
  * @return	A pointer to the abstracted electronic structure calculator interface.
  */
 std::shared_ptr<ElectronicStructureCodeInterface>
-choose_interface( InputOptions inputOPts );
+choose_interface( InputOptions  const & inputOPts );
 
 } /* namespace IOMethods */
 } /* namespace elephon */

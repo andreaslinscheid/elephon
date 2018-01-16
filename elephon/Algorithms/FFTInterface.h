@@ -43,6 +43,11 @@ class FFTInterface
 public:
 
 	/**
+	 * Empty constructor
+	 */
+	FFTInterface();
+
+	/**
 	 * Clears the internal storage.
 	 */
 	~FFTInterface();
