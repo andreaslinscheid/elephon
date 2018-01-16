@@ -139,10 +139,11 @@ LinearAlgebraInterface::matrix_vector_prod(
 {
 	typedef typename VT::value_type T;
 	int n = static_cast<int>(B.size());
+	assert(n > 0);
 	int m = static_cast<int>(A.size())/n;
 	assert( static_cast<int>(A.size()) == m * n );
-	ATimesB.resize( n );
-	this->call_gemv('n',m,n,T(1.0),A.data(),m,B.data(),1,T(0.0),ATimesB.data(),1);
+	ATimesB.resize( m );
+	this->call_gemv('n',m,n,T(1.0),A.data(),n,B.data(),1,T(0.0),ATimesB.data(),1);
 }
 
 template<typename T>

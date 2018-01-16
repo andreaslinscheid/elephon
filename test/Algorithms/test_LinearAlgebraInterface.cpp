@@ -238,27 +238,47 @@ void
 check_mv(std::vector<T> const & A, std::vector<T> const & B)
 {
 	elephon::Algorithms::LinearAlgebraInterface linalg;
+	assert((B.size()>0)&&(A.size()>0));
 	int n = B.size();
 	int m = A.size()/n;
-	std::vector<T> C(n);
-	linalg.call_gemv('n', n,m, T(1.0), A.data(), m, B.data(), 1, T(0.0), C.data(), 1 );
+	std::vector<T> C(m);
+	linalg.call_gemv('n', m, n, T(1.0), A.data(), n, B.data(), 1, T(0.0), C.data(), 1 );
 
-	std::vector<T> C_check(n, T(0.0));
-	for (int in = 0 ; in < n; ++in )
-		for (int im = 0 ; im < m; ++im )
-			C_check[in] += A[in*m+im]*B[im];
+	std::vector<T> C_check(m, T(0.0));
+	for (int im = 0 ; im < m; ++im )
+		for (int in = 0 ; in < n; ++in )
+			C_check[im] += A[im*n+in]*B[in];
 
-	for (int in = 0 ; in < n; ++in )
-		BOOST_CHECK_SMALL( std::abs(C_check[in] - C[in]),
+	for (int im = 0 ; im < m; ++im )
+		BOOST_CHECK_SMALL( std::abs(C_check[im] - C[im]),
 					typename ComplexTypeTrait<T>::type(0.0001) );
 };
 
 BOOST_AUTO_TEST_CASE( Matrix_Vector_prod )
 {
+	int n = 7;
+	int m = 3;
+	std::vector<std::complex<float>> A(m*n), B(n), C;
+
+	for (int i = 0 ; i < A.size(); ++i)
+		A[i] = std::complex<float>(i+1);
+	for (int i = 0 ; i < B.size(); ++i)
+		B[i] = std::complex<float>(i+1);
+
+	elephon::Algorithms::LinearAlgebraInterface linalg;
+
+	check_mv<std::complex<float>>(A, B);
+	linalg.matrix_vector_prod(A,B,C);
+	BOOST_REQUIRE_EQUAL(C.size(),3);
+	BOOST_CHECK_SMALL(std::abs(C[0]-std::complex<float>(140)), 1e-5f);
+	BOOST_CHECK_SMALL(std::abs(C[1]-std::complex<float>(336)), 1e-5f);
+	BOOST_CHECK_SMALL(std::abs(C[2]-std::complex<float>(532)), 1e-5f);
+
 	srand (time(NULL));
-	int n = rand()%100+1;
-	int m = rand()%100+1;
-	std::vector<std::complex<float>> A(m*n), B(n);
+	n = (rand()%100)+1;
+	m = (rand()%100)+1;
+	A.resize(m*n);
+	B.resize(n);
 
 	for (auto &a : A)
 		a = std::complex<float>(rand()%10, rand()%10);
