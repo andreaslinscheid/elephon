@@ -19,6 +19,7 @@
 
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include <boost/math/special_functions/spherical_harmonic.hpp>
+#include "Auxillary/memory_layout_functions.hpp"
 
 namespace elephon
 {
@@ -39,30 +40,22 @@ SphericalHarmonicExpansion::initialize(
 	rgrid_ = std::move(rgrid);
 }
 
-int
-SphericalHarmonicExpansion::angular_momentum_layout(
-		int l,
-		int m) const
-{
-	assert((m>=-l)&&(m<=l));
-	// sum l'=0,l (2l'+1) = (l-1)l + l = l*l
-	return l+m + (l*l);
-}
-
 std::complex<double> &
 SphericalHarmonicExpansion::operator() (int r, int m, int l)
 {
-	assert((data_.size() > r+rMax_*this->angular_momentum_layout(l,m))
-			&& (r+rMax_*this->angular_momentum_layout(l,m) >= 0));
-	return data_[r+rMax_*this->angular_momentum_layout(l,m)];
+	using Auxillary::memlayout::angular_momentum_layout;
+	assert((data_.size() > r+rMax_*angular_momentum_layout(l,m))
+			&& (r+rMax_*angular_momentum_layout(l,m) >= 0));
+	return data_[r+rMax_*angular_momentum_layout(l,m)];
 }
 
 std::complex<double>
 SphericalHarmonicExpansion::operator() (int r, int m, int l) const
 {
-	assert((data_.size() > r+rMax_*this->angular_momentum_layout(l,m))
-			&& (r+rMax_*this->angular_momentum_layout(l,m) >= 0));
-	return data_[r+rMax_*this->angular_momentum_layout(l,m)];
+	using Auxillary::memlayout::angular_momentum_layout;
+	assert((data_.size() > r+rMax_*angular_momentum_layout(l,m))
+			&& (r+rMax_*angular_momentum_layout(l,m) >= 0));
+	return data_[r+rMax_*angular_momentum_layout(l,m)];
 }
 
 void
@@ -102,7 +95,7 @@ SphericalHarmonicExpansion::interpolate(
 	for (int l = 0 ; l <= lmax_; ++l)
 		for (int m = -l ; m <= l; ++m)
 		{
-			auto itBegin = data_.begin() + this->angular_momentum_layout(l,m)*rMax_;
+			auto itBegin = data_.begin() + Auxillary::memlayout::angular_momentum_layout(l,m)*rMax_;
 			auto itEnd = itBegin + rMax_;
 			rgrid_.interpolate(
 					spherical_r,
@@ -120,27 +113,11 @@ SphericalHarmonicExpansion::interpolate(
 }
 
 void
-SphericalHarmonicExpansion::apply_wigner_D_rotation(
-		std::vector<WignerDMatrix> const & wignerD)
+SphericalHarmonicExpansion::transform(
+		symmetry::SymmetryOperation const & sop)
 {
-	Algorithms::LinearAlgebraInterface linalg;
-	assert(wignerD.size() > lmax_);
-
-	elephon::Auxillary::alignedvector::ZV buffer(rMax_*(2*lmax_+1));
-	for (int l = 0 ; l <= lmax_ ; ++l)
-	{
-		int nl = 2*l+1;
-		assert(wignerD[l].view_as_matrix().size() == nl*nl);
-		auto wignerD_ptr = wignerD[l].view_as_matrix().data();
-		auto expansionData_ptr = data_.data() + this->angular_momentum_layout(l,-l)*rMax_;
-		linalg.call_gemm('n', 'n',
-				nl, rMax_, nl, // W is a (2*l+1) x (2*l+1) matrix, the expansion data we interpret as a (2*l+1) x rMax_ matrix.
-				decltype(*wignerD_ptr)(1.0), wignerD_ptr, nl,
-				expansionData_ptr, rMax_,
-				decltype(*wignerD_ptr)(0.0), buffer.data(), rMax_ );
-
-		std::copy(buffer.begin(), buffer.begin()+rMax_*nl, expansionData_ptr);
-	}
+	rgrid_.transform(sop);
+	sop.rotate_radial_data(lmax_, rMax_, data_);
 }
 
 } /* namespace AtomicSite */

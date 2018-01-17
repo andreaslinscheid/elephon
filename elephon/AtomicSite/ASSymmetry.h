@@ -58,7 +58,7 @@ public:
 	 * @return			shared pointer to a constant vector of size lMax+1
 	 * 						with rotation matrices from l=0 to l=lMax
 	 */
-	std::shared_ptr<const std::vector<AtomicSite::WignerDMatrix>>
+	std::shared_ptr<const RadSym>
 	get_wigner_rotation_matrices_symop(
 			int isymop) const;
 

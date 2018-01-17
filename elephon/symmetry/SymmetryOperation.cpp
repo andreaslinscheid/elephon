@@ -34,7 +34,8 @@ SymmetryOperation::SymmetryOperation(
 		std::vector<double>::const_iterator pointGroupCarthBasisBegin,
 		std::vector<double>::const_iterator pointGroupCarthBasisEnd,
 		std::vector<double>::const_iterator fractCarthBasisBegin,
-		std::vector<double>::const_iterator fractCarthBasisEnd )
+		std::vector<double>::const_iterator fractCarthBasisEnd,
+		std::shared_ptr<const AtomicSite::ASSymmetry::RadSym> radSym_ptr )
 {
 	assert(std::distance(pointGroupLatticeBasisBegin, pointGroupLatticeBasisEnd) == 9);
 	assert(std::distance(fractLatticeBasisBegin, fractLatticeBasisEnd) == 3);
@@ -45,6 +46,7 @@ SymmetryOperation::SymmetryOperation(
 	std::copy(fractLatticeBasisBegin, fractLatticeBasisEnd, fracTrans);
 	std::copy(pointGroupCarthBasisBegin, pointGroupCarthBasisEnd, ptgCart);
 	std::copy(fractCarthBasisBegin, fractCarthBasisEnd, fracTransCart);
+	radSym_ptr_ = radSym_ptr;
 }
 
 void

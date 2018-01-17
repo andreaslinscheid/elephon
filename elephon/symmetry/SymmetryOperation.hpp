@@ -18,6 +18,8 @@
  */
 
 #include "symmetry/SymmetryOperation.h"
+#include "Auxillary/memory_layout_functions.hpp"
+#include "Algorithms/LinearAlgebraInterface.h"
 #include <cassert>
 
 namespace elephon
@@ -68,6 +70,36 @@ SymmetryOperation::get_lat_frac_trans(int i) const
 {
 	assert((i>=0)&&(i<3));
 	return fracTrans[i];
+}
+
+template<class VT>
+void
+SymmetryOperation::rotate_radial_data(
+		int lMax,
+		int numDataPerLM,
+		VT & dataToBeTransformed) const
+{
+	Algorithms::LinearAlgebraInterface linalg;
+	assert(radSym_ptr_->size() >= lMax);
+
+	VT buffer(numDataPerLM*(2*lMax+1));
+	for (int l = 0 ; l <= lMax ; ++l)
+	{
+		int nl = 2*l+1;
+		auto const & wignerD = (*radSym_ptr_)[l];
+		assert(wignerD.view_as_matrix().size() == nl*nl);
+		auto wignerD_ptr = wignerD.view_as_matrix().data();
+		auto expansionData_ptr = dataToBeTransformed.data() +
+				Auxillary::memlayout::angular_momentum_layout(l,-l)*numDataPerLM;
+		linalg.call_gemm('t', 'n',	// See declaration comments; the Wigner matrix is transposed because we transform the coefficients, while the
+									//		operator acts on the functions.
+				nl, numDataPerLM, nl, // W is a (2*l+1) x (2*l+1) matrix, the expansion data we interpret as a (2*l+1) x numDataPerLM matrix.
+				decltype(*wignerD_ptr)(1.0), wignerD_ptr, nl,
+				expansionData_ptr, numDataPerLM,
+				decltype(*wignerD_ptr)(0.0), buffer.data(), numDataPerLM );
+
+		std::copy(buffer.begin(), buffer.begin()+numDataPerLM*nl, expansionData_ptr);
+	}
 }
 
 } /* namespace symmetry */

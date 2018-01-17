@@ -77,25 +77,25 @@ public:
 	std::complex<double> operator() (int r, int m, int l) const;
 
 	/**
-	 *	Defines the memory layout of angular momentum channels.
+	 * Transform the data in this object using a symmetry operation
 	 *
-	 * @param l		The main angular momentum quantum number.
-	 * @param m		The magnetic quantum number, m is in the range [-l,l]
-	 * @return		The position of the element (l,m)
+	 * @param sop	The symmertry operation representation.
 	 */
-	int angular_momentum_layout(int l, int m) const;
-
-	/**
-	 * Perform a rotation of the data in this object according Wigner rotation matrices.
-	 *
-	 * @param wignerD	A vector with the rotation matrices for l=0,1,...,Lmax in this order.
-	 * 					The maximal Lmax must be larger or equal than the internal range of the
-	 * 					data in this object.
-	 */
-	void apply_wigner_D_rotation(std::vector<WignerDMatrix> const & wignerD);
-
 	void transform(symmetry::SymmetryOperation const & sop);
 
+	/**
+	 * Obtain the number of radial points
+	 *
+	 * @return	the number of radial points
+	 */
+	int get_num_radial() const;
+
+	/**
+	 * Given a set of arbitrary points, interpolate the data by multiplying the spherical harmonic basis.
+	 *
+	 * @param[in] coordinates			A list of 3N coordinates, x1,y1,z1,x2,...,zN of N points where the function should be interpolated to.
+	 * @param[out] interpolated_data	Resized to fit the N data values of the function at the location of the N points.
+	 */
 	void interpolate(
 			std::vector<double> const & coordinates,
 			Auxillary::alignedvector::ZV & interpolated_data) const;

@@ -43,5 +43,11 @@ RadialGrid::get_num_R() const
 	return numR_;
 }
 
+void
+RadialGrid::transform(symmetry::SymmetryOperation const & sop)
+{
+	sop.apply(center_);
+}
+
 } /* namespace AtomicSite */
 } /* namespace elephon */

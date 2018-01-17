@@ -53,7 +53,7 @@ ASSymmetry::initialize(
 	}
 }
 
-std::shared_ptr<const std::vector<AtomicSite::WignerDMatrix>>
+std::shared_ptr<const ASSymmetry::RadSym>
 ASSymmetry::get_wigner_rotation_matrices_symop(
 		int isymop) const
 {

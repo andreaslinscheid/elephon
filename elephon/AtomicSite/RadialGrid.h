@@ -20,6 +20,7 @@
 #ifndef ELEPHON_ATOMICSITE_RADIALGRID_H_
 #define ELEPHON_ATOMICSITE_RADIALGRID_H_
 
+#include "symmetry/SymmetryOperation.h"
 #include <vector>
 
 namespace elephon
@@ -27,15 +28,30 @@ namespace elephon
 namespace AtomicSite
 {
 
+/**
+ * Representation of a circular grid in 3D.
+ */
 class RadialGrid
 {
 public:
 
+	/**
+	 * Initialize the radial grid around a center.
+	 *
+	 * @param[in] center	The central point with radial coordinate 0.
+	 * @param[in] radius	The radius of the grid.
+	 * @param[in] points	The points defining the grid. Each must be < radius.
+	 */
 	void initialize(
 			std::vector<double> center,
 			double radius,
 			std::vector<double> points);
 
+	/**
+	 * Get number of radial points.
+	 *
+	 * @return	number of radial points.
+	 */
 	int get_num_R() const;
 
 	/**
@@ -57,6 +73,13 @@ public:
 			ConstIterator gridDataBegin,
 			ConstIterator gridDataEnd,
 			Iterator interpolDataBegin) const;
+
+	/**
+	 * Transport the center of the grid according to the symemtry opeartion.
+	 *
+	 * @param sop	Representation of the symmerty operation.
+	 */
+	void transform(symmetry::SymmetryOperation const & sop);
 private:
 
 	int numR_ = 1;

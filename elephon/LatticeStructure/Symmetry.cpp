@@ -551,7 +551,8 @@ Symmetry::get_sym_op( int isym ) const
 			ptgroup.begin(), ptgroup.end(),
 			fracTrans.begin(), fracTrans.end(),
 			symmCart.begin(), symmCart.end(),
-			fracTransCart.begin(), fracTransCart.end() );
+			fracTransCart.begin(), fracTransCart.end(),
+			radialSiteSymmetry_.get_wigner_rotation_matrices_symop(isym));
 	return res;
 }
 

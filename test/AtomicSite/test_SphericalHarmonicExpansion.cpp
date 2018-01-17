@@ -21,6 +21,7 @@
 #include "AtomicSite/WignerDMatrix.h"
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include "Auxillary/AlignedVector.h"
+#include "Auxillary/memory_layout_functions.hpp"
 #include "AtomicSite/RadialGrid.h"
 #include "LatticeStructure/RegularBareGrid.h"
 #include <vector>
@@ -48,8 +49,8 @@ create_radial_constant_data(
 	// now, only fill the radial data of constant '1' for all l and m.
 	for (auto l : ls)
 		for (auto m: ms)
-			std::fill(constant_data.begin() + test_data.angular_momentum_layout(l,m)*RMax,
-					constant_data.begin() + test_data.angular_momentum_layout(l,m)*RMax + RMax,
+			std::fill(constant_data.begin() + elephon::Auxillary::memlayout::angular_momentum_layout(l,m)*RMax,
+					constant_data.begin() +  elephon::Auxillary::memlayout::angular_momentum_layout(l,m)*RMax + RMax,
 					1.0);
 
 	test_data.initialize(lMax, RMax, std::move(constant_data), std::move(rgrid));
@@ -170,12 +171,22 @@ BOOST_AUTO_TEST_CASE( test_rotation )
 	std::vector<elephon::AtomicSite::WignerDMatrix> wd(6);
 	for (int l = 0; l <= 5; ++l)
 		wd[l].initialize(l, alpha, beta, gamma);
+	auto rotOp = std::make_shared<decltype(wd)>(std::move(wd));
+
+	// construct a formal symmetry operation. In this test, only the angular part is used.
+	std::vector<int> rotMatLatticeBasis{-1, 0, 0, 0, 1, 0, 0, 0, -1};
+	std::vector<double> fracTransZero{0.0, 0.0, 0.0};
+	elephon::symmetry::SymmetryOperation sop(rotMatLatticeBasis.begin(), rotMatLatticeBasis.end(),
+											 fracTransZero.begin(), fracTransZero.end(),
+											 rotationMatrix.begin(), rotationMatrix.end(),
+											 fracTransZero.begin(), fracTransZero.end(),
+											 rotOp);
 
 	// Create l=1 m=-1
 	auto ylm_1m1 = create_radial_constant_data({1}, {-1}, /*l_max = */5, /*Rmax = */50);
 
 	// Rotate by 180 Deg about the y axis
-	ylm_1m1.apply_wigner_D_rotation(wd);
+	ylm_1m1.transform(sop);
 
 	// now check that this equals -Ylm for l=1 m=+1
 	check_is_function_on_grid_125(ylm_1m1,
