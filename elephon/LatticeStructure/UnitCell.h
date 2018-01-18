@@ -50,6 +50,16 @@ public:
 			LatticeStructure::LatticeModule lattice,
 			LatticeStructure::Symmetry sym);
 
+	/**
+	 * Construct a supercell from the primitive unit cell.
+	 *
+	 * @todo refactor to independent class that also allows non-trivial supercells.
+	 *
+	 * @param[in] scx	The multiple of the x dimension
+	 * @param[in] scy	The multiple of the y dimension
+	 * @param[in] scz	The multiple of the z dimension
+	 * @return	An initialized super-unitcell.
+	 */
 	UnitCell build_supercell(int scx, int scy, int scz) const;
 
 	void displace_atom( AtomDisplacement const& displ );

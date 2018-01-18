@@ -73,12 +73,6 @@ DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> u
 			redToIrredAtoms, symRedToIrredAtoms,
 			irredToRedAtoms, symIrredToRedAtoms);
 
-	//define a consistent atom numbering in the primitive cell.
-	//We choose the unitCell.get_atoms_list() order
-	std::map< LatticeStructure::Atom, int > primitiveCellLookup;
-	for ( int ia = 0 ; ia < unitCell->get_atoms_list().size(); ++ia )
-		primitiveCellLookup.insert( std::move( std::make_pair( unitCell->get_atoms_list()[ia], ia ) ) );
-
 	Algorithms::LinearAlgebraInterface linAlg;
 
 	//For each such atom, compute the local displacement potential in x,y and z
@@ -730,8 +724,6 @@ DisplacementPotential::symmetrize_periodic_dvscf_q(
 				{
 					const int irRot = rotMap[isym][ir];
 					dvscfToSym[irRot] += dvscfData[(iq*nM+inu)*nptsRealSpace_+ir];
-std::cout <<inu<<'\t'<< ir<<'\t'<<isym<< '\n'
-		<< dvscfData[(iq*nM+inu)*nptsRealSpace_+ir] << '\t'<< dvscfToSym[ir] << std::endl;
 				}
 			}
 			for (int ir = 0 ; ir < nptsRealSpace_; ++ir)

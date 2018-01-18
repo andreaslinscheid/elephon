@@ -1,0 +1,37 @@
+/*	This file rotation_matrix_connecting_unit_vectors.cpp is part of elephon.
+ *
+ *  elephon is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  elephon is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Created on: Jan 18, 2018
+ *      Author: A. Linscheid
+ */
+
+#include "Algorithms/rotation_matrix_connecting_unit_vectors.h"
+
+namespace elephon
+{
+namespace Algorithms
+{
+
+inline void
+rotation_matrix_connecting_unit_vectors(
+		std::vector<double> const & unitVectorOrig,
+		std::vector<double> const & unitVectorResult,
+		boost::multi_array<double,2> & rotationMatrix)
+{
+
+}
+
+} /* namespace Algorithms */
+} /* namespace elephon */

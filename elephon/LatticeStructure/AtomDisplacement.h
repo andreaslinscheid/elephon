@@ -24,12 +24,16 @@
 #include "symmetry/SymmetryOperation.h"
 #include <vector>
 #include <string>
+#include <boost/multi_array.hpp>
 
 namespace elephon
 {
 namespace LatticeStructure
 {
 
+/**
+ * Represents the position and vector of a atomic displacement.
+ */
 class AtomDisplacement
 {
 public:
@@ -86,6 +90,12 @@ public:
 
 	friend bool operator== (AtomDisplacement const& d1, AtomDisplacement const& d2);
 
+	boost::multi_array<double,2> const &
+	get_direction_rotation_matrix() const;
+
+	std::shared_ptr<const AtomicSite::ASSymmetry::RadSym>
+	get_direction_rotation_operator() const;
+
 private:
 
 	double equivalencePrc_ = 1e-6;
@@ -101,7 +111,15 @@ private:
 	//In cartesian coordinates
 	std::vector<double> direction_ = {1.0,0.0,0.0};
 
+	mutable boost::multi_array<double,2> rotationMatrix_;
+
+	mutable std::shared_ptr<const AtomicSite::ASSymmetry::RadSym> rotOperatorSphericalHarm_;
+
 	void normalize_direction();
+
+	void prepare_rotation_matrix();
+
+	void prepare_rotation_operator();
 };
 
 } /* namespace LatticeStructure */
