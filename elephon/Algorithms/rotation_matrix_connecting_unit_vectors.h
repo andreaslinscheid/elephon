@@ -38,7 +38,7 @@ namespace Algorithms
  * @param[in] unitVectorResult	3 element vector with norm 1 that is the result of the unitVectorOrig multiplied by the result.
  * @param[out] rotationMatrix	assigned the matrix R that takes unitVectorOrig to unitVectorResult by a left multiplication.
  */
-inline void
+void
 rotation_matrix_connecting_unit_vectors(
 		std::vector<double> const & unitVectorOrig,
 		std::vector<double> const & unitVectorResult,
