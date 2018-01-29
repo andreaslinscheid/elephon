@@ -2696,7 +2696,7 @@ v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}) & = & \sum_{l,m<0}\frac{{\rm i}}{\sqr
  &  & +Y_{l}^{-m}(\theta,\phi)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+(-1)^{m}Y_{l}^{m}(\theta,\phi)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\\
  & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m<0}Y_{l}^{m}(\theta,\phi)\frac{1}{\sqrt{2}}[v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+{\rm i}v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\nonumber \\
  &  & +\sum_{l,m>0}Y_{l}^{m}(\theta,\phi)\frac{(-1)^{m}}{\sqrt{2}}[v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-{\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\\
- & = & \sum_{l}Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(\boldsymbol{\vert\boldsymbol{r}}\vert)
+ & = & \sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(\boldsymbol{\vert\boldsymbol{r}}\vert)\label{eq:AEpotentialSHexpansion}
 \end{eqnarray}
 
 \end_inset
@@ -2804,6 +2804,123 @@ m_{1} & m_{2} & m_{3}
 
 The value can be computed using the package https://github.com/valandil/wignerSym
 bols.
+\end_layout
+
+\begin_layout Subsubsection
+Shifting the center of expansion
+\end_layout
+
+\begin_layout Standard
+For computing finite displacement, we have to evalate the difference between
+ two expansions at shifted sites.
+ In order to provide the result in terms of the originial center of expansion,
+ we have to translate the perturbed atomic site expansion into the original
+ one.
+ The displaced potential is now given in the coordinate system of the equillibri
+um position as 
+\begin_inset Formula $v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}-\boldsymbol{\Delta\tau})$
+\end_inset
+
+.
+ Using Eq.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand eqref
+reference "eq:AEpotentialSHexpansion"
+
+\end_inset
+
+, we have
+\begin_inset Formula 
+\begin{equation}
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}-\boldsymbol{\Delta\tau})=\sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}Y_{l}^{m}(\frac{\boldsymbol{r}-\boldsymbol{\Delta\tau}}{\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert})v_{l,m}^{{\rm AE}}(\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert)
+\end{equation}
+
+\end_inset
+
+The problem here is that 
+\begin_inset Formula 
+\begin{equation}
+\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert=\sqrt{\vert\boldsymbol{r}\vert^{2}+\vert\boldsymbol{\Delta\tau}\vert^{2}+2\vert\boldsymbol{r}\vert\vert\boldsymbol{\Delta\tau}\vert{\rm cos}(\alpha)}
+\end{equation}
+
+\end_inset
+
+which depends on the angle of 
+\begin_inset Formula $\boldsymbol{r}$
+\end_inset
+
+ w.r.p.t.
+ the fixed 
+\begin_inset Formula $\boldsymbol{\Delta\tau}$
+\end_inset
+
+.
+ This makes the problem quite difficult to solve.
+ Instead we make use of the fact, that 
+\begin_inset Formula $\boldsymbol{\Delta\tau}$
+\end_inset
+
+ is small and for almost the entire region in the atomic sphere it is true
+ that
+\begin_inset Formula 
+\begin{equation}
+\vert\boldsymbol{\Delta\tau}\vert\ll\vert\boldsymbol{r}\vert
+\end{equation}
+
+\end_inset
+
+Thus using a Taylor expansion
+\begin_inset Formula 
+\begin{equation}
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}-\boldsymbol{\Delta\tau})\approx v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})+\boldsymbol{\nabla}_{\boldsymbol{r}}[v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})]\cdot\boldsymbol{\Delta\tau}
+\end{equation}
+
+\end_inset
+
+Let us go to a basis, where the action of the gradient operator on the spherical
+ harmonics is known.
+ with
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{\nabla}[v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})] & = & \bigl(\hat{{\rm e}}_{r}\partial_{r}+\frac{1}{r}[\hat{{\rm e}}_{\theta}\partial_{\theta}+\hat{{\rm e}}_{\phi}\frac{1}{{\rm sin}(\theta)}\partial_{\phi}]\bigr)v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})\\
+ & = & \sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}\bigl(\hat{{\rm e}}_{r}\partial_{r}+\frac{1}{r}[\hat{{\rm e}}_{\theta}\partial_{\theta}+\hat{{\rm e}}_{\phi}\frac{1}{{\rm sin}(\theta)}\partial_{\phi}]\bigr)Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(r)\\
+ & = & \sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}\bigl(Y_{l}^{m}(\theta,\phi)\partial_{r}v_{l,m}^{{\rm AE}}(r)+\frac{v_{l,m}^{{\rm AE}}(r)}{r}\{\frac{m}{{\rm sin}(\theta)}[{\rm cos}(\theta)\hat{{\rm e}}_{\theta}+\hat{{\rm e}}_{\phi}]Y_{l}^{m}(\theta,\phi)+\hat{{\rm e}}_{\theta}\sqrt{(l-m)(l+m+1)}{\rm e}^{-{\rm i}\phi}Y_{l}^{m+1}(\theta,\phi)\}\bigr)
+\end{eqnarray}
+
+\end_inset
+
+usign
+\begin_inset Formula 
+\begin{eqnarray}
+\hat{{\rm e}}_{\theta} & = & {\rm cos}(\theta){\rm cos}(\phi)\hat{x}+{\rm cos}(\theta){\rm sin}(\phi)\hat{y}-{\rm cos}(\theta)\hat{z}\\
+\hat{{\rm e}}_{\phi} & = & -{\rm sin}(\phi)\hat{x}+{\rm cos}(\phi)\hat{y}\\
+\end{eqnarray}
+
+\end_inset
+
+Thus we arrive at the full relation
+\begin_inset Formula 
+\begin{eqnarray}
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}-\boldsymbol{\Delta\tau}) & \approx & \sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}\bigl([v_{l,m}^{{\rm AE}}(r)+\partial_{r}v_{l,m}^{{\rm AE}}(r)\vert\boldsymbol{\Delta\tau}\vert]Y_{l}^{m}(\theta,\phi)\nonumber \\
+ &  & +\frac{v_{l,m}^{{\rm AE}}(r)}{r}\{\frac{m}{{\rm sin}(\theta)}[cos(\theta)\vert\boldsymbol{\Delta\tau}\vert_{\theta}+\vert\boldsymbol{\Delta\tau}\vert_{\phi}]Y_{l}^{m}(\theta,\phi)+\nonumber \\
+ &  & \vert\boldsymbol{\Delta\tau}\vert_{\theta}\sqrt{(l-m)(l+m+1)}{\rm e}^{-{\rm i}\phi}Y_{l}^{m+1}(\theta,\phi)\}\bigr)\\
+ &  & \sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}\bigl([v_{l,m}^{{\rm AE}}(r)+\partial_{r}v_{l,m}^{{\rm AE}}(r)\vert\boldsymbol{\Delta\tau}\vert]Y_{l}^{m}(\theta,\phi)\\
+ &  & +\frac{v_{l,m}^{{\rm AE}}(r)}{r}\{\frac{m}{{\rm sin}(\theta)}[cos(\theta)\vert\boldsymbol{\Delta\tau}\vert_{\theta}+\vert\boldsymbol{\Delta\tau}\vert_{\phi}]Y_{l}^{m}(\theta,\phi)+\\
+ &  & \vert\boldsymbol{\Delta\tau}\vert_{\theta}\sqrt{(l-m)(l+m+1)}{\rm e}^{-{\rm i}\phi}Y_{l}^{m+1}(\theta,\phi)\}\bigr)
+\end{eqnarray}
+
+\end_inset
+
+There is some indication that it is possible to get through a analytic shift
+ if we expand the radial part in bessel functions, because there is an addition
+ theorem known for these.
+ There is also an addition theorem for solid harmonics and sphereical harmonics.
+ The formula however are very complicated and make it very likely not worth
+ it.
 \end_layout
 
 \begin_layout Subsection
