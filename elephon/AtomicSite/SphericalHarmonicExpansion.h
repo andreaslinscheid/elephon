@@ -24,15 +24,22 @@
 #include "LatticeStructure/Symmetry.h"
 #include "AtomicSite/RadialGrid.h"
 #include "AtomicSite/WignerDMatrix.h"
-#include "symmetry/SymmetryOperation.h"
 
 namespace elephon
 {
+// forward declares
+namespace symmetry { class SymmetryOperation; };
+
 namespace AtomicSite
 {
 
 /**
  * A container for a spherical harmonic expansion.
+ *
+ * It provides the basic interface to handle numerical data in this representation
+ * as well as methods to interpolate back onto other points via SphericalHarmonicExpansion::interpolate
+ * and fitting from a different data representation onto the spherical harmonic expansion via the method
+ * SphericalHarmonicExpansion::fit_to_data.
  */
 class SphericalHarmonicExpansion
 {
@@ -42,17 +49,16 @@ public:
 	 * Set the internal data.
 	 *
 	 * @param lmax	maximal angular momentum that occurs l=(0,...,lmax)
-	 * @param rMax	dimension of the data per l and m
 	 * @param data	list of data. Must be of exactly the size determined by lmax and rMax.
 	 * 				The layout of the data must be r fastest and l slowest, such that
 	 * 				for each constant l we have a block of m=-l to m=l which consists of a block of rMax elements,
 	 * 				Since the sum of natural numbers is l(l+1)/2, we can compute the location of an element
 	 * 				if r ranges from 0 to rMax, m from -l to l and l from 0 to lmax as
 	 * 				r+rMax*( sum _{l' < l} (2l'+1) + m+l ) = r+rMax*(l*l + m+l)
+	 * @param rgrid	The radial grid.
 	 */
 	void initialize(
 			int lmax,
-			int rMax,
 			Auxillary::alignedvector::ZV data,
 			RadialGrid rgrid);
 
@@ -100,6 +106,33 @@ public:
 			std::vector<double> const & coordinates,
 			Auxillary::alignedvector::ZV & interpolated_data) const;
 
+	/**
+	 * Set the internal data from a interpolation produced by the class F.
+	 *
+	 * We want to represent a function \f$ F(\bf{r})\f$ in this object as
+	 * \f{eqnarray*}{
+	 * F({\bf r}) & = & \sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}f_{lm}(\vert{\bf r}-{\bf r}_{0}\vert)
+	 * 					 Y_{l}^{m}(\frac{{\bf r}-{\bf r}_{0}}{\vert{\bf r}-{\bf r}_{0}\vert})
+	 * \f}
+	 * This method will numerically perform the angular integration to obtain the expansion coefficients:
+	 * \f{eqnarray*}{
+	 * f_{lm}(r) & = & \int_{0}^{2\pi}{\rm d}\phi\int_{0}^{\pi}{\rm d}\theta{\rm cos}(\theta)
+	 * 					F[{\bf r}(r,\theta,\phi)-{\bf r}_{0}]{Y_{l}^{m}}^{\ast}(\theta,\phi)
+	 * \f}
+	 * For each of these integrals it uses Algorithms::SphereIntegrator
+	 *
+	 * @tparam F	A functor that implements the function interpolate() with the same signature and meaning
+	 * 				as the one above.
+	 *
+	 * @param[in] f			A const reference to the object providing the data
+	 * @param[in] lmax		The maximal angular momentum we want to represent.
+	 * @param[in] rgrid		The radial grid.
+	 */
+	template<class F>
+	void fit_to_data(
+			F const & f,
+			int lmax,
+			RadialGrid rgrid );
 private:
 
 	int lmax_ = 0;

@@ -8,6 +8,7 @@
 #include "Algorithms/test_TrilinearInterpolation.cpp"
 #include "Algorithms/test_CubeSplineInterpolation.cpp"
 #include "Algorithms/test_rotation_matrix_connecting_unit_vectors.cpp"
+#include "Algorithms/test_SphereIntegrator.cpp"
 
 // include all test suits for namespace AtomicSite
 #include "AtomicSite/test_SphericalHarmonicExpansion.cpp"

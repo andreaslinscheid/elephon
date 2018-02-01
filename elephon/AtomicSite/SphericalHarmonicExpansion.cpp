@@ -20,6 +20,8 @@
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include "Auxillary/memory_layout_functions.hpp"
+#include "Algorithms/helperfunctions.hpp"
+#include "symmetry/SymmetryOperation.h"
 
 namespace elephon
 {
@@ -28,14 +30,12 @@ namespace AtomicSite
 void
 SphericalHarmonicExpansion::initialize(
 		int lmax,
-		int rMax,
 		Auxillary::alignedvector::ZV data,
 		RadialGrid rgrid)
 {
-	assert(data.size() == rMax*((lmax+1)*(lmax+1)));
-	assert(rMax == rgrid.get_num_R());
+	assert(data.size() == rgrid.get_num_R()*((lmax+1)*(lmax+1)));
+	rMax_ = rgrid.get_num_R();
 	lmax_ = lmax;
-	rMax_ = rMax;
 	data_ = std::move(data);
 	rgrid_ = std::move(rgrid);
 }
@@ -71,23 +71,9 @@ SphericalHarmonicExpansion::interpolate(
 	std::vector<double> spherical_phi(numPts);
 	std::vector<double> spherical_theta(numPts);
 	for (int ip = 0 ; ip < numPts; ++ip)
-	{
-		double x = coordinates[ip*3+0];
-		double y = coordinates[ip*3+1];
-		double z = coordinates[ip*3+2];
-		double r = std::sqrt(std::pow(x,2) + std::pow(y,2) + std::pow(z,2));
-		spherical_r[ip] = r;
-		if (r < 1e-10) // by convention, set theta and phi to zero for zero radius
-		{
-			spherical_phi[ip] = 0.0;
-			spherical_theta[ip] = 0.0;
-			continue;
-		}
-		double theta = std::acos(z/r);
-		double phi = std::atan2(y,x);
-		spherical_theta[ip] = theta;
-		spherical_phi[ip] = phi;
-	}
+		Algorithms::helperfunctions::compute_spherical_coords(
+				coordinates[ip*3+0], coordinates[ip*3+1], coordinates[ip*3+2],
+				spherical_r[ip], spherical_theta[ip], spherical_phi[ip]);
 
 	// for each l and m interpolate the radial data to the r-values and multiply the spherical harmonics
 	interpolated_data.assign(numPts, std::complex<double>(0.0));

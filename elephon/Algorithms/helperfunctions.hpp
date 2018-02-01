@@ -174,6 +174,22 @@ interpolate_within_single_tetrahedron(
 		}
 }
 
+inline void
+compute_spherical_coords(
+		double x, double y, double z,
+		double &r, double & theta, double & phi)
+{
+	r = std::sqrt(std::pow(x,2) + std::pow(y,2) + std::pow(z,2));
+	if (r < 1e-10) // by convention, set theta and phi to zero for zero radius
+	{
+		phi = 0.0;
+		theta = 0.0;
+		return;
+	}
+	theta = std::acos(z/r);
+	phi = std::atan2(y,x);
+}
+
 } /* namespace helperfunctions */
 } /* namespace Algorithms */
 } /* namespace elephon */

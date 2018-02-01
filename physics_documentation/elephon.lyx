@@ -2841,10 +2841,39 @@ v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}-\boldsymbol{\Delta\tau})=\sum_{l=0}^{l
 
 \end_inset
 
-The problem here is that 
+We want to represent it as
 \begin_inset Formula 
 \begin{equation}
-\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert=\sqrt{\vert\boldsymbol{r}\vert^{2}+\vert\boldsymbol{\Delta\tau}\vert^{2}+2\vert\boldsymbol{r}\vert\vert\boldsymbol{\Delta\tau}\vert{\rm cos}(\alpha)}
+\tilde{\mbox{v_{{\rm scf}}^{{\rm AE}-1}}}(\boldsymbol{r})=\sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}Y_{l}^{m}(\frac{\boldsymbol{r}}{\vert\boldsymbol{r}\vert})\tilde{\mbox{v_{l,m}^{{\rm AE}}}}(\vert\boldsymbol{r}\vert)
+\end{equation}
+
+\end_inset
+
+The new coefficients can be obtain formally as
+\begin_inset Formula 
+\begin{equation}
+\tilde{\mbox{v_{l,m}^{{\rm AE}}}}(r)=\int_{0}^{2\pi}{\rm d}\phi\int_{0}^{\pi}{\rm d}\theta{\rm cos}(\theta)v_{{\rm scf}}^{{\rm AE}-1}[\boldsymbol{r}(r,\theta,\phi)-\boldsymbol{\Delta\tau}]{Y_{l}^{m}}^{\ast}(\theta,\phi)
+\end{equation}
+
+\end_inset
+
+This is the equaton currently implemented in the code.
+\end_layout
+
+\begin_layout Standard
+Below, we make an attempt of getting somewere analytically.
+ If we orient the coordinate system that 
+\begin_inset Formula $\boldsymbol{\Delta\tau}$
+\end_inset
+
+ points along the 
+\begin_inset Formula $x$
+\end_inset
+
+ axis, then we see that the problem here is that 
+\begin_inset Formula 
+\begin{equation}
+\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert=\sqrt{\vert\boldsymbol{r}\vert^{2}+\vert\boldsymbol{\Delta\tau}\vert^{2}-2\vert\boldsymbol{r}\vert\vert\boldsymbol{\Delta\tau}\vert{\rm cos}(\theta)}
 \end{equation}
 
 \end_inset
@@ -2860,7 +2889,112 @@ which depends on the angle of
 
 .
  This makes the problem quite difficult to solve.
- Instead we make use of the fact, that 
+ A solution would be to disentange the expression into functions that only
+ depend on 
+\begin_inset Formula $\boldsymbol{r}$
+\end_inset
+
+ (in spherical coordinates) and 
+\begin_inset Formula $\boldsymbol{\Delta\tau}$
+\end_inset
+
+ independently.
+\end_layout
+
+\begin_layout Standard
+Let us first use an orthogonal polynomial as a basis where addition theorem
+ are known.
+ We start with
+\begin_inset Formula 
+\begin{equation}
+v_{l,m}^{{\rm AE}}(r)=\sum_{n=0}^{\infty}a_{n}^{l,m}j_{n}(r)
+\end{equation}
+
+\end_inset
+
+and the Gegenbauer addition theorem [https://dlmf.nist.gov/10.23#Px1]
+\begin_inset Formula 
+\begin{equation}
+\frac{j_{n}(\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert)}{\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert^{n}}=2^{n}\Gamma(n)\sum_{k=0}^{\infty}(n+k)\frac{j_{n+k}(r)}{r^{n}}\frac{J_{n+k}(\Delta\tau)}{(\Delta\tau)^{n}}C_{k}^{(n)}[{\rm cos}(\theta)]
+\end{equation}
+
+\end_inset
+
+for 
+\begin_inset Formula $\vert\boldsymbol{\Delta\tau}{\rm e}^{\pm{\rm i}\alpha_{\Delta}}\vert=\Delta\tau<r$
+\end_inset
+
+.
+ Otherwise, the role of 
+\begin_inset Formula $r$
+\end_inset
+
+ and 
+\begin_inset Formula $\Delta\tau$
+\end_inset
+
+ is reversed.
+ If we also introduce
+\begin_inset Formula 
+\begin{equation}
+R_{l}^{m}(\boldsymbol{r})=\sqrt{\frac{4\pi}{2l+1}}\vert\boldsymbol{r}\vert^{l}Y_{l}^{m}(\frac{\boldsymbol{r}}{\vert\boldsymbol{r}\vert})
+\end{equation}
+
+\end_inset
+
+we may write for 
+\begin_inset Formula $\boldsymbol{r}-\boldsymbol{\Delta\tau}\neq0$
+\end_inset
+
+
+\begin_inset Formula 
+\begin{eqnarray}
+Y_{l}^{m}(\frac{\boldsymbol{r}-\boldsymbol{\Delta\tau}}{\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert}) & = & \sqrt{\frac{2l+1}{4\pi}}\frac{R_{l}^{m}(\boldsymbol{r}-\boldsymbol{\Delta\tau})}{\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert^{l}}\\
+ & = & \sqrt{\frac{2l+1}{4\pi}}\frac{1}{\vert\boldsymbol{r}\vert^{l}}\frac{R_{l}^{m}(\boldsymbol{r}-\boldsymbol{\Delta\tau})}{[1+x^{2}-2x{\rm cos}(\theta)]^{\frac{l}{2}}}\\
+ & = & \sqrt{\frac{2l+1}{4\pi}}\frac{1}{\vert\boldsymbol{r}\vert^{l}}R_{l}^{m}(\boldsymbol{r}-\boldsymbol{\Delta\tau})\sum_{k=0}^{\infty}\frac{\vert\boldsymbol{\Delta\tau}\vert^{k}}{\vert\boldsymbol{r}\vert^{k}}C_{k}^{(\frac{l}{2})}[{\rm cos}(\theta)]
+\end{eqnarray}
+
+\end_inset
+
+with
+\begin_inset Formula 
+\begin{equation}
+x=\frac{\Delta\tau}{r}
+\end{equation}
+
+\end_inset
+
+There is an addition theorem for the solid harmonics
+\begin_inset Formula 
+\begin{equation}
+R_{l}^{m}(\boldsymbol{r}-\boldsymbol{\Delta\tau})=\sum_{\lambda=0}^{l}\left(\begin{array}{c}
+2l\\
+2\lambda
+\end{array}\right)^{\frac{1}{2}}\sum_{\mu=-\lambda}^{\lambda}R_{\lambda}^{\mu}(\boldsymbol{r})R_{l-\lambda}^{m-\mu}(-\boldsymbol{\Delta\tau})\langle\lambda,\mu;l-\lambda,m-\mu\vert l,m\rangle
+\end{equation}
+
+\end_inset
+
+such that
+\begin_inset Formula 
+\begin{eqnarray}
+Y_{l}^{m}(\frac{\boldsymbol{r}-\boldsymbol{\Delta\tau}}{\vert\boldsymbol{r}-\boldsymbol{\Delta\tau}\vert}) & = & \sqrt{\frac{4\pi}{2l+1}}\sum_{\lambda=0}^{l}\left(\begin{array}{c}
+2l\\
+2\lambda
+\end{array}\right)^{\frac{1}{2}}\sum_{\mu=-\lambda}^{\lambda}\frac{\vert\boldsymbol{r}\vert^{\lambda+l-\lambda}}{\vert\boldsymbol{r}\vert^{l}}Y_{\lambda}^{\mu}(\boldsymbol{r})Y_{l-\lambda}^{m-\mu}(-\boldsymbol{\Delta\tau})\langle\lambda,\mu;l-\lambda,m-\mu\vert l,m\rangle\sum_{k=0}^{\infty}\frac{\vert\boldsymbol{\Delta\tau}\vert^{k}}{\vert\boldsymbol{r}\vert^{k}}C_{k}^{(\frac{l}{2})}[{\rm cos}(\theta)]\\
+ & = & \sqrt{\frac{4\pi}{2l+1}}\sum_{\lambda=0}^{l}\left(\begin{array}{c}
+2l\\
+2\lambda
+\end{array}\right)^{\frac{1}{2}}\sum_{\mu=-\lambda}^{\lambda}Y_{\lambda}^{\mu}(\theta,\phi)Y_{l-\lambda}^{m-\mu}(-\boldsymbol{\Delta\tau})\langle\lambda,\mu;l-\lambda,m-\mu\vert l,m\rangle\sum_{k=0}^{\infty}\frac{\vert\boldsymbol{\Delta\tau}\vert^{k}}{\vert\boldsymbol{r}\vert^{k}}C_{k}^{(\frac{l}{2})}[{\rm cos}(\theta)]
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Instead we make use of the fact, that 
 \begin_inset Formula $\boldsymbol{\Delta\tau}$
 \end_inset
 

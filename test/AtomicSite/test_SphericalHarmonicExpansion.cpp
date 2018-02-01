@@ -53,7 +53,7 @@ create_radial_constant_data(
 					constant_data.begin() +  elephon::Auxillary::memlayout::angular_momentum_layout(l,m)*RMax + RMax,
 					1.0);
 
-	test_data.initialize(lMax, RMax, std::move(constant_data), std::move(rgrid));
+	test_data.initialize(lMax, std::move(constant_data), std::move(rgrid));
 	return test_data;
 }
 
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE( test_she_datalayout )
 	for (int l = 0; l<=5 ; ++l)
 		for (int m = -l; m <= l; ++m)
 			compareData.push_back(std::complex<double>(l,m));
-	layout_test.initialize(5, 1, compareData, rgrid);
+	layout_test.initialize(5, compareData, rgrid);
 
 	for (int l = 0; l<=5 ; ++l)
 		for (int m = -l; m <= l; ++m)
