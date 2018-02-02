@@ -24,6 +24,7 @@
 #include "Auxillary/memory_layout_functions.hpp"
 #include "AtomicSite/RadialGrid.h"
 #include "LatticeStructure/RegularBareGrid.h"
+#include <boost/math/special_functions/spherical_harmonic.hpp>
 #include <vector>
 #include <complex>
 
@@ -40,7 +41,7 @@ create_radial_constant_data(
 	std::vector<double> points(RMax);
 	double radius = 2.0*M_PI/std::pow(3.0,1.0/3.0);
 	for (int ip = 0 ; ip < RMax ; ++ip)
-		points[ip] = radius*static_cast<double>(ip)/static_cast<double>(RMax);
+		points[ip] = radius*static_cast<double>(ip+1)/static_cast<double>(RMax);
 	rgrid.initialize({0.0, 0.0, 0.0}, radius, std::move(points));
 	int nElem = (lMax+1)*(lMax+1)*RMax;
 	elephon::Auxillary::alignedvector::ZV constant_data(nElem, 0.0);
@@ -197,6 +198,71 @@ BOOST_AUTO_TEST_CASE( test_rotation )
 					return std::complex<double>(0);
 				return std::complex<double>(-v[0]/r, -v[1]/r)*std::sqrt(3.0/8.0/M_PI);
 			});
+}
+
+BOOST_AUTO_TEST_CASE( test_data_fit )
+{
+	// in  this test, we generate data that is a known function of radius
+	// times a spherical harmonic. We then confirm that with a fit, the coefficients are matching
+	// this behavior.
+	struct testDataGenerator
+	{
+		testDataGenerator(int l, int m, double a, std::vector<double> center) : l_(l), m_(m), a_(a), c_(std::move(center)) {
+			assert(c_.size()==3);
+		};
+
+		void interpolate( std::vector<double> & coordinates, std::complex<double> * data) const
+		{
+			const int np = coordinates.size()/3;
+			for (int ip = 0 ; ip < np; ++ip )
+			{
+				double x = coordinates[ip*3+0] - c_[0];
+				double y = coordinates[ip*3+1] - c_[1];
+				double z = coordinates[ip*3+2] - c_[2];
+				double r, theta, phi;
+				elephon::Algorithms::helperfunctions::compute_spherical_coords(x, y, z, r, theta, phi);
+				data[ip] = boost::math::spherical_harmonic(l_, m_, theta, phi )*(1.0 - a_*r);
+			}
+		}
+
+		int l_, m_;
+		double a_;
+		std::vector<double> c_;
+	};
+
+	const int RMax = 50;
+	const int LMax = 10;
+	const int LTest = 1;
+	const int MTest = 1;
+	const double aTest = 0.5;
+
+	std::vector<double> center{0.5, 0.25, 0.125};
+	testDataGenerator gen(LTest, MTest, aTest, center);
+
+	elephon::AtomicSite::RadialGrid rgrid;
+	std::vector<double> points(RMax);
+	double radius = 2.0*M_PI/std::pow(3.0,1.0/3.0);
+	for (int ip = 0 ; ip < RMax ; ++ip)
+		points[ip] = radius*static_cast<double>(ip+1)/static_cast<double>(RMax);
+	rgrid.initialize(center, radius, std::move(points));
+
+	elephon::AtomicSite::SphericalHarmonicExpansion shexp;
+	shexp.fit_to_data(gen, LMax, rgrid);
+
+	for (int iL = 0 ; iL < LMax; ++iL)
+		for (int iM = -iL ; iM <= iL; ++iM)
+		{
+			double diff = 0.0;
+			for (int iR = 0 ; iR < RMax; ++iR)
+			{
+				double r = rgrid.get_radius(iR);
+				std::complex<double> expected = ((iL == LTest)&&(iM == MTest) ?
+											std::complex<double>(1.0 - aTest*r) : std::complex<double>(0.0));
+				std::complex<double> obtained = shexp(iR, iM, iL);
+				diff += std::abs(obtained - expected)/RMax;
+			}
+			BOOST_CHECK_SMALL(diff, 1e-6);
+		}
 }
 
 BOOST_AUTO_TEST_SUITE_END()

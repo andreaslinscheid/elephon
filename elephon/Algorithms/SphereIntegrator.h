@@ -56,10 +56,29 @@ public:
 	typedef typename Auxillary::FunctionTraits<Functor>::template arg<1>::type SAT;
 
 	/**
+	 * Initialize with a given lebedev rule.
+	 *
+	 * Don't call this method unless you want to perform prepreatory things without actually performing the integral.
+	 * This sets internal number of points and weights etc.
+	 *
+	 * @param[int] lebedev_rule
+	 */
+	void initialize(int lebedev_rule);
+
+	/**
+	 * Pick the smallest rule which integrates a spherical harmonic of order lMax exactly.
+	 *
+	 * @param[in] lMax	The order of the spherical harmonic.
+	 * @return	The smallest rule implemented in this method which integrates the spherical harmonic lMax exactly.
+	 */
+	int pick_rule_spherical_harmonic(int lMax) const;
+
+	/**
 	 * Compute the integral of f over the unit sphere)
 	 *
 	 * The integration is perform using the Lebedev rule [https://en)wikipedia)org/wiki/Lebedev_quadrature])
 	 * Data obtained from [https://people.sc.fsu.edu/~jburkardt/datasets/sphere_lebedev_rule/sphere_lebedev_rule.html]
+	 * Possibly updates internal storage according to initialize().
 	 *
 	 * @param f				Functor or lambda providing the data at specific points on the sphere)
 	 * @param lebedev_rule	Integer defining the spherical harmonic order which will be integrated exactly.
@@ -76,6 +95,24 @@ public:
 			Functor const & f,
 			int lebedev_rule = 131);
 
+	/**
+	 * Obtain the number of points of the surface of the unit sphere for the given rule called by integrate() or initialize()
+	 * @return	number of points on the surface of the unit sphere.
+	 */
+	int get_num_pts_surface() const;
+
+	/**
+	 * Obtain the point coordinates on the surface of the unit sphere as defined by the Lebedev rule used for initialize() or integrate()
+	 *
+	 * The convention is according to the spherical coordinates and is specified by ISO standard 80000-2:2009, and earlier in ISO 31-11 (1992).
+	 * This matches the physics convention.
+	 *
+	 * @param[out] thetas	List of inclination (or elevation) angles
+	 * @param[out] phis		List of azimuth angles
+	 */
+	void get_surface_pts(
+			elephon::Auxillary::alignedvector::aligned_vector<FAT> & thetas,
+			elephon::Auxillary::alignedvector::aligned_vector<SAT> & phis) const;
 private:
 
 	int numRule_ = 0;

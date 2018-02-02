@@ -35,12 +35,27 @@ RadialGrid::initialize(
 	center_ = std::move(center);
 	radius_ = radius;
 	radialPoints_ = std::move(points);
+	assert(center_.size() == 3);
 }
 
 int
 RadialGrid::get_num_R() const
 {
 	return numR_;
+}
+
+double
+RadialGrid::get_radius(int iR) const
+{
+	assert((iR >= 0)&&(iR<numR_));
+	return radialPoints_[iR];
+}
+
+std::vector<double> const &
+RadialGrid::get_center() const
+{
+	assert(center_.size() == 3);
+	return center_;
 }
 
 void

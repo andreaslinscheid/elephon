@@ -20,8 +20,8 @@
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 #include "Auxillary/memory_layout_functions.hpp"
-#include "Algorithms/helperfunctions.hpp"
 #include "symmetry/SymmetryOperation.h"
+#include "Algorithms/helperfunctions.hpp"
 
 namespace elephon
 {
@@ -40,28 +40,21 @@ SphericalHarmonicExpansion::initialize(
 	rgrid_ = std::move(rgrid);
 }
 
-std::complex<double> &
-SphericalHarmonicExpansion::operator() (int r, int m, int l)
+void
+SphericalHarmonicExpansion::interpolate(
+		std::vector<double> const & coordinates,
+		Auxillary::alignedvector::ZV & interpolated_data) const
 {
-	using Auxillary::memlayout::angular_momentum_layout;
-	assert((data_.size() > r+rMax_*angular_momentum_layout(l,m))
-			&& (r+rMax_*angular_momentum_layout(l,m) >= 0));
-	return data_[r+rMax_*angular_momentum_layout(l,m)];
-}
-
-std::complex<double>
-SphericalHarmonicExpansion::operator() (int r, int m, int l) const
-{
-	using Auxillary::memlayout::angular_momentum_layout;
-	assert((data_.size() > r+rMax_*angular_momentum_layout(l,m))
-			&& (r+rMax_*angular_momentum_layout(l,m) >= 0));
-	return data_[r+rMax_*angular_momentum_layout(l,m)];
+	assert(coordinates.size()%3 == 0);
+	int numPts = coordinates.size()/3;
+	interpolated_data.resize(numPts);
+	this->interpolate(coordinates, interpolated_data.data());
 }
 
 void
 SphericalHarmonicExpansion::interpolate(
 		std::vector<double> const & coordinates,
-		Auxillary::alignedvector::ZV & interpolated_data) const
+		std::complex<double> * interpolated_data) const
 {
 	assert(coordinates.size()%3 == 0);
 
@@ -76,8 +69,7 @@ SphericalHarmonicExpansion::interpolate(
 				spherical_r[ip], spherical_theta[ip], spherical_phi[ip]);
 
 	// for each l and m interpolate the radial data to the r-values and multiply the spherical harmonics
-	interpolated_data.assign(numPts, std::complex<double>(0.0));
-	auto radial_interpol = interpolated_data;
+	Auxillary::alignedvector::ZV radial_interpol(numPts, std::complex<double>(0.0));
 	for (int l = 0 ; l <= lmax_; ++l)
 		for (int m = -l ; m <= l; ++m)
 		{
@@ -104,6 +96,20 @@ SphericalHarmonicExpansion::transform(
 {
 	rgrid_.transform(sop);
 	sop.rotate_radial_data(lmax_, rMax_, data_);
+}
+
+void
+SphericalHarmonicExpansion::set_ylm_conjg_data(
+		int l, int m,
+		Auxillary::alignedvector::DV const & thetas,
+		Auxillary::alignedvector::DV const & phis,
+		Auxillary::alignedvector::ZV & ylmData) const
+{
+	assert(thetas.size() == phis.size());
+	ylmData.resize(thetas.size());
+	for (int ip = 0 ; ip < static_cast<int>(thetas.size()); ++ip)
+		ylmData[ip] = std::conj(boost::math::spherical_harmonic(l, m, thetas[ip], phis[ip] ));
+
 }
 
 } /* namespace AtomicSite */

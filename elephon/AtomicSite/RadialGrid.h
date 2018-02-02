@@ -55,6 +55,20 @@ public:
 	int get_num_R() const;
 
 	/**
+	 * Get the radius for radial point iR.
+	 * @param iR	Point number.
+	 * @return	The radius of the element referenced by iR.
+	 */
+	double get_radius(int iR) const;
+
+	/**
+	 * Get center coordinate.
+	 *
+	 * @return	a const reference to the 3 element vector with the center.
+	 */
+	std::vector<double> const & get_center() const;
+
+	/**
 	 * Perform a cubic spline interpolation of data on the grid.
 	 *
 	 * @param rValues				List of points where the data should be interpolated to.

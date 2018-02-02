@@ -26,12 +26,47 @@ namespace Algorithms
 {
 
 template<class Functor>
+int
+SphereIntegrator<Functor>::pick_rule_spherical_harmonic(int lMax) const
+{
+	std::vector<int> avail_rules = {3, 5, 7, 9, 11, 13, 15,
+				17, 19, 21, 23, 25, 27, 29, 31, 35, 41, 47, 53, 59, 65, 71, 77,
+				83, 89, 95, 101, 107, 113, 119, 125, 131 };
+	auto it = std::lower_bound(avail_rules.begin(), avail_rules.end(), lMax);
+	return it == avail_rules.end() ? *avail_rules.rbegin() : *it;
+}
+
+template<class Functor>
+int
+SphereIntegrator<Functor>::get_num_pts_surface() const
+{
+	return numElem_;
+}
+
+template<class Functor>
+void
+SphereIntegrator<Functor>::get_surface_pts(
+		elephon::Auxillary::alignedvector::aligned_vector<FAT> & thetas,
+		elephon::Auxillary::alignedvector::aligned_vector<SAT> & phis) const
+{
+	thetas.assign(thetas_.begin(), thetas_.end());
+	phis.assign(phis_.begin(), phis_.end());
+};
+
+template<class Functor>
+void
+SphereIntegrator<Functor>::initialize(int lebedev_rule)
+{
+	this->get_rule_data(lebedev_rule);
+}
+
+template<class Functor>
 typename SphereIntegrator<Functor>::RT
 SphereIntegrator<Functor>::integrate(
 		Functor const & f,
 		int lebedev_rule)
 {
-	this->get_rule_data(lebedev_rule);
+	this->initialize(lebedev_rule);
 
 	Auxillary::alignedvector::aligned_vector<RT> data(numElem_);
 
