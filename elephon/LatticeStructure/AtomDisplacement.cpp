@@ -17,7 +17,8 @@
  *      Author: A. Linscheid
  */
 
-#include "AtomDisplacement.h"
+#include "LatticeStructure/AtomDisplacement.h"
+#include "LatticeStructure/Atom.h"
 #include <string>
 #include <cmath>
 
@@ -26,10 +27,22 @@ namespace elephon
 namespace LatticeStructure
 {
 
-AtomDisplacement::AtomDisplacement()
-{
+AtomDisplacement::AtomDisplacement() { };
 
-};
+AtomDisplacement::AtomDisplacement(
+		Atom const & atom,
+		double magnitude,
+		std::vector<double> direction,
+		bool symmetricDirection)
+{
+	this->initialize(
+			atom.get_kind(),
+			magnitude,
+			atom.get_position(),
+			std::move(direction),
+			atom.get_position_precision(),
+			symmetricDirection);
+}
 
 AtomDisplacement::AtomDisplacement(
 		std::string kind,

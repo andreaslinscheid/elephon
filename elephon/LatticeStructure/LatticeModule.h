@@ -27,10 +27,16 @@ namespace elephon
 namespace LatticeStructure
 {
 
+/**
+ * Description of the lattice without the atomic basis.
+ */
 class LatticeModule
 {
 public:
 
+	/**
+	 * Creates a valid instance with cubic basis vectors of unit length.
+	 */
 	LatticeModule();
 
 	LatticeModule( std::vector<double> latticeMatrix );

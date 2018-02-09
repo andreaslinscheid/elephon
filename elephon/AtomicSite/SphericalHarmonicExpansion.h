@@ -88,11 +88,17 @@ public:
 	void transform(symmetry::SymmetryOperation const & sop);
 
 	/**
-	 * Obtain the number of radial points
+	 * Obtain the radial grid
 	 *
-	 * @return	the number of radial points
+	 * @return	a constant reference to the radial grid.
 	 */
-	int get_num_radial() const;
+	RadialGrid const & get_radial_grid() const;
+
+	/**
+	 * Get the maximal contained angular momentum number.
+	 * @return	The highest angular momentum number for which we have data.
+	 */
+	int get_l_max() const;
 
 	/**
 	 * Given a set of arbitrary points, interpolate the data by multiplying the spherical harmonic basis.
@@ -144,6 +150,30 @@ public:
 			F const & f,
 			int lmax,
 			RadialGrid rgrid );
+
+	/**
+	 * Random access iterator to the data in this container.
+	 * @return	beginning of the range.
+	 */
+	Auxillary::alignedvector::ZV::iterator begin();
+
+	/**
+	 * Random access iterator to the end in this container.
+	 * @return	one after the last element in the range.
+	 */
+	Auxillary::alignedvector::ZV::iterator end();
+
+	/**
+	 * Constant random access iterator to the data in this container.
+	 * @return	beginning of the range.
+	 */
+	Auxillary::alignedvector::ZV::const_iterator begin() const;
+
+	/**
+	 * Constant random access iterator to the end in this container.
+	 * @return	one after the last element in the range.
+	 */
+	Auxillary::alignedvector::ZV::const_iterator end() const;
 private:
 
 	int lmax_ = 0;

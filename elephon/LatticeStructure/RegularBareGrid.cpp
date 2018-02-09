@@ -31,6 +31,18 @@ namespace elephon
 namespace LatticeStructure
 {
 
+RegularBareGrid::RegularBareGrid() { };
+
+RegularBareGrid::RegularBareGrid(
+		std::vector<int> dim,
+		bool isReciprocal,
+		double gridPrec,
+		std::vector<double> shift,
+		LatticeModule lattice)
+{
+	this->initialize(std::move(dim), isReciprocal, gridPrec, std::move(shift), std::move(lattice));
+}
+
 void
 RegularBareGrid::initialize(
 		std::vector<int> dim,

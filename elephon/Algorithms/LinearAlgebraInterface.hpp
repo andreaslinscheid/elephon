@@ -213,7 +213,7 @@ template<class C>
 void
 LinearAlgebraInterface::inverse(C A, C & invA )
 {
-	typedef typename C::value_type T;
+	typedef typename std::remove_pointer<decltype(A.data())>::type T;
 	invA = std::move(A);
 	int dim = this->square_matrix_dim(invA);
 	int info;

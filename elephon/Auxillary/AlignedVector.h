@@ -18,6 +18,7 @@
  */
 
 #include <boost/align/aligned_allocator.hpp>
+#include <boost/multi_array.hpp>
 #include <vector>
 #include <complex>
 
@@ -60,6 +61,40 @@ bool check_data_is_aligned(T * ptr)
 }
 
 } /* namespace alignedvector */
+
+/**
+ * Wrapper for boost::multi_array to work with linear algebra interface that uses.
+ *
+ * We redefine several types that have a different meaning in the context of stl containers.
+ * In particular size() is not the number of individual elements in the boost multiarray but the number
+ * of 'objects' in the first dimension. This makes sense, but it not what we want here.
+ * Similarly, value_type is redefined as compared to standard containers.
+ */
+template<typename T, std::size_t NumDims,
+typename Allocator = boost::alignment::aligned_allocator<T, alignedvector::architecture_align>>
+class Multi_array : private boost::multi_array<T, NumDims, Allocator>
+{
+public:
+	 using boost::multi_array<T, NumDims, Allocator>::data;
+	 using boost::multi_array<T, NumDims, Allocator>::operator[];
+	 using boost::multi_array<T, NumDims, Allocator>::begin;
+	 using boost::multi_array<T, NumDims, Allocator>::end;
+	 using boost::multi_array<T, NumDims, Allocator>::shape;
+	 using boost::multi_array<T, NumDims, Allocator>::resize;
+
+	 typedef typename boost::multi_array<T, NumDims, Allocator>::element value_type;
+
+	 Multi_array() { };
+
+	 template <class ExtentList>
+	 explicit Multi_array(
+		      ExtentList const& extents)
+	  	  : boost::multi_array<T, NumDims, Allocator>(extents){ };
+
+	typename boost::multi_array<T, NumDims, Allocator>::size_type
+	size() const {return boost::multi_array<T, NumDims, Allocator>::num_elements();};
+};
+
 } /* namespace Auxillary */
 } /* namespace elephon */
 

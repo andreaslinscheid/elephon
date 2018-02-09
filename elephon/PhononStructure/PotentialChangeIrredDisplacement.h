@@ -28,9 +28,11 @@
 namespace elephon
 {
 // forward declares
-namespace AtomicSite { class SphericalHarmonicExpansion; };
+namespace AtomicSite { class AtomSiteData; };
 namespace LatticeStructure { class RegularBareGrid; };
+namespace LatticeStructure { class UnitCell; };
 namespace LatticeStructure { class AtomDisplacement; };
+namespace LatticeStructure { class PrimitiveToSupercellConnection; };
 
 namespace PhononStructure
 {
@@ -63,30 +65,10 @@ namespace PhononStructure
  * 	 	\tau_{\kappa\alpha{\bf r}}}{\vert{\bf r}-\tau_{\kappa\alpha{\bf r}}^{0}-\Delta\tau_{\kappa\alpha{\bf r}}\vert})\bigr)
  * \f}
  *
- * recognizing that the unit vectors are related by a rotation \f$ \hat{R} \f$
- *
- * \f{eqnarray*}{
- * \frac{{\bf r}-\tau_{\kappa{\bf r}}^{0}}{\vert{\bf r}-\tau_{\kappa{\bf r}}^{0}\vert}
- * 		& = &
- * 	\hat{R}\cdot\frac{{\bf r}-\tau_{\kappa\alpha{\bf r}}^{0}-\Delta\tau_{\kappa\alpha{\bf r}}}{\vert{\bf r}-\tau_{\kappa\alpha{\bf r}}^{0}-\Delta\tau_{\kappa\alpha{\bf r}}\vert}
- * \f}
- *
- * we can compute the finite difference in terms of the expansion coefficients. The rotation matrix is determined by Algorithms::rotation_matrix_connecting_unit_vectors.
- * That rotation matrix is decomposed into Euler angles whereby we can compute the Wigner D matrix that represents the rotation operator in spherical harmonics.
- * The radial data content of this class is then for the displaced site \f$ \kappa_{0}\f$, \f$ v_{l,m}^{\Delta\kappa_{0}} \f$, with
- *
- * \f{eqnarray*}{
- * \Delta v_{{\rm {\scriptscriptstyle scf}}}^{\kappa_{0}}({\bf r})
- * 		& = &
- * 	\sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}v_{l,m}^{\Delta\kappa_{0}}(\vert{\bf r}-\tau_{\kappa_{0}{\bf r}}^{0}\vert)
- * 			Y_{l}^{m}(\frac{{\bf r}-\tau_{\kappa_{0}{\bf r}}^{0}}{\vert{\bf r}-\tau_{\kappa_{0}{\bf r}}^{0}\vert})
- * 			\\
- * v_{l,m}^{\Delta\kappa_{0}}(\vert{\bf r}-\tau_{\kappa_{0}{\bf r}}^{0}\vert)
- * 		& = &
- * 	v_{l,m}^{(0)}(\vert{\bf r}-\tau_{\kappa_{0}{\bf r}}^{0}\vert)-\sum_{m^{\prime}=-l}^{l}v_{l,m^{\prime}}^{(1)}(\vert{\bf r}-\tau_{\kappa_{0}\alpha{\bf r}}^{0}-\Delta\tau_{\kappa_{0}\alpha{\bf r}}\vert)
- * 		D_{m^{\prime}m}^{l\ast}(\alpha_{\Delta\tau_{\kappa_{0}\alpha{\bf r}}},\beta_{\Delta\tau_{\kappa_{0}\alpha{\bf r}}},\gamma_{\Delta\tau_{\kappa_{0}\alpha{\bf r}}})
- * \f}
- *
+ * Here, we take the approach to compute the second term in the above equation, expanded around \f$ {\bf r}-\tau_{\kappa\alpha{\bf r}}^{0}\f$,
+ * and fit different expansion coefficients \f$ v_{l,m}^{\prime}(\vert {\bf r}\vert)\f$ at the center of the original atom.
+ * This is done using AtomicSite::SphericalHarmonicExpansion::interpolate() following by a AtomicSite::SphericalHarmonicExpansion::fit_to_data().
+ * Then, we can compute the finite difference in terms of the expansion coefficients.
  * For the non-displaced sites, we simply subtract the data values on the same grid
  *
  * \f{eqnarray*}{
@@ -102,22 +84,26 @@ public:
 	/**
 	 * Compute the difference potential due to a finite displacement.
 	 *
-	 * @param displ
-	 * @param regularGridGroundStatePotential
-	 * @param radialGroundStatePotential
-	 * @param regularGridDisplacedPotential
-	 * @param radialDisplacedPotential
-	 * @param unitcellGrid
-	 * @param supercellGrid
+	 * @throw a logic error if displ references an atom that is not in the primitive unit cell
+	 * 			or radialDisplacedPotential contains two atoms that overlap.
+	 *
+	 * @param[in] displ
+	 * @param[in] regularGridGroundStatePotential
+	 * @param[in] radialGroundStatePotential
+	 * @param[in] regularGridDisplacedPotential
+	 * @param[in] radialDisplacedPotential
+	 * @param[in] unitcellGrid
+	 * @param[in] supercellGrid
 	 */
 	void initialize(
-			std::shared_ptr<const LatticeStructure::AtomDisplacement> displ,
+			std::shared_ptr<const LatticeStructure::AtomDisplacement> atomDispl,
 			std::vector<double> const & regularGridGroundStatePotential,
-			std::vector<std::shared_ptr<const AtomicSite::SphericalHarmonicExpansion>> radialGroundStatePotential,
+			std::vector<std::shared_ptr<const AtomicSite::AtomSiteData>> radialGroundStatePotential,
 			std::vector<double> const & regularGridDisplacedPotential,
-			std::vector<std::shared_ptr<const AtomicSite::SphericalHarmonicExpansion>> radialDisplacedPotential,
+			std::vector<std::shared_ptr<const AtomicSite::AtomSiteData>> radialDisplacedPotential,
 			std::shared_ptr<const LatticeStructure::RegularBareGrid> unitcellGrid,
-			std::shared_ptr<const LatticeStructure::RegularBareGrid> supercellGrid );
+			std::shared_ptr<const LatticeStructure::RegularBareGrid> supercellGrid,
+			std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> scPrimMap );
 
 	/**
 	 * Re-shuffel the internal data according to the symmetry operation sop.
@@ -130,15 +116,15 @@ public:
 
 	Auxillary::alignedvector::DV::const_iterator end_regular_data() const;
 
-	Auxillary::alignedvector::ZV::const_iterator begin_radial_data() const;
+	Auxillary::alignedvector::ZV::const_iterator begin_radial_data(int atomIndex) const;
 
-	Auxillary::alignedvector::ZV::const_iterator end_radial_data() const;
+	Auxillary::alignedvector::ZV::const_iterator end_radial_data(int atomIndex) const;
 
 private:
 
 	Auxillary::alignedvector::DV regularGridData_;
 
-	std::vector<AtomicSite::SphericalHarmonicExpansion> radialGridData_;
+	std::vector<AtomicSite::AtomSiteData> radialGridData_;
 };
 
 } /* namespace PhononStructure */

@@ -31,6 +31,8 @@ namespace elephon
 namespace LatticeStructure
 {
 
+class Atom;
+
 /**
  * Represents the position and vector of a atomic displacement.
  */
@@ -39,6 +41,12 @@ class AtomDisplacement
 public:
 
 	AtomDisplacement();
+
+	AtomDisplacement(
+			Atom const & atom,
+			double magnitude,
+			std::vector<double> direction,
+			bool symmetricDirection = true);
 
 	AtomDisplacement(
 			std::string kind,

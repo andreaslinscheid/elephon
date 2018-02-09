@@ -59,6 +59,13 @@ RadialGrid::get_center() const
 }
 
 void
+RadialGrid::set_center(std::vector<double> center)
+{
+	assert(center.size() == 3);
+	center_ = std::move(center);
+}
+
+void
 RadialGrid::transform(symmetry::SymmetryOperation const & sop)
 {
 	sop.apply(center_);

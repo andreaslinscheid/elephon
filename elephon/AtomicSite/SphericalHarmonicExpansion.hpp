@@ -131,5 +131,29 @@ SphericalHarmonicExpansion::fit_to_data(
 	this->initialize(lmax, std::move(coefficientData), std::move(rgrid));
 }
 
+inline Auxillary::alignedvector::ZV::iterator
+SphericalHarmonicExpansion::begin()
+{
+	return data_.begin();
+}
+
+inline Auxillary::alignedvector::ZV::iterator
+SphericalHarmonicExpansion::end()
+{
+	return data_.end();
+}
+
+inline Auxillary::alignedvector::ZV::const_iterator
+SphericalHarmonicExpansion::begin() const
+{
+	return data_.begin();
+}
+
+inline Auxillary::alignedvector::ZV::const_iterator
+SphericalHarmonicExpansion::end() const
+{
+	return data_.end();
+}
+
 } /* namespace AtomicSite */
 } /* namespace elephon */

@@ -69,6 +69,13 @@ public:
 	std::vector<double> const & get_center() const;
 
 	/**
+	 * Reset the center of the grid.
+	 *
+	 * @param[in] center	a 3 component vector with the new center
+	 */
+	void set_center(std::vector<double> center);
+
+	/**
 	 * Perform a cubic spline interpolation of data on the grid.
 	 *
 	 * @param rValues				List of points where the data should be interpolated to.

@@ -190,6 +190,25 @@ compute_spherical_coords(
 	phi = std::atan2(y,x);
 }
 
+/**
+ * Compute the determinant of a 3x3 matrix.
+ *
+ * @tparam M			A container that implements the size function and defines the content type as M::value_type
+ * @param[in] mat		3x3 matrix in c storage layout
+ * @return				the determinant of the matrix
+ */
+template<class M>
+typename M::value_type
+determinant_3by3_matrix(M const & mat)
+{
+	assert(mat.size() == 9);
+	typename M::value_type matrix[3][3];
+	std::copy(mat.data(), mat.data()+mat.size(), &matrix[0][0]);
+	return 	-matrix[0][2]*matrix[1][1]*matrix[2][0] + matrix[0][1]*matrix[1][2]*matrix[2][0] +
+			 matrix[0][2]*matrix[1][0]*matrix[2][1] - matrix[0][0]*matrix[1][2]*matrix[2][1] -
+			 matrix[0][1]*matrix[1][0]*matrix[2][2] + matrix[0][0]*matrix[1][1]*matrix[2][2];
+}
+
 } /* namespace helperfunctions */
 } /* namespace Algorithms */
 } /* namespace elephon */

@@ -112,5 +112,17 @@ SphericalHarmonicExpansion::set_ylm_conjg_data(
 
 }
 
+RadialGrid const &
+SphericalHarmonicExpansion::get_radial_grid() const
+{
+	return rgrid_;
+}
+
+int
+SphericalHarmonicExpansion::get_l_max() const
+{
+	return lmax_;
+}
+
 } /* namespace AtomicSite */
 } /* namespace elephon */

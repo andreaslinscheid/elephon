@@ -37,6 +37,14 @@ class GridPt;
 struct GridCubeImpl;
 }; /*namespace detail */
 
+/**
+ * Manages a regular grid of 3D vectors in the range for x,y and z of [-0.5,0.0[ in internal coordinates.
+ *
+ * Internal coordinates are fractions of the lattice basis vectors. See LatticeStructure::LatticeModule.
+ * A grid vector has a comparison in the form of a operator< which is done element wise. Any x and x' are
+ * said to be qual if they differ by no more than a gridPrec_ value. Then, for two vectors if x is <equal>
+ * we compare y and so on.
+ */
 class RegularBareGrid
 {
 public:
@@ -45,6 +53,33 @@ public:
 
 	typedef class detail::GridPt GridPoint;
 
+	/**
+	 * Empty constructor, not in a legal state - call initialize() before usage.
+	 */
+	RegularBareGrid();
+
+	/**
+	 *	Construct and directly call initialize()
+	 */
+	RegularBareGrid(
+			std::vector<int> dim,
+			bool isReciprocal = false,
+			double gridPrec = 1e-6,
+			std::vector<double> shift = {0.0,0.0,0.0},
+			LatticeModule lattice = LatticeModule());
+
+	/**
+	 *	Set the grid.
+	 *
+	 * @param[in] dim			a 3D vector with the numer of points in each x, y and z direction.
+	 * @param[in] isReciprocal	Flag if the grid is sampling reciprocal space.
+	 * @param[in] gridPrec		max difference below when to consider two vector components equal
+	 * @param[in] shift			a offset of each vector in the grid from the origin. Enter in units
+	 * 							of the lattice basis and with a scale of the number of points in each
+	 * 							direction. Thus, 0.5, 0, 0.25 will shift every x coordinate of a grid vector by half a lattice spacing
+	 * 							in x, does not shift y and shift z by 1/4 of a lattice spacing in z direction.
+	 * @param[in] lattice		The lattice module defining the basis.
+	 */
 	void initialize(
 			std::vector<int> dim,
 			bool isReciprocal = false,
