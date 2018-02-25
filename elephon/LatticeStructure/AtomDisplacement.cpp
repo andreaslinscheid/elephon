@@ -66,9 +66,7 @@ void AtomDisplacement::initialize(
 {
 	kind_ = std::move(kind);
 	magnitude_ = magnitude;
-	position_=std::move(position);
-	for ( auto &xi : position_ )
-		xi -= std::floor(xi + 0.5);
+	this->set_position(std::move(position));
 	direction_=std::move(direction);
 	equivalencePrc_ = gridPrecision;
 	treatDirectionSymmetric_ = symmetricDirection;
@@ -82,6 +80,15 @@ AtomDisplacement::scale_position(double scaleX, double scaleY, double scaleZ)
 	position_[0] *= scaleX;
 	position_[1] *= scaleY;
 	position_[2] *= scaleZ;
+}
+
+void
+AtomDisplacement::set_position(std::vector<double> pos)
+{
+	assert(pos.size() == 3);
+	position_=std::move(pos);
+	for ( auto &xi : position_ )
+		xi -= std::floor(xi + 0.5);
 }
 
 void AtomDisplacement::transform(symmetry::SymmetryOperation const& sop)

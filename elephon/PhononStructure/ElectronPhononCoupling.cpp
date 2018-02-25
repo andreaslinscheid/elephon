@@ -118,8 +118,8 @@ ElectronPhononCoupling::generate_gkkp_mod_2_of_q(
 	fft1.plan_fft(potentialFFTGrid, nB,  1, false, nK);
 	fft2.plan_fft(potentialFFTGrid, nBp, -1, false, nK);
 
-	Auxillary::alignedvector::DV modes;
-	Auxillary::alignedvector::ZV dynmat, conjDynmat;
+	Auxillary::Multi_array<double,2> modes;
+	Auxillary::Multi_array<std::complex<double>,3> dynmat, conjDynmat;
 	Auxillary::alignedvector::CV localGkkp, dvscfData, bufferWfct1,bufferWfct2, phaseBuffer(nr);
 	std::vector<Auxillary::alignedvector::CV> dvscfBuffers;
 	Auxillary::alignedvector::ZV localGkkpMod2(nM*nM), localGkkpMod2Buffer(nM*nM);

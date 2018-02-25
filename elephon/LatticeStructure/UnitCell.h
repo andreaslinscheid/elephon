@@ -31,6 +31,8 @@ namespace elephon
 namespace LatticeStructure
 {
 
+class AtomSymmetryConnection;
+
 /**
  * A collection of data and methods that describes the physical system in a periodic lattice.
  *
@@ -64,10 +66,6 @@ public:
 
 	void displace_atom( AtomDisplacement const& displ );
 
-	void generate_displacements( double displMagn,
-			bool symmetricDisplacements,
-			std::vector<AtomDisplacement> & irreducibleDisplacements) const;
-
 	void get_site_displacements(Atom const & atomicSite,
 			bool symmetricDisplacements,
 			LatticeStructure::Symmetry const & siteSymmetry,
@@ -93,7 +91,7 @@ public:
 
 	void compute_supercell_dim(std::shared_ptr<const UnitCell> supercell, std::vector<int> & supercellDim ) const;
 
-	int atom_rot_map(int symIndex, int atomIndex) const;
+	std::shared_ptr<const LatticeStructure::AtomSymmetryConnection> get_atom_symmetry() const;
 private:
 
 	LatticeStructure::LatticeModule lattice_;
@@ -104,7 +102,7 @@ private:
 
 	std::vector<LatticeStructure::Symmetry> siteSymmetries_;
 
-	std::vector<std::vector<int>> atomSymMap_;
+	std::shared_ptr<LatticeStructure::AtomSymmetryConnection> atomSymmetryModule_;
 
 	void add_displacement( std::vector<double> direction,
 			std::vector<double> const & position,

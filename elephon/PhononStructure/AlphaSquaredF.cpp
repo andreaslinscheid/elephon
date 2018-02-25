@@ -20,10 +20,12 @@
 #include "PhononStructure/AlphaSquaredF.h"
 #include "PhononStructure/ElectronPhononCoupling.h"
 #include "ElectronicStructure/FermiSurface.h"
+#include "ElectronicStructure/TetrahedraIsosurface.h"
 #include "Algorithms/FFTInterface.h"
 #include "Algorithms/TrilinearInterpolation.h"
 #include "Algorithms/LocalDerivatives.h"
 #include "Auxillary/UnitConversion.h"
+#include "PhononStructure/PhononGrid.h"
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>

@@ -20,6 +20,7 @@
 #ifndef ELEPHON_LATTICESTRUCTURE_LATTICEMODULE_H_
 #define ELEPHON_LATTICESTRUCTURE_LATTICEMODULE_H_
 
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 
 namespace elephon
@@ -47,6 +48,8 @@ public:
 	void initialize( std::vector<double> latticeMatrix );
 
 	LatticeModule build_supercell(std::vector<int> const & supercellDim) const;
+
+	LatticeModule build_supercell(Auxillary::Multi_array<int,2> const & supercellMatrix) const;
 
 	std::vector<double> const & get_latticeMatrix() const;
 

@@ -23,6 +23,7 @@
 #include "IOMethods/ResourceHandler.h"
 #include "IOMethods/Input.h"
 #include "fixtures/MockStartup.h"
+#include "IOMethods/KPath.h"
 
 BOOST_AUTO_TEST_SUITE( DataRegularGrid )
 

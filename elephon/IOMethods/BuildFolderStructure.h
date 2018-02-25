@@ -34,16 +34,15 @@ namespace elephon
 namespace IOMethods
 {
 
+/**
+ * Class that knows how to construct the folder structure and fill the input files
+ * for the electronic structure code tasks.
+ */
 class BuildFolderStructure
 {
 public:
 
 	void build(std::shared_ptr<ResourceHandler> resources) const;
-
-	void build(
-			IOMethods::InputOptions const & input,
-			LatticeStructure::UnitCell const & unitcell,
-			ElectronicStructureCodeInterface & interface ) const;
 
 	bool check_is_build( std::string rootFolder ) const;
 

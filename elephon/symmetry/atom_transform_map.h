@@ -35,7 +35,7 @@ namespace symmetry
  *
  * @param[in] atoms			A vector with the atoms to be transformed.
  * @param[in] symmetry		The symmetry group of that will be applied.
- * @param[out] rotAtomsMap	Overwritten with a vector of size of the symmetry group, where is element is a vector that
+ * @param[out] rotAtomsMap	Overwritten with a vector of size of the symmetry group, where each element is a vector that
  * 							tells for a given atom index where it was before application of the symmetry operation.
  */
 void

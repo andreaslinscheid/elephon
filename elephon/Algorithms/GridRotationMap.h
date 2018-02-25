@@ -34,14 +34,14 @@ namespace Algorithms
 /**
  * Compute an index map for each symmetry operation.
  *
- * @param shift			(input) Displace the regular grid *before* applying the symmetry operation.
+ * @param[in] shift		Displace the regular grid *before* applying the symmetry operation.
  * 						Must be a 3 element vector in grid internal units in the 1st Wigner Seitz cell [-0.5,0.5[
  * 						Must be the coordinate of a grid vectors, such that the grid is mapped to itself within
  * 						periodic boundary conditions.
- * @param grid			(input) The regular grid to be rotated.
- * @param symmetry		(input) The symmetry group who's operations are applied to the grid. Transformations will be handled
+ * @param[in] grid		The regular grid to be rotated.
+ * @param[in] symmetry	The symmetry group who's operations are applied to the grid. Transformations will be handled
  * 						modulo a reciprocal lattice vector.
- * @param rotMap		The transformation in terms of grid indices.
+ * @param[out] rotMap	The transformation in terms of grid indices.
  * 						On output, it will be a vector of vectors of int. For each symmetry operation, it will contain a vector
  * 						of #gridpoint grid indices such that rotMap[isym][ir] will tell from which index 'ir' originated from
  * 						before the symmetry operation was applied.

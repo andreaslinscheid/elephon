@@ -26,6 +26,9 @@
 
 namespace elephon
 {
+
+namespace LatticeStructure { class RegularBareGrid; };
+
 namespace symmetry
 {
 
@@ -72,7 +75,11 @@ public:
 	std::shared_ptr<const AtomicSite::ASSymmetry::RadSym>
 	get_radial_symmetry_operator() const;
 
-	void rotate_cart( std::vector<double> & v ) const;
+	template<class VT>
+	void rotate_cart( VT & v ) const;
+
+	template<typename iterator>
+	void rotate_cart( iterator begin, iterator end ) const;
 
 	template<class VT>
 	void rotate_matrix_cart(VT & m) const;
@@ -84,6 +91,11 @@ public:
 	int get_lat_rot_matrix (int i, int j) const;
 
 	int get_lat_frac_trans(int i) const;
+
+	template<class VT, class Grid>
+	void transform_field_regular_grid(
+			Grid const & grid,
+			VT & functionData) const;
 
 	/**
 	 * Apply the inverse of the rotation operator to expansion coefficients of spherical harmonics.
@@ -115,6 +127,16 @@ public:
 			int lMax,
 			int numDataPerLM,
 			VT & dataToBeTransformed) const;
+
+	/**
+	 * For the documentation, please see rotate_radial_data()
+	 */
+	template<class interator>
+	void rotate_radial_data(
+			int lMax,
+			int numDataPerLM,
+			interator dataToBeTransformedBegin,
+			interator dataToBeTransformedEnd) const;
 
 private:
 

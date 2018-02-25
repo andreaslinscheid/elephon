@@ -49,6 +49,32 @@ angular_momentum_layout(
 	return l+m + (l*l);
 }
 
+/**
+ *	Define the composition of a phonon mode by atom index and cartesianIndex
+ *
+ * @param atomIndex			The index of the atom in the primitive cell
+ * @param cartesianIndex	The index 0-3 of x,y,z the cartesian component
+ * @return					The index in the layout of modes.
+ */
+inline int
+mode_layout(int atomIndex, int cartesianIndex)
+{
+	assert((cartesianIndex>=0)&&(cartesianIndex<3));
+	return cartesianIndex+3*atomIndex;
+};
+
+/**
+ *	Extract the atom index from a mode number
+ *
+ * @param modeNumber	The index of the mode.
+ * @return				The index of the Atom.
+ */
+inline int
+atomIndex_of_mode(int modeNumber)
+{
+	return modeNumber/3;
+};
+
 } /* namespace memlayout */
 } /* namespace Auxillary */
 } /* namespace elephon */

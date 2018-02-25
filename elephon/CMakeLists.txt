@@ -76,7 +76,7 @@ target_include_directories(libTest PUBLIC ${elephon_src_tree} "${PROJECT_SOURCE_
 
 add_executable(elephon main.cpp)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -mtune=generic")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -ffast-math -mtune=generic -DBOOST_DISABLE_ASSERTS")
 
 
 target_compile_options(elephon PUBLIC ${elephon_OPTS} )

@@ -56,10 +56,10 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	primScCon->initialize(primCell_ptr, superCell_ptr);
 
 	// here we set the ground state "potential" on the regular grid to Pi
-	std::vector<double> regularGridGroundStatePotential(ucGrid_ptr->get_num_points(), M_PI);
+	Auxillary::alignedvector::DV regularGridGroundStatePotential(ucGrid_ptr->get_num_points(), M_PI);
 
 	// here we set the displaced "potential" on the regular grid to Pi
-	std::vector<double> regularGridDisplacedPotential(scGrid_ptr->get_num_points(), M_PI);
+	Auxillary::alignedvector::DV regularGridDisplacedPotential(scGrid_ptr->get_num_points(), M_PI);
 
 	std::vector<double> rpoints(nRad);
 	for (int ir = 0 ; ir < nRad; ++ir)
@@ -77,32 +77,30 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	adata.initialize(
 			primCell_ptr->get_atoms_list().front(),
 			sexp);
-	auto radialGroundStatePotential = std::vector<std::shared_ptr<const AtomicSite::AtomSiteData>>(1);
-	for (auto &rgp_ptr : radialGroundStatePotential)
-		rgp_ptr = std::make_shared<AtomicSite::AtomSiteData>(adata);
-	auto radialDisplacedPotential = std::vector<std::shared_ptr<const AtomicSite::AtomSiteData>>(primScCon->supercell_volume_factor());
+	auto radialGroundStatePotential = std::vector<AtomicSite::AtomSiteData>(1, adata);
+	auto radialDisplacedPotential = std::vector<AtomicSite::AtomSiteData>(primScCon->get_supercell_volume_factor());
 
 	// create the displaced atom and set the first element
 	auto displacedAtom = primCell_ptr->get_atoms_list().front();
-	auto displ_ptr = std::make_shared<LatticeStructure::AtomDisplacement>(displacedAtom, 0.001, std::vector<double>({1.0, 0.0, 0.0}));
-	displacedAtom.apply_displacement(*displ_ptr);
+	LatticeStructure::AtomDisplacement displ_ptr(displacedAtom, 0.001, std::vector<double>({1.0, 0.0, 0.0}));
+	displacedAtom.apply_displacement(displ_ptr);
 	adata.initialize(displacedAtom, sexp);
-	radialDisplacedPotential[0] = std::make_shared<AtomicSite::AtomSiteData>(std::move(adata));
+	radialDisplacedPotential[0] = AtomicSite::AtomSiteData(std::move(adata));
 	// set the remainder non-displaced atoms
-	for (int ia = 1 ; ia < primScCon->supercell_volume_factor(); ++ia)
-	{
-		AtomicSite::AtomSiteData adata;
-		adata.initialize(superCell_ptr->get_atoms_list()[ia], sexp);
-		radialDisplacedPotential[ia] = std::make_shared<AtomicSite::AtomSiteData>(std::move(adata));
-	}
+	for (int ia = 1 ; ia < primScCon->get_supercell_volume_factor(); ++ia)
+
+		radialDisplacedPotential[ia].initialize(superCell_ptr->get_atoms_list()[ia], sexp);
+
+	LatticeStructure::DataRegularAndRadialGrid<double> groundStatePotential;
+	groundStatePotential.initialize(regularGridGroundStatePotential, radialGroundStatePotential);
+	LatticeStructure::DataRegularAndRadialGrid<double> displacedPotential;
+	displacedPotential.initialize(regularGridDisplacedPotential, radialDisplacedPotential);
 
 	PhononStructure::PotentialChangeIrredDisplacement chng;
 	chng.initialize(
 			displ_ptr,
-			regularGridGroundStatePotential,
-			radialGroundStatePotential,
-			regularGridDisplacedPotential,
-			radialDisplacedPotential,
+			groundStatePotential,
+			displacedPotential,
 			ucGrid_ptr,
 			scGrid_ptr,
 			primScCon);
@@ -135,17 +133,17 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 		sexp(ir, mCheck, lCheck) = finiteLM;
 	}
 	adata.initialize(primCell_ptr->get_atoms_list().front(), sexp);
-	radialDisplacedPotential[0] = std::make_shared<AtomicSite::AtomSiteData>(adata);
+	radialDisplacedPotential[0] = adata;
 	const int lastElem = static_cast<int>(radialDisplacedPotential.size()) - 1;
-	adata.initialize(radialDisplacedPotential[lastElem]->get_atom(), sexp);
-	radialDisplacedPotential[lastElem] = std::make_shared<AtomicSite::AtomSiteData>(adata);
+	adata.initialize(radialDisplacedPotential[lastElem].get_atom(), sexp);
+	radialDisplacedPotential[lastElem] = adata;
 
+	groundStatePotential.initialize(regularGridGroundStatePotential, radialGroundStatePotential);
+	displacedPotential.initialize(regularGridDisplacedPotential, radialDisplacedPotential);
 	chng.initialize(
 			displ_ptr,
-			regularGridGroundStatePotential,
-			radialGroundStatePotential,
-			regularGridDisplacedPotential,
-			radialDisplacedPotential,
+			groundStatePotential,
+			displacedPotential,
 			ucGrid_ptr,
 			scGrid_ptr,
 			primScCon);

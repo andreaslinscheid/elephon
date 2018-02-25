@@ -39,8 +39,8 @@ Phonon::initialize( std::shared_ptr<const ForceConstantMatrix> fc,
 
 void
 Phonon::compute_at_q(std::vector<double> const & q,
-		Auxillary::alignedvector::DV & w2,
-		Auxillary::alignedvector::ZV & eigenModes) const
+		Auxillary::Multi_array<double,2> & w2,
+		Auxillary::Multi_array<std::complex<double>,3> & eigenModes) const
 {
 	assert( fc_ );
 	assert( q.size()%3 == 0 );
@@ -60,20 +60,20 @@ Phonon::compute_at_q(std::vector<double> const & q,
 
 	fc_->fourier_transform_q(q, eigenModes, true);
 	assert( eigenModes.size() == nM*nM*nq );
-	w2.resize( nq*nM );
+	w2.resize( boost::extents[nq][nM] );
 	for ( int iq = 0 ; iq < nq ; ++iq)
 	{
 		for ( int mu1 = 0 ; mu1 < nM ; ++mu1)
 			for ( int mu2 = 0 ; mu2 < nM ; ++mu2)
-				qlocalModes[mu1*nM+mu2] = eigenModes[ (iq*nM+mu1)*nM+mu2 ]
+				qlocalModes[mu1*nM+mu2] = eigenModes[iq][mu1][mu2]
 						 / sqrtMasses[mu1] / sqrtMasses[mu2] ;
 
 		linalg.diagonalize_hermitian( true, true, std::move(qlocalModes), qlocalBuf, qlocalFreq);
 		std::swap(qlocalBuf,qlocalModes);
 
-		std::copy( qlocalModes.begin(), qlocalModes.end(), eigenModes.begin() + iq*nM*nM );
+		std::copy( qlocalModes.begin(), qlocalModes.end(), eigenModes.data() + iq*nM*nM );
 		for ( int mu = 0 ; mu < nM ; ++mu)
-			w2[iq*nM+mu] = Auxillary::units::SQRT_EV_BY_A2_U_TO_THZ*
+			w2[iq][mu] = Auxillary::units::SQRT_EV_BY_A2_U_TO_THZ*
 					( qlocalFreq[mu] >= 0 ? std::sqrt(qlocalFreq[mu]) : -std::sqrt(-qlocalFreq[mu]));
 
 		// phase convention: choose the first eigenmode real
@@ -82,15 +82,15 @@ Phonon::compute_at_q(std::vector<double> const & q,
 			std::complex<double> phase(1.0);
 			for (int icomponent = 0 ; icomponent < nM; ++icomponent)
 			{
-				if ( std::abs(eigenModes[(iq*nM+icomponent)*nM+imode]) > 1e-8 )
+				if ( std::abs(eigenModes[iq][icomponent][imode]) > 1e-8 )
 				{
-					phase = eigenModes[(iq*nM+icomponent)*nM+imode]
-									   /std::abs(eigenModes[(iq*nM+icomponent)*nM+imode]);
+					phase = eigenModes[iq][icomponent][imode]
+									   /std::abs(eigenModes[iq][icomponent][imode]);
 					break;
 				}
 			}
 			for (int icomponent = 0 ; icomponent < nM; ++icomponent)
-				eigenModes[(iq*nM+icomponent)*nM+imode] *= std::conj(phase);
+				eigenModes[iq][icomponent][imode] *= std::conj(phase);
 		}
 	}
 }
@@ -101,8 +101,8 @@ Phonon::evaluate_derivative(
 		Auxillary::alignedvector::DV & dwdq) const
 {
 	assert( fc_ );
-	Auxillary::alignedvector::DV w;
-	Auxillary::alignedvector::ZV unitaryTrafo;
+	Auxillary::Multi_array<double,2> w;
+	Auxillary::Multi_array<std::complex<double>,3> unitaryTrafo;
 	this->compute_at_q(q, w, unitaryTrafo);
 	Auxillary::alignedvector::ZV ftderivative;
 	fc_->fourier_transform_derivative(q,ftderivative);
@@ -135,7 +135,7 @@ Phonon::evaluate_derivative(
 			linalg.call_gemm(
 					'c','n',
 					nM, nM, nM, std::complex<double>(1.0),
-					&unitaryTrafo[iq*nM*nM],
+					unitaryTrafo.data()+iq*nM*nM,
 					nM,
 					&ftderivative[(iq*3+i)*nM*nM], nM,
 					std::complex<double>(0.0),
@@ -147,14 +147,14 @@ Phonon::evaluate_derivative(
 					nM, nM, nM, std::complex<double>(1.0),
 					matrixBuffer.data(),
 					nM,
-					&unitaryTrafo[iq*nM*nM], nM,
+					unitaryTrafo.data()+iq*nM*nM, nM,
 					std::complex<double>(0.0),
 					matrixBufferResult.data(),nM);
 
 			double imagSum = 0;
 			for ( int inu = 0 ; inu < nM ; ++inu )
 			{
-				dwdq[(iq*nM+inu)*3+i] = std::real(matrixBufferResult[inu*nM+inu]) / (2.0 * w[iq*nM+inu]);
+				dwdq[(iq*nM+inu)*3+i] = std::real(matrixBufferResult[inu*nM+inu]) / (2.0 * w[iq][inu]);
 				imagSum += std::imag(matrixBufferResult[inu*nM+inu]);
 			}
 			if ( imagSum > 1e-4 )
@@ -166,8 +166,8 @@ Phonon::evaluate_derivative(
 
 void
 Phonon::evaluate(std::vector<double> const & q,
-		Auxillary::alignedvector::DV & w2,
-		Auxillary::alignedvector::ZV & eigenModes) const
+		Auxillary::Multi_array<double,2> & w2,
+		Auxillary::Multi_array<std::complex<double>,3> & eigenModes) const
 {
 	this->compute_at_q(q, w2, eigenModes);
 }
@@ -191,12 +191,12 @@ Phonon::write_bands_path(
 {
 	auto gnuplotFile = filename+".gp";
 
-	Auxillary::alignedvector::DV modesAlongPath;
+	Auxillary::Multi_array<double,2> modesAlongPath;
+	Auxillary::Multi_array<std::complex<double>,3> dynmat;
 	std::vector<double> const & qpath = kpath->get_k_points();
-	Auxillary::alignedvector::ZV dynmat;
 	this->compute_at_q(qpath, modesAlongPath, dynmat);
 
-	auto mm = std::minmax_element(modesAlongPath.begin(), modesAlongPath.end());
+	auto mm = std::minmax_element(modesAlongPath.data(), modesAlongPath.data()+modesAlongPath.size());
 	double range = *mm.second - *mm.first;
 	auto frequencyWindow = std::make_pair(*mm.first, *mm.second+range*0.05);
 
@@ -204,7 +204,7 @@ Phonon::write_bands_path(
 			gnuplotFile,
 			filename,
 			"${\varOmega}_{\nu}(\bf{q})$",
-			modesAlongPath,
+			Auxillary::alignedvector::DV(modesAlongPath.data(), modesAlongPath.data()+modesAlongPath.size()),
 			this->get_num_modes(),
 			frequencyWindow);
 }

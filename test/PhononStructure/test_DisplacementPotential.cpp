@@ -42,8 +42,8 @@ BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )
 	//Write the q displacement variant
 	std::vector<double> qVect{ 0.0,0.0,0.0 , 0.25,0.0,0.0, 0.5,0.0,0.0 };
 	std::vector<int> modes{0,1};
-	elephon::Auxillary::alignedvector::DV w;
-	elephon::Auxillary::alignedvector::ZV dynMat;
+	elephon::Auxillary::Multi_array<double,2> w;
+	elephon::Auxillary::Multi_array<std::complex<double>,3> dynMat;
 	auto ph = resourceHandler->get_phonon_obj();
 	ph->compute_at_q( qVect, w, dynMat );
 

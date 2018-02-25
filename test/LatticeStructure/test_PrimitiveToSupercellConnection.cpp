@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE( EqualScaleEveryDirection )
 	const int scX = 4;
 	const int scY = 4;
 	const int scZ = 4;
-	BOOST_CHECK( primSCCon.supercell_volume_factor() == scX*scY*scZ );
+	BOOST_CHECK( primSCCon.get_supercell_volume_factor() == scX*scY*scZ );
 
 	auto AlAtom = primitiveCell->get_atoms_list().front();
 	BOOST_REQUIRE(AlAtom.get_kind().compare("Al")==0);

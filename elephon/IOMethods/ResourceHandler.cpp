@@ -18,6 +18,20 @@
  */
 
 #include "IOMethods/ResourceHandler.h"
+#include "LatticeStructure/AtomDisplacementCollection.h"
+#include "LatticeStructure/PrimitiveToSupercellConnection.h"
+#include "IOMethods/KPath.h"
+#include "PhononStructure/Phonon.h"
+#include "PhononStructure/PhononGrid.h"
+#include "PhononStructure/ForceConstantMatrix.h"
+#include "LatticeStructure/UnitCell.h"
+#include "LatticeStructure/AtomDisplacement.h"
+#include "PhononStructure/DisplacementPotential.h"
+#include "ElectronicStructure/ElectronicBands.h"
+#include "ElectronicStructure/Wavefunctions.h"
+#include "ElectronicStructure/TetrahedraIsosurface.h"
+#include "PhononStructure/PotentialChangeIrredDisplacement.h"
+#include "PhononStructure/Forces.h"
 #include <boost/filesystem.hpp>
 
 namespace elephon
@@ -88,13 +102,22 @@ ResourceHandler::get_supercell_obj()
 	return scUC_;
 }
 
-std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement> >
-ResourceHandler::get_irrd_displmts_obj()
+std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection >
+ResourceHandler::get_primitive_supercell_connect_obj()
 {
-	if ( ! irredDispl_ )
-		this->initialize_irrd_displmts_obj();
-	assert(irredDispl_);
-	return irredDispl_;
+	if ( ! primitiveSuperCellConnection_ )
+		this->initialize_primitive_supercell_connect_obj();
+	assert(primitiveSuperCellConnection_);
+	return primitiveSuperCellConnection_;
+}
+
+std::shared_ptr<const LatticeStructure::AtomDisplacementCollection>
+ResourceHandler::get_displmts_collection_obj()
+{
+	if ( ! displColl_ )
+		this->initialize_displmts_collection_obj();
+	assert(displColl_);
+	return displColl_;
 }
 
 std::shared_ptr<const ElectronicStructure::ElectronicBands>
@@ -231,23 +254,18 @@ ResourceHandler::initialize_forceConstant_obj()
 	auto phononDir = boost::filesystem::path( dataLoader_->get_optns().get_elphd());
 
 	//Here, we read the forces from the calculator output
-	int nIrdDispl = int( this->get_irrd_displmts_obj()->size());
-	std::vector<std::vector<double>> forces( nIrdDispl );
-	std::vector<double> thisForces;
-	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
-	{
-		dataLoader_->read_forces(
-				(phononDir / (std::string("displ_")+std::to_string(idispl))).string(),
-				thisForces);
-		forces[idispl] = std::move(thisForces);
-	}
+	auto forces = std::make_shared<PhononStructure::Forces>();
+	forces->initialize(
+			this->get_displmts_collection_obj(),
+			dataLoader_);
 
 	fc_ = std::make_shared<PhononStructure::ForceConstantMatrix>();
-	fc_->build(
+	fc_->initialize(
 			this->get_primitive_unitcell_obj(),
 			this->get_supercell_obj(),
-			this->get_irrd_displmts_obj(),
-			std::move(forces));
+			this->get_displmts_collection_obj(),
+			this->get_primitive_supercell_connect_obj(),
+			forces);
 }
 
 void
@@ -269,16 +287,19 @@ ResourceHandler::initialize_supercell_obj()
 }
 
 void
-ResourceHandler::initialize_irrd_displmts_obj()
+ResourceHandler::initialize_primitive_supercell_connect_obj()
 {
-	auto ops = dataLoader_->get_optns();
-	auto uc = this->get_primitive_unitcell_obj();
-	std::vector<LatticeStructure::AtomDisplacement> irredDispl;
-	uc->generate_displacements(
-			ops.get_magdispl(),
-			ops.get_symDispl(),
-			irredDispl);
-	irredDispl_ = std::make_shared<std::vector<LatticeStructure::AtomDisplacement>>(std::move(irredDispl));
+	primitiveSuperCellConnection_ = std::make_shared<LatticeStructure::PrimitiveToSupercellConnection>();
+	primitiveSuperCellConnection_->initialize( this->get_primitive_unitcell_obj(), this->get_supercell_obj());
+}
+
+void
+ResourceHandler::initialize_displmts_collection_obj()
+{
+	displColl_ = std::make_shared<LatticeStructure::AtomDisplacementCollection>();
+	displColl_->initialize( this->get_primitive_unitcell_obj(),
+			dataLoader_->get_optns().get_symDispl(),
+			dataLoader_->get_optns().get_magdispl());
 }
 
 void
@@ -321,56 +342,79 @@ void
 ResourceHandler::initialize_displacement_potential_obj()
 {
 	auto supercell = this->get_supercell_obj();
-	auto unitCell = this->get_primitive_unitcell_obj();
+	auto primitiveCell = this->get_primitive_unitcell_obj();
 	auto phononDir = boost::filesystem::path( dataLoader_->get_optns().get_elphd());
 
-	auto gPrec = dataLoader_->get_optns().get_gPrec();
+	const double gPrec = dataLoader_->get_optns().get_gPrec();
+	auto displColl = this->get_displmts_collection_obj();
+	const int nIrdDispl = displColl->get_tota_num_irred_displacements();
+	if ( nIrdDispl < 1)
+		throw std::runtime_error("Problem getting number of irreducible displacements");
 
-	// Here, we read the potential from the calculator output
-	int nIrdDispl = int( this->get_irrd_displmts_obj()->size());
-	std::vector<std::vector<double>> displPot( nIrdDispl );
-	std::vector<int> dim;
-	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
-	{
-		std::vector<double> thisDisplPot;
-		dataLoader_->read_electronic_potential(
-				( phononDir / ("displ_"+std::to_string(idispl)) ).string(),
-				dim,
-				thisDisplPot);
-
-		displPot[idispl] = std::move(thisDisplPot);
-	}
-	LatticeStructure::RegularBareGrid rsGridSC;
-	rsGridSC.initialize( dim, false, gPrec, {0.0, 0.0, 0.0}, supercell->get_lattice());
+	// here we load the grid data for both supercell and primitive cell and their grids
+	auto rsGridSC = std::make_shared<LatticeStructure::RegularBareGrid>();
 
 	// Read the normal periodic potential form the root dir
-	std::vector<double> primitiveCellPotential;
+	LatticeStructure::DataRegularAndRadialGrid<double> primitiveCellPotential;
+	std::vector<int> dimPCGrid;
 	dataLoader_->read_electronic_potential(
 			dataLoader_->get_optns().get_root_dir(),
-			dim,
+			dimPCGrid,
 			primitiveCellPotential);
-	elephon::LatticeStructure::RegularBareGrid rsGridUC;
-	rsGridUC.initialize( dim, false, gPrec, {0.0, 0.0, 0.0}, unitCell->get_lattice());
+	auto rsGridPC = std::make_shared<LatticeStructure::RegularBareGrid>();
+	rsGridPC->initialize( dimPCGrid, false, gPrec, {0.0, 0.0, 0.0}, primitiveCell->get_lattice());
+
+	// Here, we read the potential from the calculator output
+	std::vector<std::shared_ptr<const PhononStructure::PotentialChangeIrredDisplacement>> displPot( nIrdDispl );
+	int idispl = 0;
+	for ( auto atomDispl : displColl->get_irreducible_displacements() )
+	{
+		for ( auto const & irreducibleDispl : atomDispl.second )
+		{
+			std::vector<int> dimSCGrid;
+
+			// regular grid part
+			LatticeStructure::DataRegularAndRadialGrid<double> thisDisplPot;
+			dataLoader_->read_electronic_potential(
+					( phononDir / ("displ_"+std::to_string(idispl)) ).string(),
+					dimSCGrid,
+					thisDisplPot);
+
+			if (idispl == 0 )
+				rsGridSC->initialize( dimSCGrid, false, gPrec, {0.0, 0.0, 0.0}, supercell->get_lattice());
+
+			for (int ix = 0 ; ix < 3 ; ++ix)
+				if ( dimSCGrid[ix] % rsGridSC->get_grid_dim()[ix] )
+					throw std::runtime_error("Input error: The Fourier grid of the supercell is not consistent among displacements.");
+
+
+			PhononStructure::PotentialChangeIrredDisplacement potChangeDispl;
+			potChangeDispl.initialize(	irreducibleDispl,
+										primitiveCellPotential,
+										thisDisplPot,
+										rsGridPC,
+										rsGridSC,
+										this->get_primitive_supercell_connect_obj());
+
+			displPot[idispl] = std::make_shared<PhononStructure::PotentialChangeIrredDisplacement>(std::move(potChangeDispl));
+			++idispl;
+		}
+	}
 
 	// check if the grids are compatible
 	for (int ix = 0 ; ix < 3 ; ++ix)
-		if ( rsGridSC.get_grid_dim()[ix] % rsGridUC.get_grid_dim()[ix] )
+		if ( rsGridSC->get_grid_dim()[ix] % rsGridPC->get_grid_dim()[ix] )
 			throw std::runtime_error("Input error: The Fourier grid of the supercell is not a multiple of the unit cell grid.");
 
-	std::vector<int> coarseGrainGrid = this->get_optns().get_dvscfc();
-	if ( coarseGrainGrid.size() == 1 )
-		coarseGrainGrid = this->get_electronic_bands_obj()->get_grid().get_grid_dim();
-
 	displPot_ = std::make_shared<PhononStructure::DisplacementPotential>();
-	displPot_->build(
+	displPot_->initialize(
 			this->get_primitive_unitcell_obj(),
 			this->get_supercell_obj(),
-			this->get_irrd_displmts_obj(),
-			std::move(rsGridUC),
-			std::move(rsGridSC),
-			primitiveCellPotential,
-			displPot,
-			coarseGrainGrid);
+			displColl,
+			this->get_primitive_supercell_connect_obj(),
+			*rsGridPC,
+			*rsGridSC,
+			displPot);
 }
 
 void

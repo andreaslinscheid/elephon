@@ -110,7 +110,7 @@ public:
 	void read_electronic_potential(
 			std::string root_directory,
 			std::vector<int> & dims,
-			std::vector<double> & output);
+			LatticeStructure::DataRegularAndRadialGrid<double> & output);
 
 	void read_kpt_sampling(
 			std::string root_directory,

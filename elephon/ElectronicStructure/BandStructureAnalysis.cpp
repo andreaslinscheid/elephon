@@ -21,6 +21,7 @@
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "Algorithms/FFTInterface.h"
 #include "Auxillary/UnitConversion.h"
+#include "IOMethods/KPath.h"
 #include <fstream>
 #include <set>
 #include <stdexcept>

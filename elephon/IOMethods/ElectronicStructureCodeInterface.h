@@ -24,6 +24,7 @@
 #include "ElectronicStructure/ElectronicBands.h"
 #include "IOMethods/InputOptions.h"
 #include "LatticeStructure/RegularSymmetricGrid.h"
+#include "LatticeStructure/DataRegularAndRadialGrid.h"
 #include <vector>
 #include <string>
 #include <complex>
@@ -120,7 +121,7 @@ public:
 	virtual void read_electronic_potential(
 			std::string root_directory,
 			std::vector<int> & dims,
-			std::vector<double> & output) = 0;
+			LatticeStructure::DataRegularAndRadialGrid<double> & output) = 0;
 
 	virtual void read_band_structure(
 			std::string root_directory,

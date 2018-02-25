@@ -29,14 +29,15 @@ namespace elephon
 namespace Algorithms
 {
 
-template<typename T>
+template<class C>
 void
-LinearAlgebraInterface::pseudo_inverse(std::vector<T> A, int m, int n,
-		std::vector<T> & pinvA, double cutoff)
+LinearAlgebraInterface::pseudo_inverse(C A, int m, int n,
+		C & pinvA, double cutoff)
 {
+	typedef typename C::value_type T;
 	//This routine needs to buffer a few matrices.
 	//In a kinda hacky fashion, we put them in the workspace, too.
-	typedef typename detail::ComplexTypeTrait<T>::type realT;
+	typedef typename detail::ComplexTypeTrait<typename C::value_type>::type realT;
 
 	//
 	//	First compute the SVD
@@ -117,16 +118,20 @@ LinearAlgebraInterface::null_space(std::vector<T> A, int m, int n,
 		}
 }
 
-template<typename VT>
+template<class VT1, class VT2,class VT3>
 void
-LinearAlgebraInterface::matrix_matrix_prod(VT const & A,
-		VT const & B,
-		VT & ATimesB, int m, int n) const
+LinearAlgebraInterface::matrix_matrix_prod(VT1 const & A,
+		VT2 const & B,
+		VT3 & ATimesB, int m, int n) const
 {
-	typedef typename VT::value_type T;
+	typedef typename VT1::value_type T;
+	typedef typename VT2::value_type T2;
+	typedef typename VT3::value_type T3;
+	static_assert(std::is_same<T,T2>::value, "Value types for matrix_matrix_prod of first and second argument must match");
+	static_assert(std::is_same<T,T3>::value, "Value types for matrix_matrix_prod of first and third argument must match");
 	int k = int(A.size())/m;
 	assert( k == int(B.size())/n );
-	ATimesB.resize( m * n );
+	assert( ATimesB.size() == m * n );
 	this->call_gemm('n','n',m,n,k,T(1.0),A.data(),k,B.data(),n,T(0.0),ATimesB.data(),n);
 }
 

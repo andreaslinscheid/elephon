@@ -18,6 +18,8 @@
  */
 
 #include "IOMethods/BuildFolderStructure.h"
+#include "LatticeStructure/AtomDisplacementCollection.h"
+#include "LatticeStructure/PrimitiveToSupercellConnection.h"
 #include <boost/filesystem.hpp>
 #include <stdexcept>
 
@@ -90,108 +92,33 @@ BuildFolderStructure::build(std::shared_ptr<ResourceHandler> resources) const
 	superCellOptions["NGZF"] = std::to_string(rsChargeDim[2] * scMulti[2]);
 
 	// create displacements of atoms in the primitive cell and apply them in the supercell
-	std::vector< elephon::LatticeStructure::AtomDisplacement>  irreducible;
-	unitcell->generate_displacements(
-			resources->get_optns().get_magdispl(),
-			resources->get_optns().get_symDispl(),
-			irreducible );
-
-	//transform them from the primitive to the supercell
-	double s[3] = {1.0/scMulti[0], 1.0/scMulti[1], 1.0/scMulti[2]};
-	for ( auto &id : irreducible )
-		id.scale_position(s[0], s[1], s[2]);
+	auto displColl = resources->get_displmts_collection_obj();
+	auto primToSC = resources->get_primitive_supercell_connect_obj();
 
 	//We only care about the irreducible displacement at this point.
-	for ( int ipert = 0 ; ipert < static_cast<int>(irreducible.size()); ipert++ )
+	int ipert = 0;
+	for ( auto atomDispl : displColl->get_irreducible_displacements() )
 	{
-		auto perti = supercell;
-		perti.displace_atom( irreducible[ipert] );
-		boost::filesystem::path dir = elphd / (std::string("displ_")+std::to_string(ipert));
-		boost::filesystem::create_directories( dir );
+		for (auto irreducibleDisplacement : atomDispl.second )
+		{
+			//transform the coordinates from the primitive to the supercell
+			auto pos = irreducibleDisplacement.get_position();
+			primToSC->primitive_to_supercell_coordinates(pos);
+			irreducibleDisplacement.set_position(pos);
+			auto perti = supercell;
+			perti.displace_atom( irreducibleDisplacement );
+			boost::filesystem::path dir = elphd / (std::string("displ_")+std::to_string(ipert));
+			boost::filesystem::create_directories( dir );
 
-		interface->set_up_run(
-				resources->get_optns().get_root_dir(),
-				dir.string(),
-				kptsSCell,
-				kgrid.get_grid_shift(),
-				perti,
-				superCellOptions);
-	}
-}
-
-void
-BuildFolderStructure::build(
-		IOMethods::InputOptions const & input,
-		LatticeStructure::UnitCell const & unitcell,
-		ElectronicStructureCodeInterface & interface ) const
-{
-	boost::filesystem::path elphd( input.get_elphd() );
-	if ( boost::filesystem::exists( elphd ) )
-		throw std::runtime_error( std::string("Refusing to overwrite "
-				+elphd.string()+" - delete it to regenerate."));
-
-	//Set up the wavefunction/energies grid - see if we determine the sampling automatically
-	const int scale_factor = 4;
-	std::string denseNscfRoot = (elphd / "electrons").string();
-	std::vector<int> defaultKSampling;
-	std::vector<double> defaultKShift;
-	interface.read_kpt_sampling( input.get_root_dir(),  defaultKSampling, defaultKShift );
-	std::vector<int> kptsDense = input.get_kdense();
-	for (int ki = 0 ; ki < static_cast<int>(kptsDense.size()) ; ++ki )
-		if ( kptsDense[ki] <= 0)
-			kptsDense[ki] = defaultKSampling[ki]*scale_factor;
-
-	//Create the run files for the electronic structure
-	auto denseNSCFOptions = interface.options_nscf_keep_wfctns_no_relax();
-	boost::filesystem::create_directories( denseNscfRoot );
-	interface.set_up_run(
-			input.get_root_dir(),
-			denseNscfRoot,
-			kptsDense,
-			defaultKShift,
-			unitcell,
-			denseNSCFOptions);
-
-	//Determine the kpt sampling for the supercells
-	std::vector<int> kptsSCell = input.get_kscell();
-	for (int ki = 0 ; ki < static_cast<int>(kptsSCell.size()) ; ++ki )
-		if ( kptsSCell[ki] <= 0)
-			kptsSCell[ki] = std::ceil(double(defaultKSampling[ki])/double( input.get_scell()[ki] ));
-	auto superCellOptions = interface.options_scf_supercell_no_wfctns_no_relax();
-
-	//Create the clean supercell
-	elephon::LatticeStructure::UnitCell supercell =
-			unitcell.build_supercell( input.get_scell().at(0), input.get_scell().at(1), input.get_scell().at(2));
-
-	//Create displacements - we have to reduce the symmetry to the supercell in case this is different
-	LatticeStructure::UnitCell unitcellReducedSym;
-	unitcellReducedSym.initialize( unitcell.get_atoms_list(), unitcell.get_lattice(), supercell.get_symmetry() );
-	std::vector< elephon::LatticeStructure::AtomDisplacement>  irreducible;
-	unitcellReducedSym.generate_displacements(
-			input.get_magdispl(),
-			input.get_symDispl(),
-			irreducible );
-
-	//transform them from the primitive to the supercell
-	double s[3] = {1.0/input.get_scell().at(0) , 1.0/input.get_scell().at(1), 1.0/input.get_scell().at(2)};
-	for ( auto &id : irreducible )
-		id.scale_position( s[0], s[1], s[2] );
-
-	//We only care about the irreducible displacement at this point.
-	for ( int ipert = 0 ; ipert < static_cast<int>(irreducible.size()); ipert++ )
-	{
-		auto perti = supercell;
-		perti.displace_atom( irreducible[ipert] );
-		boost::filesystem::path dir = elphd / (std::string("displ_")+std::to_string(ipert));
-		boost::filesystem::create_directories( dir );
-
-		interface.set_up_run(
-				input.get_root_dir(),
-				dir.string(),
-				kptsSCell,
-				defaultKShift,
-				perti,
-				superCellOptions);
+			interface->set_up_run(
+					resources->get_optns().get_root_dir(),
+					dir.string(),
+					kptsSCell,
+					kgrid.get_grid_shift(),
+					perti,
+					superCellOptions);
+			++ipert;
+		}
 	}
 }
 

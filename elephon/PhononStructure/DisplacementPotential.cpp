@@ -18,12 +18,17 @@
  */
 
 #include "PhononStructure/DisplacementPotential.h"
+#include "PhononStructure/PotentialChangeIrredDisplacement.h"
 #include "LatticeStructure/SymmetryReduction.h"
 #include "LatticeStructure/Atom.h"
+#include "LatticeStructure/AtomDisplacementCollection.h"
+#include "LatticeStructure/PrimitiveToSupercellConnection.h"
+#include "LatticeStructure/AtomSymmetryConnection.h"
 #include "Algorithms/LinearAlgebraInterface.h"
 #include "IOMethods/WriteVASPRealSpaceData.h"
 #include "Algorithms/GridRotationMap.h"
 #include "Auxillary/UnitConversion.h"
+#include "AtomicSite/SphericalHarmonicExpansion.h"
 #include <iostream>
 
 namespace elephon
@@ -32,237 +37,184 @@ namespace PhononStructure
 {
 
 void
-DisplacementPotential::build(std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
+DisplacementPotential::initialize(
+		std::shared_ptr<const LatticeStructure::UnitCell> primCell,
 		std::shared_ptr<const LatticeStructure::UnitCell> superCell,
-		std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement>> irredDispl,
-		LatticeStructure::RegularBareGrid unitcellGrid,
+		std::shared_ptr<const LatticeStructure::AtomDisplacementCollection> displCollection,
+		std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> primToSCCon,
+		LatticeStructure::RegularBareGrid primcellGrid,
 		LatticeStructure::RegularBareGrid const & supercellGrid,
-		std::vector<double> const & potentialUC,
-		std::vector< std::vector<double> > potentialDispl,
-		std::vector<int> coarseGrainGrid )
+		std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> const & potentialChange )
 {
-	unitCell->compute_supercell_dim(superCell, superCellDim_);
-
-	this->set_R_vectors();
-
-	numModes_ = unitCell->get_atoms_list().size()*3;
-	const int nrSC = supercellGrid.get_num_points();
-	const int nr = nrSC/superCellDim_[0]/superCellDim_[1]/superCellDim_[2];
-	nptsRealSpace_ = nr;
-	assert( unitcellGrid.get_num_points() == nr );
-	assert( potentialDispl.size() == irredDispl->size() );
-
-	// From the potentials, construct the difference
-	this->constuct_potential_variation(potentialUC, nrSC, unitcellGrid, supercellGrid, potentialDispl);
-
-	std::vector<std::vector< std::pair<int,std::vector<int> > >> rSuperCellToPrimitve;
-	this->build_supercell_to_primitive(
-			unitcellGrid,
+	assert(potentialChange.size()>0);
+	// precompute the supercell to primitive cell folding maps
+	primToSCCon->build_supercell_to_primitive(
+			primcellGrid,
 			supercellGrid,
-			unitCell->get_atoms_list(),
-			rSuperCellToPrimitve);
+			primCell->get_atoms_list(),
+			perAtomGridIndexMap_,
+			perAtomGridIndexMapRVector_,
+			embeddingRVectorBox_,
+			RVectors_,
+			RVectoToIndexMap_);
 
-	//Regenerate the list of irreducible atoms. This is needed to map the input forces
-	// which come for non-equivalent displacements at irreducible atoms into the reducible set.
-	std::vector<LatticeStructure::Atom> irredAtoms;
-	std::vector<int> redToIrredAtoms, symRedToIrredAtoms;
-	std::vector< std::vector<int> > irredToRedAtoms, symIrredToRedAtoms;
-	LatticeStructure::SymmetryReduction<LatticeStructure::Atom>(
-			unitCell->get_symmetry(),
-			unitCell->get_atoms_list(),  irredAtoms,
-			redToIrredAtoms, symRedToIrredAtoms,
-			irredToRedAtoms, symIrredToRedAtoms);
+	numModes_ = primCell->get_atoms_list().size()*3;
+	const int nrSC = supercellGrid.get_num_points();
+	const int nrPC = nrSC/primToSCCon->get_supercell_volume_factor();
+	const int nASC = superCell->get_atoms_list().size();
+	const int nR = this->get_num_R();
+	const int nRadMax = potentialChange[0]->get_max_num_radial_elements();
+	const int nAngChnlMax = potentialChange[0]->get_max_num_angular_moment_channels();
+	const int LMax = 1;
+
+	nptsRealSpace_ = nrPC;
+	assert( primcellGrid.get_num_points() == nrPC );
+	assert( potentialChange.size() == displCollection->get_tota_num_irred_displacements() );
 
 	Algorithms::LinearAlgebraInterface linAlg;
-
-	//For each such atom, compute the local displacement potential in x,y and z
-	std::vector<double> irreducibleDisplPot( irredAtoms.size()*3*nrSC );
-
-	//This counter advances the point in the set of input potentialVariations.
-	//At each irreducible atomic site, we add the irreducible displacements.
-	int iIrredDisplCount = 0;
-	for ( int ia = 0 ; ia < irredAtoms.size(); ++ia )
+	Auxillary::Multi_array<double,2> pseudoInverseDisplacements;
+	Auxillary::Multi_array<std::complex<double>,2> pseudoInverseDisplacementsCmplx;
+	Auxillary::Multi_array<double,2> deltaVRegularSymExpanded;
+	Auxillary::Multi_array<std::complex<double>,4> deltaVRadialSymExpanded;
+	Auxillary::alignedvector::DV linDVscfRegular, linDVscfRegularSave;
+	Auxillary::alignedvector::ZV linDVscfRadial, linDVscfRadialSave;
+	dataRegular_.resize(boost::extents[nR][numModes_][nrPC]);
+	dataRadial_.resize(boost::extents[nR][numModes_][nAngChnlMax][nRadMax]);
+	for ( int atomIndex : primitiveCell_->get_atom_symmetry()->get_list_irreducible_atoms())
 	{
-		//regenerate displacements to make the connection with the input forces
-		LatticeStructure::Symmetry const & sSym = unitCell->get_site_symmetry(ia);
+		LatticeStructure::Symmetry const & siteSymmetry = primCell->get_site_symmetry(atomIndex);
 
-		std::vector<LatticeStructure::AtomDisplacement> irredNotUsed,reducible;
-		bool symmetricDispl = not (*irredDispl)[iIrredDisplCount].is_plus_minus_displ_equivalent();
-		std::vector<int> redToIrredDispl, symRedToIrredDispl;
-		std::vector< std::vector<int> > irredToRedDispl, symIrredToRedDispl;
-		unitCell->get_site_displacements( irredAtoms[ia],
-				symmetricDispl, sSym,
-				1, // not used here
-				irredNotUsed,reducible,
-				redToIrredDispl, symRedToIrredDispl,
-				irredToRedDispl, symIrredToRedDispl);
+		// obtain the pseudo inverse of the reducible set of displacements for this atom
+		displCollection->generate_pseudo_inverse_reducible_displacements_for_atom(atomIndex, pseudoInverseDisplacements);
 
-		//Otherwise the system is underdetermined - this is not supposed to happen.
-		int nRedDispl = redToIrredDispl.size();
-		assert( nRedDispl >= 3 );
-
-		//build the transpose of the U matrix from the irreducible displacements
-		std::vector<double> U( 3 * nRedDispl );
-		for ( int idir = 0 ; idir < irredToRedDispl.size();  ++idir)
+		// copy the irreducible data belonging to this atom
+		std::vector<int> symmetryOpIndexIrredToReducible;
+		std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> irreduciblePotChangeThisAtom;
+		auto listIrredAndSym = displCollection->get_symmetry_relation_red_displacements_for_atom(atomIndex);
+		symmetryOpIndexIrredToReducible.reserve(listIrredAndSym.size());
+		irreduciblePotChangeThisAtom.reserve(listIrredAndSym.size());
+		for (auto irAndSym : listIrredAndSym )
 		{
-			auto d = (*irredDispl)[iIrredDisplCount+idir].get_direction();
-			for ( auto &xi : d )
-				xi *= (*irredDispl)[iIrredDisplCount].get_magnitude();
-			for ( int istar = 0 ; istar < symIrredToRedDispl[idir].size(); ++istar)
-			{
-				auto drot = d;
-				sSym.rotate_cartesian( symIrredToRedDispl[idir][istar], drot.begin(), drot.end() );
-				std::copy( drot.begin(), drot.end(),  &U[irredToRedDispl[idir][istar]*3] );
-			}
+			assert((irAndSym.first >= 0) && (irAndSym.first < potentialChange.size()));
+			irreduciblePotChangeThisAtom.push_back(potentialChange[irAndSym.first]);
+			symmetryOpIndexIrredToReducible.push_back(irAndSym.second);
 		}
 
-		//compute the pseudo inverse
-		std::vector<double> piU;
-		linAlg.pseudo_inverse( std::move(U), nRedDispl, 3, piU );
+		// Symmetry-expand the set of potential variations
+		this->symmetry_expand_displacement_data(
+				siteSymmetry,
+				symmetryOpIndexIrredToReducible,
+				irreduciblePotChangeThisAtom,
+				deltaVRegularSymExpanded,
+				deltaVRadialSymExpanded);
+		assert(deltaVRegularSymExpanded.shape()[0] == displCollection->get_num_red_displacements_for_atom(atomIndex) );
+		assert(deltaVRegularSymExpanded.shape()[1] == nrSC );
+		assert(deltaVRadialSymExpanded.shape()[0] == displCollection->get_num_red_displacements_for_atom(atomIndex) );
+		assert(deltaVRadialSymExpanded.shape()[1] == nASC );
+		assert(deltaVRadialSymExpanded.shape()[2] == nAngChnlMax );
+		assert(deltaVRadialSymExpanded.shape()[3] == nRadMax );
 
-		//Obtain the displaced atom in the coordinates of the supercell and compute the rotation maps
-		auto p = irredAtoms[ia].get_position();
-		for ( int i = 0 ; i < 3 ; ++i)
-			p[i] /= double(superCellDim_[i]);
-		std::vector< std::vector<int> > rotMapsSiteSymmetry;
-		this->compute_rot_map( p, supercellGrid, sSym, rotMapsSiteSymmetry);
+		// multiplying the Moore-Penrose pseudo inverse, of the displacements,
+		// we obtain the least square fit of transpose of the linear displacement potential
+		linDVscfRegular.resize(3*nrSC);
+		linAlg.matrix_matrix_prod( pseudoInverseDisplacements, deltaVRegularSymExpanded, linDVscfRegular, 3, nrSC );
+		// since radial data is complex, so must be the displacements for the call to BLAS
+		std::copy_n(pseudoInverseDisplacements.data(), pseudoInverseDisplacements.size(),
+				pseudoInverseDisplacementsCmplx.data());
+		linAlg.matrix_matrix_prod( pseudoInverseDisplacementsCmplx, deltaVRadialSymExpanded, linDVscfRadial, 3, nASC*nAngChnlMax*nRadMax );
 
-		//Symmetry-expand the set of potential variations
-		std::vector<double> deltaV( nRedDispl*nrSC );
-		for ( int idir = 0 ; idir < irredToRedDispl.size(); ++idir)
+		// go through the star of this atom and set the internal data
+		// note that the fitted data is now a vector, so it has to be transformed according
+		// to the inverse symmetry operation
+		for (std::pair<int,int> atomStar : primitiveCell_->get_atom_symmetry()->get_star_atom_indices(atomIndex))
 		{
-			for ( int istar = 0 ; istar < symIrredToRedDispl[idir].size(); ++istar)
+			const int atomIndexStar = atomStar.first;
+			const int symIndex = atomStar.second;
+
+			if ( symIndex != siteSymmetry.get_identity_index() )
 			{
-				int id = irredToRedDispl[idir][istar];
-				assert( id < nRedDispl );
-				int isym = symIrredToRedDispl[idir][istar];
-				for ( int ir = 0 ; ir < nrSC; ++ir )
+				// in case we are transformating the data, we make a copy for the next iteration
+				linDVscfRegularSave.assign(linDVscfRegular.begin(), linDVscfRegular.end());
+				linDVscfRadialSave.assign(linDVscfRadial.begin(), linDVscfRadial.end());
+				auto symOp = siteSymmetry.get_sym_op(symIndex);
+				symOp.transform_field_regular_grid(supercellGrid, linDVscfRegular);
+
+				// Please note: here we rotate the data, but also the location, i.e. the atom
+				//				the data refers to is affected by the transformation. This
+				//				will be accounted for later, when we assign the data to the
+				//				appropriate location.
+				for (int iASC = 0 ; iASC < nASC; ++iASC)
 				{
-					assert( iIrredDisplCount+idir < irredToRedDispl.size() );
-					int irRot = rotMapsSiteSymmetry[isym][ir];
-					deltaV[id*nrSC+ir] = potentialDispl[iIrredDisplCount+idir][irRot];
+					auto dRangeBegin = linDVscfRadial.begin() + iASC*nAngChnlMax*nRadMax*3;
+					auto dRangeEnd = dRangeBegin + nAngChnlMax*nRadMax*3;
+					symOp.rotate_radial_data(LMax, nRadMax*3, dRangeBegin, dRangeEnd);
 				}
 			}
-		}
 
-		//multiplying the Moore-Penrose pseudo inverse, of the displacements,
-		//we obtain the least square fit of transpose of the linear displacement potential
-		std::vector<double> linDVscf(3*nrSC);
-		linAlg.matrix_matrix_prod( piU, deltaV, linDVscf, 3, nrSC );
-
-		//We convert to a layout with space as the slower running dimension for later
-		//symmetry operations and relations. Thus v_[x,y,z](r) is layed out as at
-		//point r=r0 we have [v_x(r0),v_y(r0),v_z(r0)]
-		for ( int irSC = 0 ; irSC < nrSC; ++irSC)
-			for ( int i = 0 ; i < 3; ++i)
-				irreducibleDisplPot[(ia*nrSC+irSC)*3+i] = linDVscf[i*nrSC+irSC];
-
-		iIrredDisplCount += irredToRedDispl.size();
-	}
-
-	data_.assign(numModes_*nr*this->get_num_R(), 0.0f);
-	std::vector<double> linDVscf(3*nrSC);
-	std::vector<double> linDVscfTransform(3*nrSC);
-	for ( int irA = 0; irA < irredToRedAtoms.size(); ++irA )
-	{
-		std::copy( &irreducibleDisplPot[irA*3*nrSC],
-				   &irreducibleDisplPot[irA*3*nrSC]+3*nrSC,
-				   linDVscf.data());
-
-		std::vector<double> gridThisAtom = supercellGrid.get_all_vectors_grid();
-
-		//loop the star of the irreducible atom
-		for ( int istar = 0; istar < symIrredToRedAtoms[irA].size(); ++istar )
-		{
-			auto symmetryShiftedGrid = gridThisAtom;
-			//transform the linear displacement potential according
-			//to the present symmetry operation which takes us from the irreducible
-			//to the reducible atom
-			int isym = symIrredToRedAtoms[irA][istar];
-
-			//Re-shuffle the field according to the symmetry operation beta = S( alpha )
-			//Note: at this point we need that the symmetry of the unit cell is the same as
-			//		the one of the supercell
-			superCell->get_symmetry().apply(isym,symmetryShiftedGrid.begin(),symmetryShiftedGrid.end(),true);
-			//since the grid is regular, we must obtain the (x,y,z) indices by scaling with the grid dimension
-			//in each direction
-			std::vector<int> xyz(3);
+			// First get the regular part sorted.
+			// Convert into the format of the linear derivative potential in real space, this also means
+			// folding the data to correct primitive cell with the atom centered in the middle
 			for ( int ir = 0 ; ir < nrSC; ++ir)
-			{
-				for ( int j = 0 ; j < 3; ++j)
-				{
-					symmetryShiftedGrid[ir*3+j] -= std::floor(symmetryShiftedGrid[ir*3+j]);
-					symmetryShiftedGrid[ir*3+j] *= supercellGrid.get_grid_dim()[j];
-					xyz[j] = std::floor(symmetryShiftedGrid[ir*3+j]+0.5);
-					if ( std::abs(symmetryShiftedGrid[ir*3+j]-xyz[j]) > 0.01 )
-						throw std::logic_error("The symmetry operation that transports the atom "
-								"does not map the grid to itself which can't be.");
-				}
-				int cnsq = supercellGrid.get_xyz_to_reducible(xyz);
-				assert( (cnsq >= 0) && (cnsq < nrSC) );
-
-				// re-shuffel the vector field to the right location in the grid without transforming it yet.
-				for (int xi = 0 ; xi < 3 ; ++xi)
-					linDVscfTransform[cnsq*3+xi]=linDVscf[ir*3+xi];
-			}
-			// transform the vector field.
-			superCell->get_symmetry().rotate_cartesian(
-					isym,
-					linDVscfTransform.begin(),
-					linDVscfTransform.end());
-
-			//Convert into the format of the linear derivative potential in real space
-			int iaDispl = irredToRedAtoms[irA][istar];
-			for ( int ir = 0 ; ir < nrSC; ++ir)
-			{
 				for ( int xi_displ = 0 ; xi_displ < 3; ++xi_displ)
 				{
-					int mu = iaDispl*3 + xi_displ;
-					int ir1uc = rSuperCellToPrimitve[iaDispl][ir].first;
-					std::vector<int> R = rSuperCellToPrimitve[iaDispl][ir].second;
-					for ( int i = 0 ; i < 3 ; ++i)
-						R[i] = R[i] < 0 ? R[i] + RVectorDim_[i] : R[i];
-					int iR = this->RVectorLayout(R[0],R[1],R[2]);
-					data_[this->mem_layout(ir1uc,mu,iR)] = linDVscfTransform[ir*3+xi_displ];
+					int modeIndex = Auxillary::memlayout::mode_layout(atomIndexStar,xi_displ);
+					int ir1uc = perAtomGridIndexMap_[atomIndexStar][ir];
+					int iR = this->R_vector_to_index( 	perAtomGridIndexMapRVector_[atomIndexStar][ir][0],
+														perAtomGridIndexMapRVector_[atomIndexStar][ir][1],
+														perAtomGridIndexMapRVector_[atomIndexStar][ir][2]);
+					dataRegular_[iR][modeIndex][ir1uc] = linDVscfRegular[ir*3+xi_displ];
 				}
+
+			// now conclude with the radial part
+			auto linRadialDatLayout = [&] (int scAtomIndex, int iAngChnl, int iRadial, int iDisplDirection) {
+				assert((iAngChnl>=0)&&(iAngChnl < nAngChnlMax)
+						&&(iDisplDirection>=0)&&(iDisplDirection < 3)
+						&&(iRadial>=0)&&(iRadial < nRadMax)
+						&&(scAtomIndex>=0)&&(scAtomIndex < nASC));
+				return iDisplDirection + 3*(iRadial + nRadMax*(iAngChnl + nAngChnlMax*scAtomIndex));
+			};
+
+			for (int iASC = 0 ; iASC < nASC; ++iASC)
+			{
+				// Above, we have only applied the rotation to a given atomic site, but left the position
+				// in the list of atoms unaffected.
+				// This locates the atom after application of the symmetry operation.
+				int iASCRot = superCell->get_atom_symmetry()->atom_rot_map(symIndex, iASC);
+				int atomIndexPrimitive = primToSCCon->get_equiv_atom_primitive(iASCRot);
+				std::array<int,3> latticeVectorPrimitiveToSC =
+						primToSCCon->get_supercell_vector(primToSCCon->get_equiv_atom_primitive_lattice_vector_index(iASCRot));
+				int iR = this->R_vector_to_index(latticeVectorPrimitiveToSC[0], latticeVectorPrimitiveToSC[1], latticeVectorPrimitiveToSC[2]);
+				for ( int xi_displ = 0 ; xi_displ < 3; ++xi_displ)
+				{
+					int modeIndex = Auxillary::memlayout::mode_layout(atomIndexPrimitive, xi_displ);
+					for ( int ilm = 0 ; ilm < nAngChnlMax; ++ilm)
+						for ( int iradial = 0 ; iradial < nRadMax; ++iradial)
+							dataRadial_[iR][modeIndex][ilm][iradial] = linDVscfRadialSave[linRadialDatLayout(iASCRot, ilm, iradial, xi_displ)];
+				}
+			}
+
+			// swap back the copy
+			if ( symIndex != siteSymmetry.get_identity_index() )
+			{
+				std::swap(linDVscfRegularSave, linDVscfRegular);
+				std::swap(linDVscfRadialSave, linDVscfRadial);
 			}
 		}
 	}
 
 	//keep a copy for lattice information, symmetry ect ...
-	unitCell_ = unitCell;
-	unitCellGrid_ = std::move(unitcellGrid);
+	primitiveCell_ = primCell;
+	primitiveCellGrid_ = std::move(primcellGrid);
+	superCellGrid_ = std::move(supercellGrid);
 
 	this->clean_displacement_potential();
-
-	if (not coarseGrainGrid.empty())
-	{
-		assert(coarseGrainGrid.size() == 3);
-		coarseGrainGrid_ = std::make_shared<LatticeStructure::RegularBareGrid>();
-		coarseGrainGrid_->initialize(
-				std::move(coarseGrainGrid),
-				/*is reciprcal space=*/true,
-				unitCellGrid_.get_grid_prec(),
-				/*set grid shit to zero :*/{0.0, 0.0, 0.0},
-				unitcellGrid.get_lattice());
-	}
-}
-
-void
-DisplacementPotential::compute_rot_map(
-		std::vector<double> const & shift,
-		LatticeStructure::RegularBareGrid const & supercellGrid,
-		LatticeStructure::Symmetry const & siteSymmetry,
-		std::vector< std::vector<int> > & rotMap) const
-{
-	Algorithms::compute_grid_rotation_map(shift, supercellGrid, siteSymmetry, rotMap);
 }
 
 void
 DisplacementPotential::compute_dvscf_q(
 		std::vector<double> const & qVect,
-		Auxillary::alignedvector::DV const & modes,
-		Auxillary::alignedvector::ZV const & dynamicalMatrices,
+		Auxillary::Multi_array<double,2> const & modes,
+		Auxillary::Multi_array<std::complex<double>,3> const & dynamicalMatrices,
 		std::vector<double> const & masses,
 		std::vector<double> const & rVectors,
 		Auxillary::alignedvector::CV & dvscf,
@@ -289,33 +241,38 @@ DisplacementPotential::compute_dvscf_q(
 	Algorithms::LinearAlgebraInterface linAlg;
 	for ( int iq = 0 ; iq < nq; ++iq)
 	{
+		// this computes the Fourier transform. Note that internally
+		// the data is stored with each atom in the center. After the Fourier
+		// transform, we want to be back in the reference frame of the original
+		// primitive cell. Thus we have to shift back by adding the atomic coordinate to each Lattice vector.
 		std::fill(ftDisplPot.begin(), ftDisplPot.end(), std::complex<float>(0));
 		for (int ia = 0 ; ia < nAUC; ++ia)
 		{
-			double tau[3] = {unitCell_->get_atoms_list()[ia].get_position()[0],
-							 unitCell_->get_atoms_list()[ia].get_position()[1],
-							 unitCell_->get_atoms_list()[ia].get_position()[2] };
+			double tau[3] = {primitiveCell_->get_atoms_list()[ia].get_position()[0],
+					primitiveCell_->get_atoms_list()[ia].get_position()[1],
+					primitiveCell_->get_atoms_list()[ia].get_position()[2] };
 			for ( int iR = 0 ; iR < nR; ++iR)
 			{
-				float dprod = -2.0*M_PI*(qVect[iq*3+0]*(RVectors_[3*iR+0] + tau[0])
-										+qVect[iq*3+1]*(RVectors_[3*iR+1] + tau[1])
-										+qVect[iq*3+2]*(RVectors_[3*iR+2] + tau[2]));
+				float dprod = -2.0*M_PI*(qVect[iq*3+0]*(RVectors_[iR][0] + tau[0])
+										+qVect[iq*3+1]*(RVectors_[iR][1] + tau[1])
+										+qVect[iq*3+2]*(RVectors_[iR][2] + tau[2]));
 				std::complex<float> phase = std::exp( std::complex<float>(0,dprod));
 
 				for (int iDispl = 0 ; iDispl < 3; ++iDispl)
 				{
-					int mu = ia*3+iDispl;
+					int mu = Auxillary::memlayout::mode_layout(ia,iDispl);
 					for (int ir = 0 ; ir < nptsRealSpace_; ++ir)
-						ftDisplPot[mu*nptsRealSpace_+ir] += phase*data_[this->mem_layout(ir, mu, iR)];
+						ftDisplPot[mu*nptsRealSpace_+ir] += phase*dataRegular_[iR][mu][ir];
 				}
 			}
 		}
 
+		// Here we multiply the dynamical matrix to the Fourier transformed data
 		dynmatMassBuffer.resize(numModes_*numModes_);
 		for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
 			for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
 				dynmatMassBuffer[mu1*numModes_+mu2] =
-						std::complex<float>(dynamicalMatrices[(iq*numModes_+mu1)*numModes_+mu2]) /  std::sqrt(float(masses[mu1/3]));
+						std::complex<float>(dynamicalMatrices[iq][mu1][mu2]) /  std::sqrt(float(masses[mu1/3]));
 
 		auto r_ptr = &dvscf[iq*numModes_*nptsRealSpace_];
 		linAlg.call_gemm( 't', 'n',
@@ -335,8 +292,8 @@ DisplacementPotential::compute_dvscf_q(
 	for ( int iq = 0 ; iq < nq; ++iq)
 		for ( int mu = 0 ; mu < numModes_; ++mu )
 		{
-			float scale = (modes[iq*numModes_+mu] < freqCutoff ? 0.0f :
-					static_cast<float>(Auxillary::units::SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM / std::sqrt(modes[iq*numModes_+mu])) );
+			float scale = (modes[iq][mu] < freqCutoff ? 0.0f :
+					static_cast<float>(Auxillary::units::SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM / std::sqrt(modes[iq][mu])) );
 			for (int ir = 0 ; ir < nptsRealSpace_; ++ir)
 			{
 				dvscf[(iq*numModes_+mu)*nptsRealSpace_+ir] *= scale;
@@ -353,45 +310,20 @@ DisplacementPotential::query_q(
 	assert(qVect.size()%3 == 0);
 	qGridCorseGainToQIndex.clear();
 	const int nq = qVect.size()/3;
-	const double gPrec = unitCell_->get_symmetry().get_symmetry_prec();
+	const double gPrec = primitiveCell_->get_symmetry().get_symmetry_prec();
 
-	if ( not coarseGrainGrid_ )
+	for (int iq = 0 ; iq < nq ;++iq)
 	{
-		for (int iq = 0 ; iq < nq ;++iq)
-		{
-			LatticeStructure::RegularBareGrid::GridPoint g(std::move(std::vector<double>(&qVect[iq*3], &qVect[iq*3]+3)), gPrec);
-			auto ret = qGridCorseGainToQIndex.insert(std::move(std::make_pair(std::move(g), std::vector<int>())));
-			ret.first->second.push_back(iq);
-		}
-	}
-	else
-	{
-		std::vector<int> closestGridIndices;
-		coarseGrainGrid_->find_closest_reducible_grid_points(qVect, closestGridIndices);
-
-		for (int iq = 0 ; iq < nq ;++iq)
-		{
-			auto gridVector = coarseGrainGrid_->get_vector_direct(closestGridIndices[iq]);
-			LatticeStructure::RegularBareGrid::GridPoint g(std::move(gridVector), gPrec);
-			auto ret = qGridCorseGainToQIndex.insert(std::move(std::make_pair(std::move(g), std::vector<int>())));
-			ret.first->second.push_back(iq);
-		}
+		LatticeStructure::RegularBareGrid::GridPoint g(std::move(std::vector<double>(&qVect[iq*3], &qVect[iq*3]+3)), gPrec);
+		auto ret = qGridCorseGainToQIndex.insert(std::move(std::make_pair(std::move(g), std::vector<int>())));
+		ret.first->second.push_back(iq);
 	}
 }
 
 int
 DisplacementPotential::get_num_R() const
 {
-	return RVectorDim_[0]*RVectorDim_[1]*RVectorDim_[2];
-}
-
-int
-DisplacementPotential::RVectorLayout(int iRx, int iRy, int iRz) const
-{
-	assert((iRx >= 0) && (iRx<RVectorDim_[0]));
-	assert((iRy >= 0) && (iRy<RVectorDim_[1]));
-	assert((iRz >= 0) && (iRz<RVectorDim_[2]));
-	return (iRz*RVectorDim_[1]+iRy)*RVectorDim_[0]+iRx;
+	return RVectors_.shape()[0];
 }
 
 int
@@ -412,7 +344,7 @@ DisplacementPotential::mem_layout(int ir, int mu, int iR ) const
 LatticeStructure::RegularBareGrid const &
 DisplacementPotential::get_real_space_grid() const
 {
-	return unitCellGrid_;
+	return primitiveCellGrid_;
 }
 
 void
@@ -422,75 +354,56 @@ DisplacementPotential::write_dvscf(
 {
 	assert((atomIndex >= 0) && (atomIndex<numModes_/3));
 	assert((xi >= 0) && (xi < 3));
+	assert(this->get_num_R() > 0);
+	assert(perAtomGridIndexMap_.shape()[0]>atomIndex);
+
+	const int mu = Auxillary::memlayout::mode_layout(atomIndex, xi);
+
 	IOMethods::WriteVASPRealSpaceData writer;
 	std::string comment = "Displacement potential in real space; atom # "+ std::to_string(atomIndex) +", vibration in dir. "
 			+ (xi == 0 ? "x" : (xi == 1 ? "y" : "z") ) + "\n";
 
 	LatticeStructure::UnitCell supercell;
 
+	const int nASC = primitiveCell_->get_atoms_list().size()*RVectors_.shape()[0];
+
 	// build a supercell where the displaced atom is in the center.
+	auto atomsUC = primitiveCell_->get_atoms_list();
+	auto center = atomsUC[atomIndex].get_position();
+	primToSuperCell_->primitive_to_supercell_coordinates(center);
+
 	std::vector<LatticeStructure::Atom> scAtoms;
-	scAtoms.reserve(unitCell_->get_atoms_list().size()*superCellDim_[0]*superCellDim_[1]*superCellDim_[2]);
-	auto atomsUC = unitCell_->get_atoms_list();
-	auto tau0 = atomsUC[atomIndex].get_position();
-	for (auto i = 0 ; i < tau0.size(); ++i)
-		tau0[i] /=  superCellDim_[i];
-
-	for (int isx = 0 ; isx < superCellDim_[0]; ++isx)
-		for (int isy = 0 ; isy < superCellDim_[1]; ++isy)
-			for (int isz = 0 ; isz < superCellDim_[2]; ++isz)
-			{
-				int is[] = {isx, isy, isz};
-				for (auto a: atomsUC)
-				{
-					auto pos = a.get_position();
-					for (auto i = 0 ; i < pos.size(); ++i)
-						pos[i] = (is[i]+pos[i])/superCellDim_[i] - tau0[i] + 0.5; // We shift the entire system by 0.5 to have is displayed from 0-1
-					a.set_position(std::move(pos));
-					scAtoms.push_back(std::move(a));
-				}
-			}
-	supercell.initialize(	std::move(scAtoms),
-							unitCell_->get_lattice().build_supercell(superCellDim_),
-							unitCell_->get_symmetry());
-
-	auto dim = unitCellGrid_.get_grid_dim();
-	for (int i = 0 ; i < 3 ; ++i)
-		dim[i] *= superCellDim_[i];
-
-	LatticeStructure::RegularBareGrid scGrid;
-	scGrid.initialize(dim,
-			false,
-			unitCellGrid_.get_grid_prec(),
-			{0.0, 0.0, 0.0},
-			supercell.get_lattice() );
-
-	std::vector<std::vector< std::pair<int,std::vector<int> > >> rSuperCellToPrimitve;
-	this->build_supercell_to_primitive( unitCellGrid_, scGrid, unitCell_->get_atoms_list(), rSuperCellToPrimitve);
-
-	std::vector<double> dataSC( scGrid.get_num_points() );
-	assert( rSuperCellToPrimitve[atomIndex].size() == scGrid.get_num_points() );
-	for ( int irSC = 0 ; irSC < scGrid.get_num_points(); ++irSC )
+	scAtoms.reserve(nASC);
+	for (int iR = 0 ; iR < RVectors_.shape()[0]; ++iR)
 	{
-		auto ir = rSuperCellToPrimitve[atomIndex][irSC].first;
-		auto & R = rSuperCellToPrimitve[atomIndex][irSC].second;
-		int iRx = R[0] < 0 ? R[0] + RVectorDim_[0] : R[0];
-		int iRy = R[1] < 0 ? R[1] + RVectorDim_[1] : R[1];
-		int iRz = R[2] < 0 ? R[2] + RVectorDim_[2] : R[2];
-		int iR = this->RVectorLayout(iRx, iRy, iRz);
+		for (auto a: atomsUC)
+		{
+			auto pos = a.get_position();
+			for (int i = 0 ; i < pos.size(); ++i)
+				pos[i] = (RVectors_[iR][i]+pos[i]);
+			primToSuperCell_->primitive_to_supercell_coordinates(pos);
+			for (int i = 0 ; i < pos.size(); ++i)
+				pos[i] = pos[i] - center[i];
+			a.set_position(std::move(pos));
+			scAtoms.push_back(std::move(a));
+		}
+	}
+	supercell.initialize(	std::move(scAtoms),
+							primitiveCell_->get_lattice().build_supercell(primToSuperCell_->get_supercell_matrix()),
+							primitiveCell_->get_symmetry());
 
-		// shift the data position by 0.5 in each direction
-		auto xyz = scGrid.get_reducible_to_xyz(irSC);
-		for (int i = 0 ; i < xyz.size() ; ++i)
-			xyz[i] -= scGrid.get_grid_dim()[i]/2;
-		int irSC_shift = scGrid.get_xyz_to_reducible_periodic(xyz);
-
-		dataSC[irSC_shift] = data_[this->mem_layout( ir , atomIndex*3+xi, iR)];
+	std::vector<double> dataSC(perAtomGridIndexMap_.shape()[1]);
+	for ( int irSC = 0 ; irSC < perAtomGridIndexMap_.shape()[1]; ++irSC )
+	{
+		int iR = this->R_vector_to_index(	perAtomGridIndexMapRVector_[atomIndex][irSC][0],
+											perAtomGridIndexMapRVector_[atomIndex][irSC][1],
+											perAtomGridIndexMapRVector_[atomIndex][irSC][2]);
+		dataSC[irSC] = dataRegular_[iR][mu][perAtomGridIndexMap_[atomIndex][irSC]];
 	}
 
 	writer.write_file(	filename,
 						comment,
-						scGrid.get_grid_dim(),
+						superCellGrid_.get_grid_dim(),
 						std::make_shared<decltype(supercell)>(std::move(supercell)),
 						dataSC );
 }
@@ -499,8 +412,8 @@ void
 DisplacementPotential::write_dvscf_q(
 		std::vector<double> const & qVect,
 		std::vector<int> modeIndices,
-		Auxillary::alignedvector::DV const & modes,
-		Auxillary::alignedvector::ZV const & dynamicalMatrices,
+		Auxillary::Multi_array<double,2> const & modes,
+		Auxillary::Multi_array<std::complex<double>,3> const & dynamicalMatrices,
 		std::vector<double> const & masses,
 		std::string filename) const
 {
@@ -509,9 +422,9 @@ DisplacementPotential::write_dvscf_q(
 
 	Auxillary::alignedvector::CV qDataPlus;
 	std::vector<Auxillary::alignedvector::CV> buffers;
-	this->compute_dvscf_q(qVect, modes, dynamicalMatrices, masses, unitCellGrid_.get_all_vectors_grid(), qDataPlus, buffers);
+	this->compute_dvscf_q(qVect, modes, dynamicalMatrices, masses, primitiveCellGrid_.get_all_vectors_grid(), qDataPlus, buffers);
 
-	int nr = unitCellGrid_.get_num_points();
+	int nr = primitiveCellGrid_.get_num_points();
 	assert(qDataPlus.size() == nq*numModes_*nr);
 
 	auto mod_filename = [] (std::string filename, int iq, int mu) {
@@ -534,72 +447,7 @@ DisplacementPotential::write_dvscf_q(
 			for ( int ir = 0 ; ir < nr ; ++ir )
 				data[ir] = std::real(qDataPlus[(iq*numModes_+mu)*nr+ir]);
 			writer.write_file( mod_filename(filename,iq,mu), comment,
-					unitCellGrid_.get_grid_dim(), unitCell_, data );
-		}
-	}
-}
-
-void
-DisplacementPotential::build_supercell_to_primitive(
-		LatticeStructure::RegularBareGrid const & primitiveCellGrid,
-		LatticeStructure::RegularBareGrid const & supercellGrid,
-		std::vector<LatticeStructure::Atom> const & atomsUC,
-		std::vector< std::vector< std::pair<int,std::vector<int> > > > & rSuperCellToPrimitve) const
-{
-	const int nRSC = supercellGrid.get_num_points();
-
-	std::vector<double> rVectorsSupercell(nRSC*3);
-	for ( int irSC = 0 ; irSC < nRSC ; ++irSC )
-	{
-		auto rvec = supercellGrid.get_vector_direct(irSC);
-		assert(rvec.size() == 3);
-		for ( int i = 0 ; i < 3 ; ++i )
-			rVectorsSupercell[irSC*3+i] = rvec[i];
-	}
-
-	rSuperCellToPrimitve.resize(atomsUC.size());
-	for ( int ia = 0 ; ia < atomsUC.size() ; ++ia )
-	{
-		auto aPos = atomsUC[ia].get_position();
-		rSuperCellToPrimitve[ia].resize(nRSC);
-
-		for ( int irSC = 0 ; irSC < nRSC ; ++irSC )
-		{
-			std::vector<int> R(3);
-			std::vector<int> xyz(3);
-			for ( int i = 0 ; i < 3 ; ++i )
-			{
-				double rvec = rVectorsSupercell[irSC*3+i];
-
-				// scale to units of the primitive cell
-				// todo use map_supercell_to_primitive();
-				rvec *= superCellDim_[i];
-
-				// transform to a coordinate system, where the current atom is in the center
-				// NOTE: the atom coordinates are not necessarily on the grid.
-				rvec -= aPos[i];
-
-				// obtain the vector in the vector in the first unit cell and the Lattice vector taking it to the position
-				// in the supercell
-				R[i] = std::floor(rvec+0.5);
-				double rvecUC = rvec-R[i];
-				assert( (rvecUC >= -0.5-unitCellGrid_.get_grid_prec()) && (rvecUC < 0.5+unitCellGrid_.get_grid_prec()));
-				if ( rvecUC < -0.5)
-					rvecUC = -0.5;
-				if ( rvecUC > 0.5 )
-					rvecUC = 0.5;
-
-				//Convert to a coordinate index in the range [0,1[ and fetch the grid index
-				rvecUC -= std::floor(rvecUC);
-				rvecUC *= primitiveCellGrid.get_grid_dim()[i];
-				xyz[i] = std::floor(rvecUC+0.5);
-			}
-			// NOTE: since the atom position shift means we are out of the grid, we have to allow for
-			// the case where any xyz[i] is equal to primitiveCellGrid.get_grid_dim()[i]. Thus we have to use the
-			// periodic version get_xyz_to_reducible.
-			int cnsq = primitiveCellGrid.get_xyz_to_reducible_periodic(xyz);
-			assert( (cnsq >= 0) and ( cnsq < primitiveCellGrid.get_num_points() ) );
-			rSuperCellToPrimitve[ia][irSC] = std::move(std::make_pair(cnsq, std::move(R) ) );
+					primitiveCellGrid_.get_grid_dim(), primitiveCell_, data );
 		}
 	}
 }
@@ -608,7 +456,7 @@ void
 DisplacementPotential::clean_displacement_potential()
 {
 	const int numAtoms = this->get_num_modes()/3;
-	const int nr = unitCellGrid_.get_num_points();
+	const int nr = primitiveCellGrid_.get_num_points();
 	const int nR = this->get_num_R();
 
 	// apply the sum rule
@@ -618,62 +466,40 @@ DisplacementPotential::clean_displacement_potential()
 		for (int iR = 0; iR < nR ; ++iR)
 			for (int ia = 0 ; ia < numAtoms; ++ia)
 				for (int ir = 0; ir < nr ; ++ir)
-					integral += data_[this->mem_layout( ir , ia*3+xi, iR)];
+					integral += dataRegular_[iR][Auxillary::memlayout::mode_layout(ia,xi)][ir];
 		integral /= static_cast<double>(nr*nR*numAtoms);
 
 		for (int iR = 0; iR < nR ; ++iR)
 			for (int ia = 0 ; ia < numAtoms; ++ia)
 				for (int ir = 0; ir < nr ; ++ir)
-					data_[this->mem_layout( ir , ia*3+xi, iR)] -= integral;
+					dataRegular_[iR][Auxillary::memlayout::mode_layout(ia,xi)][ir] -= integral;
 	}
 }
 
 void
-DisplacementPotential::set_R_vectors()
+DisplacementPotential::symmetry_expand_displacement_data(
+		LatticeStructure::Symmetry const & siteSymmetry,
+		std::vector<int> symmetryGroupIndices,
+		std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> const & potentialChange,
+		Auxillary::Multi_array<double,2> & deltaVRegularSymExpanded,
+		Auxillary::Multi_array<std::complex<double>,4> & deltaVRadialSymExpanded) const
 {
-	RVectorDim_.resize(3);
-	for (int i = 0 ; i < 3; ++i)
-		RVectorDim_[i] = superCellDim_[i] % 2 == 0 ? superCellDim_[i]+1 : superCellDim_[i];
-
-	RVectors_.resize(3*RVectorDim_[0]*RVectorDim_[1]*RVectorDim_[2]);
-	for ( int iRz = 0 ; iRz < RVectorDim_[2]; ++iRz )
-		for ( int iRy = 0 ; iRy < RVectorDim_[1]; ++iRy )
-			for ( int iRx = 0 ; iRx < RVectorDim_[0]; ++iRx )
-			{
-				int iR = this->RVectorLayout(iRx, iRy, iRz);
-				int R[] = {	iRx <= RVectorDim_[0]/2 ? iRx : iRx - RVectorDim_[0],
-							iRy <= RVectorDim_[1]/2 ? iRy : iRy - RVectorDim_[1],
-							iRz <= RVectorDim_[2]/2 ? iRz : iRz - RVectorDim_[2] };
-				std::copy(R, R+3, &RVectors_[iR*3]);
-			}
-}
-
-void
-DisplacementPotential::constuct_potential_variation(
-		std::vector<double> const & potentialUC,
-		int nRSC,
-		LatticeStructure::RegularBareGrid const & unitcellGrid,
-		LatticeStructure::RegularBareGrid const & supercellGrid,
-		std::vector< std::vector<double> > & potentialDispl)
-{
-	std::vector<int> mapback(nRSC);
-	std::vector<double> rVectorsSupercell(nRSC*3);
-	for ( int irSC = 0 ; irSC < nRSC ; ++irSC )
-	{
-		std::vector<int> xyz = supercellGrid.get_reducible_to_xyz(irSC);
-		for (int i = 0 ; i < 3 ; ++i)
-			xyz[i] = xyz[i]%unitcellGrid.get_grid_dim()[i];
-		int irUC = unitcellGrid.get_xyz_to_reducible(xyz);
-		assert((irUC >= 0) && (irUC < unitcellGrid.get_num_points()));
-		mapback[irSC] = irUC;
-	}
-
-	for (int ird = 0 ; ird < potentialDispl.size(); ++ird)
-	{
-		assert(potentialDispl[ird].size() == nRSC);
-		for (int ir = 0 ; ir < nRSC; ++ir)
-			potentialDispl[ird][ir] -= potentialUC[mapback[ir]];
-	}
+//	for ( int idir = 0 ; idir < irredToRedDispl.size(); ++idir)
+//	{
+//		for ( int istar = 0 ; istar < symIrredToRedDispl[idir].size(); ++istar)
+//		{
+//			int id = irredToRedDispl[idir][istar];
+//			assert( id < nRedDispl );
+//			int isym = symIrredToRedDispl[idir][istar];
+//			for ( int ir = 0 ; ir < nrSC; ++ir )
+//			{
+//				assert( iIrredDisplCount+idir < irredToRedDispl.size() );
+//				int irRot = rotMapsSiteSymmetry[isym][ir];
+//				deltaV[id*nrSC+ir] = potentialDispl[iIrredDisplCount+idir][irRot];
+//			}
+//		}
+//	}
+	throw std::logic_error("Not implemented");
 }
 
 void
@@ -685,10 +511,10 @@ DisplacementPotential::symmetrize_periodic_dvscf_q(
 	const int nM = this->get_num_modes();
 	assert(dvscfData.size()==nq*nM*nptsRealSpace_);
 
-	LatticeStructure::Symmetry const & fullSymmetryGroup = unitCell_->get_symmetry();
+	LatticeStructure::Symmetry const & fullSymmetryGroup = primitiveCell_->get_symmetry();
 	std::vector<std::vector<int>> rotMap;
 	Algorithms::compute_grid_rotation_map_no_shift(
-			unitCellGrid_,
+			primitiveCellGrid_,
 			fullSymmetryGroup,
 			rotMap);
 
@@ -744,9 +570,9 @@ DisplacementPotential::multiply_phase_qr(
 	assert(dvscf_q.size()==nq*nM*nptsRealSpace_);
 
 	// the code below attempts to reduce expensive complex phase calculations in this performance critical part of the code
-	const int nrx = unitCellGrid_.get_grid_dim()[0];
-	const int nry = unitCellGrid_.get_grid_dim()[1];
-	const int nrz = unitCellGrid_.get_grid_dim()[2];
+	const int nrx = primitiveCellGrid_.get_grid_dim()[0];
+	const int nry = primitiveCellGrid_.get_grid_dim()[1];
+	const int nrz = primitiveCellGrid_.get_grid_dim()[2];
 
 	for (int iq = 0 ; iq < nq ; ++iq)
 	{
@@ -758,7 +584,7 @@ DisplacementPotential::multiply_phase_qr(
 											   std::sin(2.0*M_PI*qpoints[iq*3+2]/static_cast<double>(nrz)) );
 
 		#ifndef NDEBUG
-		auto rVec = unitCellGrid_.get_all_vectors_grid();
+		auto rVec = primitiveCellGrid_.get_all_vectors_grid();
 		#endif
 
 		for ( int mu = 0 ; mu < numModes_; ++mu )
@@ -798,6 +624,17 @@ DisplacementPotential::multiply_phase_qr(
 			}
 		}
 	}
+}
+
+int
+DisplacementPotential::R_vector_to_index(int Rx, int Ry, int Rz) const
+{
+	assert((Rx>=embeddingRVectorBox_[0].first) && (Rx<=embeddingRVectorBox_[0].second));
+	assert((Ry>=embeddingRVectorBox_[1].first) && (Ry<=embeddingRVectorBox_[1].second));
+	assert((Rz>=embeddingRVectorBox_[2].first) && (Rz<=embeddingRVectorBox_[2].second));
+	int iR = RVectoToIndexMap_[Rx][Ry][Rz];
+	assert((iR >= 0) && (iR < this->get_num_R()));
+	return iR;
 }
 
 } /* namespace PhononStructure */

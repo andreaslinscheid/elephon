@@ -97,12 +97,33 @@ LatticeModule::initialize( std::vector<double> latticeMatrix )
 LatticeModule
 LatticeModule::build_supercell(std::vector<int> const & supercellDim) const
 {
-	assert(supercellDim.size() == 3);
-	std::vector<double> newLatticeMatrix = this->get_latticeMatrix();
+	if(supercellDim.size() == 3)
+	{
+		LatticeStructure::LatticeModule newLattice;
+		std::vector<double> newLatticeMatrix(9, 0.0);
+		for ( int i = 0 ; i < 3; ++i)
+			for ( int j = 0 ; j < 3; ++j)
+				newLatticeMatrix[i*3+j] = this->get_latticeMatrix()[i*3+j]*supercellDim[i]*this->get_alat();
+		newLattice.initialize(newLatticeMatrix);
+		return newLattice;
+	}
+	Auxillary::Multi_array<int,2> matrix(boost::extents[3][3]);
+	assert(supercellDim.size() == 9);
+	std::copy(supercellDim.begin(),supercellDim.end(), matrix.data());
+	return this->build_supercell(matrix);
+}
+
+LatticeModule
+LatticeModule::build_supercell(Auxillary::Multi_array<int,2> const & supercellMatrix) const
+{
+	LatticeStructure::LatticeModule newLattice;
+	std::vector<double> newLatticeMatrix(9, 0.0);
+	assert((supercellMatrix.shape()[0] == 3) && (supercellMatrix.shape()[1] == 3));
+	// arrange loop such that lattice vector i gets multiplied from the left with the supercell matrix.
 	for ( int i = 0 ; i < 3; ++i)
 		for ( int j = 0 ; j < 3; ++j)
-			newLatticeMatrix[i*3+j] *= supercellDim[i]*this->get_alat();
-	LatticeStructure::LatticeModule newLattice;
+			for ( int k = 0 ; k < 3; ++k)
+				newLatticeMatrix[i*3+j] += supercellMatrix[j][k]*this->get_latticeMatrix()[i*3+k]*this->get_alat();
 	newLattice.initialize(newLatticeMatrix);
 	return newLattice;
 }

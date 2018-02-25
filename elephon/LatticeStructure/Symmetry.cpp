@@ -326,53 +326,6 @@ Symmetry::apply_cartesian(int isym, std::vector<double>::iterator fieldCartBegin
 	}
 }
 
-void
-Symmetry::rotate_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
-					std::vector<double>::iterator fieldCartEnd) const
-{
-	assert( std::distance(fieldCartBegin,fieldCartEnd)%3 == 0 );
-	assert( isym < numRotations_ );
-
-	std::vector<double> buff(3);
-
-	int numComponents = std::distance(fieldCartBegin,fieldCartEnd)/3;
-	for ( int ic = 0; ic < numComponents; ++ic)
-	{
-		std::copy(fieldCartBegin+ic*3,fieldCartBegin+(ic+1)*3,std::begin(buff));
-		for ( int xi = 0; xi < 3; ++xi)
-		{
-			*(fieldCartBegin+ic*3+xi) = symmetriesCartesian_[(isym*3+xi)*3+0]*buff[0]
-							+symmetriesCartesian_[(isym*3+xi)*3+1]*buff[1]
-							+symmetriesCartesian_[(isym*3+xi)*3+2]*buff[2];
-		}
-	}
-}
-
-void
-Symmetry::rotate_matrix_cartesian(int isym,
-		std::vector<double>::iterator matrixFieldCartBegin,
-		std::vector<double>::iterator matrixFieldCartEnd) const
-{
-	int elem = std::distance(matrixFieldCartBegin,matrixFieldCartEnd);
-	assert( elem%9 == 0 );
-	assert( isym < numRotations_ );
-
-	std::vector<double> b(9);
-
-	int numComponents = elem/9;
-	for ( int ic = 0; ic < numComponents; ++ic)
-	{
-		std::copy(matrixFieldCartBegin+ic*9,matrixFieldCartBegin+(ic+1)*9,std::begin(b));
-		std::fill(matrixFieldCartBegin+ic*9,matrixFieldCartBegin+(ic+1)*9, 0.0 );
-		auto G = &symmetriesCartesian_[isym*9];
-		for ( int i = 0; i < 3; ++i)
-			for ( int j = 0; j < 3; ++j)
-				for ( int k = 0; k < 3; ++k)
-					for ( int l = 0; l < 3; ++l)
-						*(matrixFieldCartBegin+ic*9+i*3+l) += G[i*3+j]*b[j*3+k]*G[l*3+k];
-	}
-}
-
 double
 Symmetry::get_symmetry_prec() const
 {

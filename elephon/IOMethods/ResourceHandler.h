@@ -21,22 +21,38 @@
 #define ELEPHON_IOMETHODS_RESOURCEHANDLER_H_
 
 #include "IOMethods/ElectronicStructureCodeInterface.h"
-#include "IOMethods/KPath.h"
-#include "PhononStructure/Phonon.h"
-#include "PhononStructure/PhononGrid.h"
-#include "PhononStructure/ForceConstantMatrix.h"
-#include "LatticeStructure/UnitCell.h"
-#include "LatticeStructure/AtomDisplacement.h"
-#include "PhononStructure/DisplacementPotential.h"
-#include "ElectronicStructure/ElectronicBands.h"
-#include "ElectronicStructure/Wavefunctions.h"
-#include "ElectronicStructure/TetrahedraIsosurface.h"
 #include <memory>
 
 namespace elephon
 {
+
+// forward declared
+namespace LatticeStructure {
+	class UnitCell;
+	class AtomDisplacement;
+	class AtomDisplacementCollection;
+	class TetrahedraGrid;
+	class PrimitiveToSupercellConnection;
+};
+
+namespace ElectronicStructure {
+	class ElectronicBands;
+	class Wavefunctions;
+	class TetrahedraIsosurface;
+};
+
+namespace PhononStructure {
+	class Phonon;
+	class PhononGrid;
+	class ForceConstantMatrix;
+	class DisplacementPotential;
+	class AlphaSquaredF;
+};
+
 namespace IOMethods
 {
+
+	class KPath;
 
 /**
  * This class is the main interface to load to the required entities in the code only when/if needed.
@@ -98,7 +114,9 @@ public:
 
 	std::shared_ptr<const LatticeStructure::UnitCell > get_supercell_obj();
 
-	std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement> > get_irrd_displmts_obj();
+	std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection > get_primitive_supercell_connect_obj();
+
+	std::shared_ptr<const LatticeStructure::AtomDisplacementCollection> get_displmts_collection_obj();
 
 	std::shared_ptr<const ElectronicStructure::ElectronicBands> get_electronic_bands_obj();
 
@@ -194,7 +212,9 @@ private:
 
 	std::shared_ptr< LatticeStructure::UnitCell > scUC_;
 
-	std::shared_ptr<std::vector<LatticeStructure::AtomDisplacement> > irredDispl_;
+	std::shared_ptr< LatticeStructure::PrimitiveToSupercellConnection > primitiveSuperCellConnection_;
+
+	std::shared_ptr<LatticeStructure::AtomDisplacementCollection> displColl_;
 
 	std::shared_ptr<ElectronicStructure::ElectronicBands> bands_;
 
@@ -228,7 +248,9 @@ private:
 
 	void initialize_supercell_obj();
 
-	void initialize_irrd_displmts_obj();
+	void initialize_primitive_supercell_connect_obj();
+
+	void initialize_displmts_collection_obj();
 
 	void initialize_electronic_bands_obj();
 

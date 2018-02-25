@@ -45,8 +45,8 @@ DataRegularGrid<T>::initialize(
 	{
 		int ikr = grid.get_maps_irreducible_to_reducible()[ikir][ grid.get_symmetry().get_identity_index() ];
 		std::vector<double> gridVector = grid.get_vector_direct(ikr);
-		VT thisBands;
-		VCT eigenvectors;
+		Auxillary::Multi_array<T,2> thisBands;
+		Auxillary::Multi_array<std::complex<T>,3> eigenvectors;
 		functor.evaluate(gridVector, thisBands, eigenvectors);
 		if ( dataEnergies.empty() )
 		{
@@ -54,7 +54,7 @@ DataRegularGrid<T>::initialize(
 			dataEnergies.resize(numBands*grid.get_np_irred());
 		}
 		for ( int ib = 0 ; ib < numBands ; ++ib)
-			dataEnergies[ikir*numBands + ib] = 	thisBands[ib];
+			dataEnergies[ikir*numBands + ib] = 	thisBands[0][ib];
 	}
 
 	this->initialize(numBands, referenceEnergy, std::move(dataEnergies), std::move(grid));

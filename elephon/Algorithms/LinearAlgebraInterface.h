@@ -88,9 +88,9 @@ class LinearAlgebraInterface
 {
 public:
 	//Here come the high level routines
-	template<typename T>
-	void pseudo_inverse(std::vector<T> A, int n, int m,
-			std::vector<T> & pinvA, double cutoff = 1e-10);
+	template<class C>
+	void pseudo_inverse(C A, int n, int m,
+			C & pinvA, double cutoff = 1e-10);
 
 	template<typename T>
 	void null_space(std::vector<T> A, int n, int m,
@@ -117,10 +117,10 @@ public:
 	template<typename VT>
 	void conjugate_square_matrix(VT & A) const;
 
-	template<typename VT>
-	void matrix_matrix_prod(VT const & A,
-			VT const & B,
-			VT & ATimesB, int m, int n) const;
+	template<class VT1, class VT2,class VT3>
+	void matrix_matrix_prod(VT1 const & A,
+			VT2 const & B,
+			VT3 & ATimesB, int m, int n) const;
 
 	template<typename VT>
 	void matrix_vector_prod(VT const & A,

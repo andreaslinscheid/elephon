@@ -19,6 +19,8 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/filesystem.hpp>
 #include "PhononStructure/ForceConstantMatrix.h"
+#include "PhononStructure/Forces.h"
+#include "LatticeStructure/AtomDisplacementCollection.h"
 #include "IOMethods/Input.h"
 #include "IOMethods/VASPInterface.h"
 #include "fixtures/MockStartup.h"
@@ -28,6 +30,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <memory>
 
 BOOST_AUTO_TEST_SUITE( ForceConstantMatrix )
 
@@ -36,9 +39,11 @@ BOOST_AUTO_TEST_CASE( ForceConstantMatrix_symmetrization )
 	std::vector<double> q = {0.5, 0.0, 0.0};
 	std::complex<double> ii(0,1);
 	std::complex<double> one(1,0);
-	elephon::Auxillary::alignedvector::ZV data{	one, ii, one,
-												one, ii, one,
-												one, ii, one };
+	elephon::Auxillary::alignedvector::ZV dataV{	one, ii, one,
+													one, ii, one,
+													one, ii, one };
+	elephon::Auxillary::Multi_array<std::complex<double>,3> data(boost::extents[1][3][3]);
+	std::copy_n(dataV.begin(), dataV.size(), data.data());
 	auto resHndl = elephon::test::fixtures::scenarios::load_Al_fcc_primitive_vasp_sc2x2x2();
 	auto uc = resHndl->get_primitive_unitcell_obj();
 	auto phi = resHndl->get_forceConstant_obj();
@@ -47,58 +52,28 @@ BOOST_AUTO_TEST_CASE( ForceConstantMatrix_symmetrization )
 
 BOOST_AUTO_TEST_CASE( build_Al_primitive )
 {
-	// TODO use the resource management from elephon and don't load this all explicitely ...
 	elephon::test::fixtures::MockStartup ms;
 	auto rootDir = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" ;
 	auto phononDir = rootDir / "el_ph";
-
-	std::shared_ptr<elephon::IOMethods::VASPInterface> loader;
-	std::vector<elephon::LatticeStructure::Atom> atomsUC;
-	elephon::LatticeStructure::Symmetry symmetry;
-	elephon::LatticeStructure::RegularSymmetricGrid kgrid;
-	elephon::LatticeStructure::LatticeModule  lattice;
-	//here we create the test input file
 	std::string content = std::string()+
 			"scell=2 2 2\n"
 			"root_dir="+rootDir.string()+"\n"
 			"elphd="+phononDir.string()+"\n"
 			"";
-
 	elephon::test::fixtures::DataLoader dl;
-	loader = dl.create_vasp_loader( content );
-
-	loader->read_cell_paramters( rootDir.string(),
-			1e-6,kgrid, lattice, atomsUC, symmetry);
-
-	elephon::LatticeStructure::UnitCell uc;
-	uc.initialize(atomsUC,lattice, symmetry);
-	auto unitCell = std::make_shared<elephon::LatticeStructure::UnitCell>(std::move(uc));
-
-	//here we build the supercell that was used to generate the test data.
-	auto supercell = std::make_shared<elephon::LatticeStructure::UnitCell>(unitCell->build_supercell( 2, 2, 2 ));
-
-	//Here, we regenerate the displacement
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irrDispl;
-	unitCell->generate_displacements(0.01,
-			true,
-			irrDispl);
-	auto irreducibleDispl = std::make_shared<std::vector<elephon::LatticeStructure::AtomDisplacement>>(std::move(irrDispl));
+	auto res = dl.create_resource_handler(content);
+	auto primitiveCell = res->get_primitive_unitcell_obj();
+	auto supercell = res->get_supercell_obj();
+	auto displColl = res->get_displmts_collection_obj();
+	auto primToSCConn = res->get_primitive_supercell_connect_obj();
 
 	//Here, we read the forces from the vasp output
-	int nIrdDispl = int(irreducibleDispl->size());
-	std::vector<std::vector<double>> forces( nIrdDispl );
-	std::vector<double> thisForces;
-	for ( int idispl = 0 ; idispl < nIrdDispl; ++idispl )
-	{
-		loader->read_forces(
-				(phononDir / (std::string("displ_")+std::to_string(idispl))).string(),
-				thisForces);
-
-		forces[idispl] = std::move(thisForces);
-	}
+	auto forces = std::make_shared<elephon::PhononStructure::Forces>();
+	forces->initialize(displColl,
+			res->get_electronic_structure_interface());
 
 	elephon::PhononStructure::ForceConstantMatrix phi;
-	phi.build( unitCell, supercell, irreducibleDispl, forces);
+	phi.initialize( primitiveCell, supercell, displColl, primToSCConn, forces);
 
 	BOOST_REQUIRE( phi.get_num_modes() == 3 );
 

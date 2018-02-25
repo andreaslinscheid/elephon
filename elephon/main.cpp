@@ -20,6 +20,7 @@
 #include "ElectronicStructure/LocalDensityOfStates.h"
 #include "IOMethods/ChooseInterface.h"
 #include "ElectronicStructure/BandStructureAnalysis.h"
+#include "PhononStructure/PhononGrid.h"
 #include "IOMethods/ResourceHandler.h"
 #include "IOMethods/BuildFolderStructure.h"
 #include "PhononStructure/AlphaSquaredF.h"

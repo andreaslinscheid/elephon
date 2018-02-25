@@ -21,7 +21,6 @@
 #define ELEPHON_PHONONSTRUCTURE_DISPLACEMENTPOTENTIAL_H_
 
 #include "LatticeStructure/UnitCell.h"
-#include "LatticeStructure/AtomDisplacement.h"
 #include "LatticeStructure/RegularSymmetricGrid.h"
 #include "Auxillary/AlignedVector.h"
 #include <vector>
@@ -30,8 +29,12 @@
 
 namespace elephon
 {
+namespace LatticeStructure {class AtomDisplacementCollection; };
+namespace LatticeStructure {class PrimitiveToSupercellConnection; };
 namespace PhononStructure
 {
+
+class PotentialChangeIrredDisplacement;
 
 /**
  * Structure to store the data and provide methods related to the linear displacement potential due to a lattice perturbation.
@@ -43,26 +46,24 @@ class DisplacementPotential
 {
 public:
 
-	void build(std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
+	void initialize(
+			std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
 			std::shared_ptr<const LatticeStructure::UnitCell> superCell,
-			std::shared_ptr<const std::vector<LatticeStructure::AtomDisplacement>> irredDispl,
+			std::shared_ptr<const LatticeStructure::AtomDisplacementCollection> displCollection,
+			std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> primToSCCon,
 			LatticeStructure::RegularBareGrid unitcellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
-			std::vector<double> const & potentialUC,
-			std::vector< std::vector<double> > potentialDispl,
-			std::vector<int> coarseGrainGrid);
+			std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> const & potentialChange);
 
 	void compute_dvscf_q(
 			std::vector<double> const & qVect,
-			Auxillary::alignedvector::DV const & modes,
-			Auxillary::alignedvector::ZV const & dynamicalMatrices,
+			Auxillary::Multi_array<double,2> const & modes,
+			Auxillary::Multi_array<std::complex<double>,3> const & dynamicalMatrices,
 			std::vector<double> const & masses,
 			std::vector<double> const & rVectors,
 			Auxillary::alignedvector::CV & dvscf,
 			std::vector<Auxillary::alignedvector::CV> & buffer,
 			double freqCutoff = 0.0) const;
-
-	int RVectorLayout(int iRx, int iRy, int iRz ) const;
 
 	LatticeStructure::RegularBareGrid const & get_real_space_grid() const;
 
@@ -88,8 +89,8 @@ public:
 
 	void write_dvscf_q(std::vector<double> const & qVect,
 			std::vector<int> modeIndices,
-			Auxillary::alignedvector::DV const & modes,
-			Auxillary::alignedvector::ZV const & dynamicalMatrices,
+			Auxillary::Multi_array<double,2> const & modes,
+			Auxillary::Multi_array<std::complex<double>,3> const & dynamicalMatrices,
 			std::vector<double> const & masses,
 			std::string filename) const;
 private:
@@ -98,68 +99,64 @@ private:
 
 	int nptsRealSpace_ = 0;
 
-	LatticeStructure::RegularBareGrid unitCellGrid_;
+	LatticeStructure::RegularBareGrid primitiveCellGrid_;
 
-	std::shared_ptr<const LatticeStructure::UnitCell> unitCell_;
+	LatticeStructure::RegularBareGrid superCellGrid_;
 
-	std::shared_ptr<LatticeStructure::RegularBareGrid> coarseGrainGrid_;
+	std::shared_ptr<const LatticeStructure::UnitCell> primitiveCell_;
 
-	///For each lattice vector, the linear displacement potential sorted
-	///according 1) the mode index and 2) to the realspaceGrid_ in z-slowest-running order.
-	std::vector<float> data_;
+	std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> primToSuperCell_;
 
-	std::vector<int> superCellDim_;
+	/// Regular grid part of the data. Coordinates are
+	/// 0 : Lattice Vector index
+	/// 1 : mode index, as layed out by Auxillary::memlayout::mode_layout()
+	/// 2 : primitive Cell index
+	Auxillary::Multi_array<float,3> dataRegular_;
 
-	std::vector<int> RVectorDim_;
+	/// Radial grid part of the data. Coordinates are
+	/// 0 : Lattice Vector index
+	/// 1 : mode index;
+	/// 2 : angular momentum + magnetic quantum number, as layed out by Auxillary::memlayout::angular_momentum_layout()
+	/// 3 : radial data index;
+	Auxillary::Multi_array<std::complex<float>,4> dataRadial_;
 
-	/// A buffer for the R vectors. These are implicitly defined by superCellDim_
-	std::vector<double> RVectors_;
+
+	/// Grid map of supercell indices to primtive cell indices, where the displaced atom is in the center. Coordinates are
+	/// 0 : Atom index
+	/// 1 : supercell grid index
+	Auxillary::Multi_array<int, 2> perAtomGridIndexMap_;
+
+	/// Grid map of supercell indices to lattice vectors to the cell from the primitive cell,
+	/// where the displaced atom is in the center. Coordinates are
+	/// 0 : Atom index
+	/// 1 : supercell grid index
+	/// 2 : R vector coordinates x y and z
+	Auxillary::Multi_array<int, 3> perAtomGridIndexMapRVector_;
 
 	std::vector<int> numRSpacePointsForLatticeVector_;
 
-	void compute_rot_map(
-			std::vector<double> const & shift,
-			LatticeStructure::RegularBareGrid const & supercellGrid,
-			LatticeStructure::Symmetry const & siteSymmetry,
-			std::vector< std::vector<int> > & rotMap) const;
+	/// For x,y and z the min (first) or max (second) of lattice vectors that occur in the embedding supercell.
+	std::array<std::pair<int,int>, 3> embeddingRVectorBox_;
+
+	/// A buffer for the embedding R vectors with the first coordinate is the index and the second of dim 3 has the x,y and z
+	/// coordinates in units of the primitive cell. Note that in contrast to LatticeStructure::PrimitiveToSupercellConnection
+	/// coordinates are such that the primitive cell is in the symmetric middle of the supercell.
+	Auxillary::Multi_array<int,2> RVectors_;
+
+	/// A mapping that tells for a tuple of Rx, Ry, and Rz coordintes within the ranges of embeddingRVectorBox_
+	///  the index in the array RVectors_ or -1 if that index does not occur.
+	Auxillary::Multi_array<int,3> RVectoToIndexMap_;
 
 	int mem_layout(int ir, int mu, int iR ) const;
 
-	/**
-	 * Establish a connection between a point in the supercell and the corresponding one in the primitive cell.
-	 *
-	 * This means to create a table which maps a point in real space in the supercell
-	 * into a point in the primitive cell plus a lattice vector
-	 * With 'primitive' we mean the point in the reference frame of the infinite lattice where a given atom
-	 * is always in the center. Thus even for the trivial supercell, this will not be an identity mapping.
-	 *
-	 * @param primitiveCellGrid		The grid which describes the real space of the primitive cell
-	 * @param supercellGrid			The grid which describes the real space of the supercell
-	 * @param atomsUC				A list of atoms in the primitive cell.
-	 * @param rSuperCellToPrimitve	a vector that will be resized to hold 1) for each atom 2) a list of
-	 * 								pairs where the first (int) references the consequtive real space index
-	 * 								in the primitive cell and the second is a vector of 3 ints labeling
-	 * 								the R vectors
-	 */
-	void build_supercell_to_primitive(
-			LatticeStructure::RegularBareGrid const & primitiveCellGrid,
-			LatticeStructure::RegularBareGrid const & supercellGrid,
-			std::vector<LatticeStructure::Atom> const & atomsUC,
-			std::vector< std::vector< std::pair<int,std::vector<int> > > > & rSuperCellToPrimitve) const;
-
 	void clean_displacement_potential();
 
-	void set_R_vectors();
-
-	/**
-	 * This method subtracts from the potentialDispl the periodically repeated one of the prestive unit cell.
-	 */
-	void constuct_potential_variation(
-			std::vector<double> const & potentialUC,
-			int nRSC,
-			LatticeStructure::RegularBareGrid const & unitcellGrid,
-			LatticeStructure::RegularBareGrid const & supercellGrid,
-			std::vector< std::vector<double> > & potentialDispl);
+	void symmetry_expand_displacement_data(
+			LatticeStructure::Symmetry const & siteSymmetry,
+			std::vector<int> symmetryGroupIndices,
+			std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> const & potentialChange,
+			Auxillary::Multi_array<double,2> & deltaVRegularSymExpanded,
+			Auxillary::Multi_array<std::complex<double>,4> & deltaVRadialSymExpanded) const;
 
 	void symmetrize_periodic_dvscf_q(
 			std::vector<double> const & qpoints,
@@ -169,6 +166,7 @@ private:
 			std::vector<double> const & qpoints,
 			Auxillary::alignedvector::CV &dvscf_q) const;
 
+	int R_vector_to_index(int Rx, int Ry, int Rz) const;
 };
 
 } /* namespace PhononStructure */

@@ -20,6 +20,7 @@
 #include "VASPInterface.h"
 #include "IOMethods/InputFile.h"
 #include "IOMethods/ReadVASPxmlFile.h"
+#include "AtomicSite/AtomSiteData.h"
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <map>
@@ -361,10 +362,14 @@ VASPInterface::read_forces(
 void VASPInterface::read_electronic_potential(
 		std::string root_directory,
 		std::vector<int> & dims,
-		std::vector<double> & output)
+		LatticeStructure::DataRegularAndRadialGrid<double> & output)
 {
 	boost::filesystem::path rootdir(root_directory);
-	potReader_.read_scf_potential( (rootdir / "LOCPOT").string(), dims, output );
+	std::vector<double> regularGridPartV;
+	potReader_.read_scf_potential( (rootdir / "LOCPOT").string(), dims, regularGridPartV );
+	std::vector<AtomicSite::AtomSiteData> radialPart;
+	Auxillary::alignedvector::DV regularGridPart(regularGridPartV.begin(), regularGridPartV.end());
+	output.initialize(std::move(regularGridPart), std::move(radialPart));
 }
 
 void

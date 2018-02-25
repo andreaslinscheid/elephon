@@ -71,15 +71,5 @@ SymmetryOperation::apply( std::vector<double> & v, bool latticePeriodic ) const
 	}
 };
 
-void
-SymmetryOperation::rotate_cart( std::vector<double> & v ) const
-{
-	assert(v.size()==3);
-	auto b = v;
-	for ( int i = 0; i < 3; ++i)
-		v[i] = ptgCart[i*3+0]*b[0]+ptgCart[i*3+1]*b[1]+ptgCart[i*3+2]*b[2];
-};
-
-
 } /* namespace symmetry */
 } /* namespace elephon */

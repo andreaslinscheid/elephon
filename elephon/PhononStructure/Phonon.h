@@ -55,14 +55,14 @@ public:
 	 * Diagonalize the Fourier transformed matrix of force constants at a list of q vectors.
 	 *
 	 * @param q				List of q vectors in the layout q1x, q1y, q1z, q2x ...
-	 * @param w2			A vector that will be resized to fit the phonon frequencies in units of THz.
-	 * 						Layout is q1 mode 0, mod 1 ... mode nM, q2 ...
-	 * @param eigenModes	A vector that will be resized to fit the dynamical matrices.
-	 * 						Layout is (q, mode mu, mode nu) such that nu is fastest and q is slowest running.
+	 * @param w2			Resized to fit the phonon frequencies in units of THz.
+	 * 						Layout is [q_index][mode_index]
+	 * @param eigenModes	Resized to fit the dynamical matrices.
+	 * 						Layout is [q_index][mode mu][mode nu].
 	 */
 	void compute_at_q(std::vector<double> const & q,
-			Auxillary::alignedvector::DV & w2,
-			Auxillary::alignedvector::ZV & eigenModes) const;
+			Auxillary::Multi_array<double,2> & w2,
+			Auxillary::Multi_array<std::complex<double>,3> & eigenModes) const;
 
 	/**
 	 * Similar to compute_at_q except that not the phonon mode, but its derivative.
@@ -78,8 +78,8 @@ public:
 	 * Other name for compute_at_q to conform with templated band structure calculations.
 	 */
 	void evaluate(std::vector<double> const & q,
-			Auxillary::alignedvector::DV & w2,
-			Auxillary::alignedvector::ZV & eigenModes) const;
+			Auxillary::Multi_array<double,2> & w2,
+			Auxillary::Multi_array<std::complex<double>,3> & eigenModes) const;
 
 	/**
 	 * Get number of modes.

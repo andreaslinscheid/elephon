@@ -20,15 +20,15 @@
 #ifndef ELEPHON_PHONONSTRUCTURE_POTENTIALCHANGEIRREDDISPLACEMENT_H_
 #define ELEPHON_PHONONSTRUCTURE_POTENTIALCHANGEIRREDDISPLACEMENT_H_
 
-#include "symmetry/SymmetryOperation.h"
 #include "Auxillary/AlignedVector.h"
+#include "LatticeStructure/DataRegularAndRadialGrid.h"
 #include <memory>
 #include <vector>
 
 namespace elephon
 {
 // forward declares
-namespace AtomicSite { class AtomSiteData; };
+namespace LatticeStructure { template<typename T> class DataRegularAndRadialGrid; };
 namespace LatticeStructure { class RegularBareGrid; };
 namespace LatticeStructure { class UnitCell; };
 namespace LatticeStructure { class AtomDisplacement; };
@@ -96,14 +96,24 @@ public:
 	 * @param[in] supercellGrid
 	 */
 	void initialize(
-			std::shared_ptr<const LatticeStructure::AtomDisplacement> atomDispl,
-			std::vector<double> const & regularGridGroundStatePotential,
-			std::vector<std::shared_ptr<const AtomicSite::AtomSiteData>> radialGroundStatePotential,
-			std::vector<double> const & regularGridDisplacedPotential,
-			std::vector<std::shared_ptr<const AtomicSite::AtomSiteData>> radialDisplacedPotential,
+			LatticeStructure::AtomDisplacement const & atomDispl,
+			LatticeStructure::DataRegularAndRadialGrid<double> const & groundStatePotential,
+			LatticeStructure::DataRegularAndRadialGrid<double> const & displacedPotential,
 			std::shared_ptr<const LatticeStructure::RegularBareGrid> unitcellGrid,
 			std::shared_ptr<const LatticeStructure::RegularBareGrid> supercellGrid,
 			std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> scPrimMap );
+
+	/**
+	 * Get number of radial data elements stored in the object.
+	 * @return	the number of radial data elements
+	 */
+	int get_max_num_radial_elements() const;
+
+	/**
+	 * Get number of angular momentum channels of the data stored in the object.
+	 * @return	the number of angular momentum channels
+	 */
+	int get_max_num_angular_moment_channels() const;
 
 	/**
 	 * Re-shuffel the internal data according to the symmetry operation sop.
@@ -122,9 +132,7 @@ public:
 
 private:
 
-	Auxillary::alignedvector::DV regularGridData_;
-
-	std::vector<AtomicSite::AtomSiteData> radialGridData_;
+	LatticeStructure::DataRegularAndRadialGrid<double> data_;
 };
 
 } /* namespace PhononStructure */

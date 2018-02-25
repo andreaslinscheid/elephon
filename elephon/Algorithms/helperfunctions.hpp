@@ -20,7 +20,7 @@
 #ifndef ELEPHON_ALGORITHMS_HELPERFUNCTIONS_HPP_
 #define ELEPHON_ALGORITHMS_HELPERFUNCTIONS_HPP_
 
-#include "LatticeStructure/Tetrahedron.h"
+#include "Auxillary/AlignedVector.h"
 #include <complex>
 #include <vector>
 #include <algorithm>
@@ -138,11 +138,11 @@ triangle_area(std::vector<T> const & p1,
  * 						The 4 ith elements are interpolated to the ith element of \ref interpolData
  * @param interpolData
  */
-template<typename T>
+template<typename T, class Tetrahedron>
 void
 interpolate_within_single_tetrahedron(
 		std::vector<double> const & ptsInTetra,
-		LatticeStructure::Tetrahedron const & tetra,
+		Tetrahedron const & tetra,
 		std::vector<std::vector<T>> const & cornerData,
 		std::vector<T> & interpolData)
 {
@@ -207,6 +207,63 @@ determinant_3by3_matrix(M const & mat)
 	return 	-matrix[0][2]*matrix[1][1]*matrix[2][0] + matrix[0][1]*matrix[1][2]*matrix[2][0] +
 			 matrix[0][2]*matrix[1][0]*matrix[2][1] - matrix[0][0]*matrix[1][2]*matrix[2][1] -
 			 matrix[0][1]*matrix[1][0]*matrix[2][2] + matrix[0][0]*matrix[1][1]*matrix[2][2];
+}
+
+/**
+ * Apply the inverse of the rotation operator to the data at a given point in 3D space.
+ *
+ * Since the symmetry operation rotates a position vector, after a transformation, the data at
+ * a given point belongs to the target of the transformation. Hence for a forward transformation
+ * the data field transform with the inverse.
+ *
+ * @param[in,out] vectorFieldBegin	Iterator pointing to the beginning of the range. 3 consqutive elements
+ * 									are field value in x,y,z respectively. std::distance(vectorFieldBegin, vectorFieldEnd) >= 3 required.
+ * 									The range must be evenly devidible by 3.
+ * @param[in,out] vectorFieldEnd	Iterator pointing to the element behind the last of the range.
+ * 									std::distance(vectorFieldBegin, vectorFieldEnd) >= 3 required.
+ * 									The range must be evenly devidible by 3.
+ * @param[in] mat					A type with consecutive storage that holds the rotation matrix in c-layout.
+ * @param[in] map					A class that implements the operator[] and tells for a given index i where i ends up
+ */
+template<class iterator, class M, class indexMap>
+void transform_vector_field_cart(
+		iterator vectorFieldBegin, iterator vectorFieldEnd,
+		M const & mat,
+		indexMap const & map)
+{
+	assert(mat.size() == 9);
+	typename M::value_type matrix[3][3];
+	std::copy(mat.data(), mat.data()+mat.size(), &matrix[0][0]);
+	assert((std::distance(vectorFieldBegin, vectorFieldEnd)%3 == 0)&&(std::distance(vectorFieldBegin, vectorFieldEnd)>0));
+	const int nD = std::distance(vectorFieldBegin, vectorFieldEnd)/3;
+	typedef typename std::iterator_traits<iterator>::value_type T;
+
+	T LocalBuffer[3];
+	Auxillary::alignedvector::aligned_vector<T> bufferField(vectorFieldBegin, vectorFieldEnd);
+	// re-shuffle the vector field and rotate the vector at each point
+	for (int iD = 0 ; iD < nD; ++iD)
+	{
+		LocalBuffer[0] = bufferField[iD*3+0];
+		LocalBuffer[1] = bufferField[iD*3+1];
+		LocalBuffer[2] = bufferField[iD*3+2];
+		*(vectorFieldBegin++) = matrix[0][0]*LocalBuffer[0] + matrix[0][1]*LocalBuffer[1] + matrix[0][2]*LocalBuffer[2];
+		*(vectorFieldBegin++) = matrix[1][0]*LocalBuffer[0] + matrix[1][1]*LocalBuffer[1] + matrix[1][2]*LocalBuffer[2];
+		*(vectorFieldBegin++) = matrix[2][0]*LocalBuffer[0] + matrix[2][1]*LocalBuffer[1] + matrix[2][2]*LocalBuffer[2];
+	}
+}
+
+/**
+ * Compute the integer closest to a floating point number.
+ *
+ * @tparam a floating point type
+ *
+ * @param[in] v	the floating point number
+ * @return	the integer closest to the floating point number.
+ */
+template<typename T>
+int nint(T v)
+{
+	return std::floor(v+T(0.5));
 }
 
 } /* namespace helperfunctions */

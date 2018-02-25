@@ -22,6 +22,7 @@
 #include "fixtures/MockStartup.h"
 #include "PhononStructure/Phonon.h"
 #include "fixtures/scenarios.h"
+#include "Auxillary/AlignedVector.h"
 #include <fstream>
 
 BOOST_AUTO_TEST_SUITE( Phonon )
@@ -59,14 +60,14 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 			refData[i*3+j] = data[3+j];
 	}
 
-	elephon::Auxillary::alignedvector::DV w;
-	elephon::Auxillary::alignedvector::ZV eigenmodes;
+	elephon::Auxillary::Multi_array<double,2> w;
+	elephon::Auxillary::Multi_array<std::complex<double>,3> eigenmodes;
 	ph->compute_at_q( qVect, w, eigenmodes );
 	assert( w.size() == ph->get_num_modes()*nq );
 	for ( int iq = 0; iq < nq; ++iq)
 	{
 		for ( int mu = 0; mu < ph->get_num_modes() ; ++mu)
-			BOOST_CHECK_SMALL(refData[iq*ph->get_num_modes()+mu]-w[iq*ph->get_num_modes()+mu],0.1);
+			BOOST_CHECK_SMALL(refData[iq*ph->get_num_modes()+mu]-w[iq][mu],0.1);
 		}
 
 	for ( int iq = 0; iq < nq; ++iq)
@@ -74,9 +75,9 @@ BOOST_AUTO_TEST_CASE( Al_phonon_bands_gamma )
 		std::vector<std::complex<double>> u1(3),u2(3),u3(3);
 		for ( int i = 0; i < 3; ++i)
 		{
-			u1[i] = eigenmodes[iq*9+0*3+i];
-			u2[i] = eigenmodes[iq*9+1*3+i];
-			u3[i] = eigenmodes[iq*9+2*3+i];
+			u1[i] = eigenmodes[iq][0][i];
+			u2[i] = eigenmodes[iq][1][i];
+			u3[i] = eigenmodes[iq][2][i];
 		}
 
 		BOOST_CHECK_CLOSE( std::abs(u1[0]*u1[0]+u1[1]*u1[1]+u1[2]*u1[2]) , 1.0, 0.02);
@@ -100,8 +101,9 @@ BOOST_AUTO_TEST_CASE( Al_phonon_derivative )
 	for ( int i = 0 ; i < nq ; ++i)
 		qVect[i*3] = 0.5*double(i)/double(nq-1);
 
-	elephon::Auxillary::alignedvector::DV omega, domegadq;
-	elephon::Auxillary::alignedvector::ZV em;
+	elephon::Auxillary::alignedvector::DV domegadq;
+	elephon::Auxillary::Multi_array<double,2> omega;
+	elephon::Auxillary::Multi_array<std::complex<double>,3> em;
 	ph->compute_at_q(qVect, omega, em);
 	ph->evaluate_derivative(qVect, domegadq);
 
@@ -119,7 +121,7 @@ BOOST_AUTO_TEST_CASE( Al_phonon_derivative )
 					(v1[0]*domegadq[(iq*ph->get_num_modes()+mu)*3]
 					+ v1[1]*domegadq[(iq*ph->get_num_modes()+mu)*3+1]
 					+ v1[2]*domegadq[(iq*ph->get_num_modes()+mu)*3+2])/norm;
-			double simplyDeriv = (omega[(iq+1)*ph->get_num_modes()+mu] - omega[iq*ph->get_num_modes()+mu])
+			double simplyDeriv = (omega[iq+1][mu] - omega[iq][mu])
 					/ norm;
 
 			diff += std::abs(directionDerv - simplyDeriv) / (nq-2);

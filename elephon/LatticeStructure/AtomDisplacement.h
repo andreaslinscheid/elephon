@@ -66,6 +66,8 @@ public:
 
 	void scale_position(double scaleX, double scaleY, double scaleZ);
 
+	void set_position(std::vector<double> pos);
+
 	void transform(symmetry::SymmetryOperation const& sop);
 
 	void transform_direction(symmetry::SymmetryOperation const& sop);

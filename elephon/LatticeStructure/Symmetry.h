@@ -69,12 +69,16 @@ public:
 				typename std::vector<T>::iterator fieldDirectSpaceEnd,
 				bool latticePeriodic) 								const;
 
-	void rotate_cartesian(int isym, std::vector<double>::iterator fieldCartBegin,
-						std::vector<double>::iterator fieldCartEnd) const;
+	template<class iterator>
+	void rotate_cartesian(
+			int isym,
+			iterator fieldCartBegin,
+			iterator fieldCartEnd) const;
 
+	template<class iterator>
 	void rotate_matrix_cartesian(int isym,
-			std::vector<double>::iterator matrixFieldCartBegin,
-			std::vector<double>::iterator matrixFieldCartEnd) const;
+			iterator matrixFieldCartBegin,
+			iterator matrixFieldCartEnd) const;
 
 	int get_index_inverse(int isym) const;
 

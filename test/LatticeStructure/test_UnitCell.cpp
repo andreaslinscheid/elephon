@@ -44,32 +44,6 @@ load_unit_cell_Al_vasp_conventional()
 	return uc;
 }
 
-BOOST_AUTO_TEST_CASE( Generate_Al_fcc_primitive_displacements )
-{
-	elephon::test::fixtures::MockStartup ms;
-	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive";
-	std::string input = std::string()+
-			"root_dir = "+testd.string()+"\n";
-	elephon::IOMethods::InputOptions opts;
-	ms.simulate_elephon_input(
-			(testd / "infile").string(),
-			input,
-			opts);
-
-	auto loader = std::make_shared<elephon::IOMethods::VASPInterface>(opts);
-	elephon::LatticeStructure::UnitCell uc;
-	loader->read_unit_cell(testd.string(), 1e-6, uc);
-
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDisplacements;
-	std::vector<int> mapRedToIrred, mapSymRedToIrred;
-	std::vector<std::vector<int>> mapIrredToRed, mapSymIrredToRed;
-	uc.generate_displacements( 0.01,
-			/*bool symmetricDisplacement = */ true,
-			irreducibleDisplacements);
-
-	BOOST_REQUIRE_EQUAL(irreducibleDisplacements.size(),1);
-}
-
 BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 {
 	auto uc = load_unit_cell_Al_vasp_conventional();
@@ -83,17 +57,4 @@ BOOST_AUTO_TEST_CASE( Build_Al_supercell )
 	BOOST_REQUIRE( supercell.get_atoms_list().size() == 8 );
 }
 
-BOOST_AUTO_TEST_CASE( Generate_Al_displacements )
-{
-	auto uc = load_unit_cell_Al_vasp_conventional();
-
-	std::vector<elephon::LatticeStructure::AtomDisplacement> irreducibleDisplacements;
-	std::vector<int> mapRedToIrred, mapSymRedToIrred;
-	std::vector<std::vector<int>> mapIrredToRed, mapSymIrredToRed;
-	uc.generate_displacements( 0.01,
-			/*bool symmetricDisplacement = */ false,
-			irreducibleDisplacements);
-
-	//how to test this?
-}
 BOOST_AUTO_TEST_SUITE_END()
