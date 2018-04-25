@@ -121,7 +121,8 @@ public:
 	virtual void read_electronic_potential(
 			std::string root_directory,
 			std::vector<int> & dims,
-			LatticeStructure::DataRegularAndRadialGrid<double> & output) = 0;
+			Auxillary::alignedvector::DV & regularGrid,
+			std::vector<AtomicSite::AtomSiteData> & radialPart) = 0;
 
 	virtual void read_band_structure(
 			std::string root_directory,

@@ -97,6 +97,17 @@ public:
 	int get_num_symmetries_no_T_rev() const;
 
 	/**
+	 * Report symmetry operations from the group that do not leave a vector invariant.
+	 *
+	 * The point is taken without periodicity. This means symmetry operations that transform p->p+G are also
+	 * discarded. TODO consider the case that p -> p+G
+	 *
+	 * @param[in] point		must be 3 component vector with x,y,z components of the vector that will be left invariant.
+	 * @return			a list of symmetry indices of the old group that were removed.
+	 */
+	std::vector<int> get_list_incompatible_symops_in_group(std::vector<double> const& point) const;
+
+	/**
 	 * Remove symmetry operations from the set that do not leave a vector invariant.
 	 *
 	 * The point is taken without periodicity. This means symmetry operations that transform p->p+G are also

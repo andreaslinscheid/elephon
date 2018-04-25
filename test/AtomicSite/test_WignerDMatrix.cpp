@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	{
 
 		elephon::AtomicSite::WignerDMatrix D0;
-		D0.initialize(0, alpha, beta, gamma);
+		D0.initialize(0, alpha, beta, gamma, /* proper rotatation = */true);
 		BOOST_CHECK_CLOSE(std::real(D0(0,0)), 1.0, 1e-10); // scalar
 		BOOST_CHECK_CLOSE(std::imag(D0(0,0)), 0.0, 1e-10);
 
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 
 		int l = 1;
 		elephon::AtomicSite::WignerDMatrix D1;
-		D1.initialize(l, alpha, beta, gamma);
+		D1.initialize(l, alpha, beta, gamma, /* proper rotatation = */ true);
 		std::vector<std::complex<double>> result(3*3);
 
 		// examples from Wikipedia [https://en.wikipedia.org/wiki/Wigner_D-matrix]
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 		l = 2;
 		assert(smallD.size() == (2*l+1)*(2*l+1));
 		elephon::AtomicSite::WignerDMatrix D2;
-		D2.initialize(l, alpha, beta, gamma);
+		D2.initialize(l, alpha, beta, gamma, /* proper rotatation = */true);
 		for (int m = -l ; m <= l; ++m )
 			for (int mp = -l ; mp <= l; ++mp )
 			{

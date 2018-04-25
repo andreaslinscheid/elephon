@@ -93,9 +93,24 @@ public:
 	int get_lat_frac_trans(int i) const;
 
 	template<class VT, class Grid>
-	void transform_field_regular_grid(
+	void transform_scalar_field_regular_grid(
 			Grid const & grid,
 			VT & functionData) const;
+
+	/**
+	 * Apply this symmetry operation to vector field data.
+	 *
+	 * @param[in] grid					Regular grid on which the function data is defined.
+	 * @param[in,out] functionData		If transposeFunctionData == false, then we expect for each grid point 3 consecutive values
+	 * 									with the vector x,y and z data. If transposeFunctionData == true, then, instead, we expect
+	 * 									for each x, y and z the entire block of data for each grid value.
+	 * @param[in] transposeFunctionData	Choose if component or grid index is the fast running dimension in the data layout.
+	 */
+	template<class VT, class Grid>
+	void transform_vector_field_regular_grid(
+			Grid const & grid,
+			VT & functionData,
+			bool transposeFunctionData = false) const;
 
 	/**
 	 * Apply the inverse of the rotation operator to expansion coefficients of spherical harmonics.
@@ -105,13 +120,13 @@ public:
 	 *	 \f{eqnarray*}{
 	 *		 A(\bf{r}) & = & \sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}a_{l,m}(\vert{\bf{r}}\vert)Y_{l}^{m}(\frac{\bf{r}}{\vert\bf{r}\vert}) \\
 	 *		 \hat{R}\cdot A(\bf{r}) & = &\sum_{l=0}^{l_{{\rm Max}}}\sum_{m,m^{\prime}=-l}^{l}
-	 *		 									a_{l,m}(\vert{\bf{r}}\vert)D_{mm^{\prime}}^{l\ast}(\alpha,\beta,\gamma)Y_{l}^{m^{\prime}}(\frac{{\bf{r}}}{\vert\bf{r}\vert})\\
+	 *		 									a_{l,m}(\vert{\bf{r}}\vert)D_{m^{\prime}m}^{l}(\alpha,\beta,\gamma)Y_{l}^{m^{\prime}}(\frac{{\bf{r}}}{\vert\bf{r}\vert})\\
 	 *		 					&& \equiv A^{\prime}({\bf{r}})=\sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}a_{l,m}^{\prime}(\vert{{\bf{r}}}\vert)
 	 *		 					              Y_{l}^{m}(\frac{{\bf{r}}}{\vert{\bf{r}}\vert})
 	 *	 \f}
 	 *	 such that, by comparing linearly independent coefficients, we identify
 	 *	 \f{eqnarray*}{
-	 *	 	a_{l,m}^{\prime}(\vert{\bf{r}}\vert)=\sum_{m^{\prime}=-l}^{l}a_{l,m^{\prime}}(\vert{\bf r}\vert)D_{m^{\prime}m}^{l\ast}(\alpha,\beta,\gamma)
+	 *	 	a_{l,m}^{\prime}(\vert{\bf{r}}\vert)=\sum_{m^{\prime}=-l}^{l}D_{mm^{\prime}}^{l}(\alpha,\beta,\gamma)a_{l,m^{\prime}}(\vert{\bf r}\vert)
 	 *	  \f}
 	 *	  This method computes the array \f$a_{l,m}^{\prime}\f$ from the array \f$a_{l,m}\f$
 	 *
@@ -123,7 +138,7 @@ public:
 	 *										where for each l,m there numDataPerLM data elements to be transformed as a block.
 	 */
 	template<class VT>
-	void rotate_radial_data(
+	void rotate_radial_scalar_data(
 			int lMax,
 			int numDataPerLM,
 			VT & dataToBeTransformed) const;
@@ -132,12 +147,40 @@ public:
 	 * For the documentation, please see rotate_radial_data()
 	 */
 	template<class interator>
-	void rotate_radial_data(
+	void rotate_radial_scalar_data(
 			int lMax,
 			int numDataPerLM,
 			interator dataToBeTransformedBegin,
 			interator dataToBeTransformedEnd) const;
 
+	/**
+	 * Apply the inverse of the rotation operator to expansion coefficients of spherical harmonics.
+	 *
+	 * See rotate_radial_scalar_data() for details on the derivation on why we take in the inverse symmetry operation
+	 * that holds similarly for this vector data.
+	 * However, if the function is vector valued, we find
+	 *	 \f{eqnarray*}{
+	 *	 \hat{R}\cdot{\bf B}({\bf r}) & = & \sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}g\cdot{\bf b}(_{lm}(\vert{\bf r}\vert)
+	 *	 									\hat{R}\cdot Y_{l}^{m}(\frac{{\bf r}}{\vert{\bf r}\vert})\,,
+	 *	  \f}
+ 	 * and we find by the same analysis
+	 *	 \f{eqnarray*}{
+	 *	 {\bf b}_{lm}^{\prime}(\vert{\bf r}\vert) & = & g\cdot\sum_{m^{\prime}=-l}^{l}{\bf b}_{lm^{\prime}}(\vert{\bf r}\vert)
+	 *	 												D_{m^{\prime}m}^{l\ast}(\alpha,\beta,\gamma)\,.
+	 *	  \f}
+	 *
+	 * @param[in] lMax							The maximal l that the expansion includes. This it defines the range l=[0,lMax] and m=[-l,l] for each l.
+	 * @param[in] numDataPerLM					For each l and m=[=l,l] the data to be transformed as numDataPerLM elements.
+	 * @param[in,out] dataToBeTransformedBegin	Data with the expansion coefficients, first for x, then for y and finally for z, each channel
+	 * 											with a layout of l,m according to AtomicSite::SphericalHarmonicExpansion::angular_momentum_layout
+	 * @param[in] dataToBeTransformedEnd		Iterator pointing to after the end of the data block.
+	 */
+	template<class interator>
+	void rotate_radial_vector_data(
+			int lMax,
+			int numDataPerLM,
+			interator dataToBeTransformedBegin,
+			interator dataToBeTransformedEnd) const;
 private:
 
 	int ptgroup[9];
@@ -149,6 +192,10 @@ private:
 	double fracTransCart[3];
 
 	std::shared_ptr<const AtomicSite::ASSymmetry::RadSym> radSym_ptr_;
+
+	template<class Grid>
+	void compute_real_space_map(Grid const & grid,
+			std::vector<int> & inverseSymOpMap) const;
 };
 
 } /* namespace symmetry */

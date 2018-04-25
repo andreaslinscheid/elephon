@@ -94,16 +94,16 @@ SymmetryOperation::rotate_cart( iterator begin, iterator end ) const
 		T b[] = {*begin, *(begin+1), *(begin+2)};
 		for ( int i = 0; i < 3; ++i)
 		{
-			*(begin++) = ptgCart[i*3+0]*b[0]+ptgCart[i*3+1]*b[1]+ptgCart[i*3+2]*b[2];
+			*begin = ptgCart[i*3+0]*b[0]+ptgCart[i*3+1]*b[1]+ptgCart[i*3+2]*b[2];
+			++begin;
 		}
 	}
 };
 
-template<class VT, class Grid>
+template<class Grid>
 void
-SymmetryOperation::transform_field_regular_grid(
-		Grid const & grid,
-		VT & functionData) const
+SymmetryOperation::compute_real_space_map(Grid const & grid,
+		std::vector<int> & inverseSymOpMap) const
 {
 	// compute the fractional translation in units of grid points
 	std::vector<int> fracGridInv = {-Algorithms::helperfunctions::nint(fracTrans[0]*grid.get_grid_dim()[0]),
@@ -117,36 +117,92 @@ SymmetryOperation::transform_field_regular_grid(
 	auto indexMapLmbda = [&] (int cnsqGridIndex){
 		grid.get_reducible_to_xyz(cnsqGridIndex, xyzBuff);
 
-		// apply inverse symmetry operation on the lattice grid
+		// apply symmetry operation on the lattice grid
 		std::copy(fracGridInv.begin(), fracGridInv.end(), xyz.begin());
 		for (int i = 0 ; i < 3 ; ++i)
 			for (int j = 0 ; j < 3 ; ++j)
-				xyz[i] += this->get_lat_rot_matrix(j,i)*xyzBuff[j];
+				xyz[i] += this->get_lat_rot_matrix(i,j)*xyzBuff[j];
 
-		int index = grid.get_xyz_to_reducible(xyz);
+		int index = grid.get_xyz_to_reducible_periodic(xyz);
 		return index;
 	};
-	std::vector<double> ptgCartVec(&ptgCart[0], &ptgCart[0]+sizeof(ptgCart));
-	Algorithms::helperfunctions::transform_vector_field_cart(
-			functionData.begin(),
-			functionData.end(),
-			ptgCartVec,
-			indexMapLmbda);
+	inverseSymOpMap.resize(grid.get_num_points());
+	for (int i = 0 ; i < inverseSymOpMap.size(); ++i)
+	{
+		inverseSymOpMap[i] = indexMapLmbda(i);
+	}
+}
+
+template<class VT, class Grid>
+void
+SymmetryOperation::transform_scalar_field_regular_grid(
+		Grid const & grid,
+		VT & functionData) const
+{
+	assert(grid.get_num_points() == functionData.size());
+	std::vector<int> indexMapRealSpace;
+	this->compute_real_space_map(grid, indexMapRealSpace);
+	Algorithms::helperfunctions::transform_scalar_field_cart(
+			functionData.data(),
+			functionData.data()+functionData.size(),
+			indexMapRealSpace);
+}
+
+template<class VT, class Grid>
+void
+SymmetryOperation::transform_vector_field_regular_grid(
+		Grid const & grid,
+		VT & functionData,
+		bool transposeFunctionData) const
+{
+	assert(grid.get_num_points()*3 == functionData.size());
+	std::vector<int> indexMapRealSpace;
+	this->compute_real_space_map(grid, indexMapRealSpace);
+	std::vector<double> ptgCartVec(&ptgCart[0], &ptgCart[0]+sizeof(ptgCart)/sizeof(double));
+	if ( not transposeFunctionData )
+	{
+		Algorithms::helperfunctions::transform_vector_field_cart(
+				functionData.data(),
+				functionData.data()+functionData.size(),
+				ptgCartVec,
+				indexMapRealSpace);
+	}
+	else
+	{
+		for (int i = 0 ; i < 3 ; ++i)
+			Algorithms::helperfunctions::transform_scalar_field_cart(
+					functionData.data() + (functionData.size()/3)*i,
+					functionData.data() + (functionData.size()/3)*(i+1),
+					indexMapRealSpace);
+
+		// now apply the component rotation by block
+		Algorithms::LinearAlgebraInterface linalg;
+		const int blockSize = (functionData.size()/3);
+		auto buffer = functionData;
+//		linalg.matrix_matrix_prod(ptgCartVec,buffer,functionData,3,blockSize);
+		for (int i = 0 ; i < 3 ; ++i)
+		{
+			for (int id = 0 ; id < blockSize ; ++id)
+				*(functionData.data() + blockSize*i + id) = ptgCart[i*3+0]*(*(buffer.data() + id))
+															+ ptgCart[i*3+1]*(*(buffer.data() + blockSize+id))
+															+ ptgCart[i*3+2]*(*(buffer.data() + blockSize*2+id));
+		}
+	}
 };
 
 template<class VT>
 void
-SymmetryOperation::rotate_radial_data(
+SymmetryOperation::rotate_radial_scalar_data(
 		int lMax,
 		int numDataPerLM,
 		VT & dataToBeTransformed) const
 {
-	this->rotate_radial_data(lMax, numDataPerLM, dataToBeTransformed.begin(), dataToBeTransformed.end());
+	this->rotate_radial_scalar_data(lMax, numDataPerLM, dataToBeTransformed.begin(), dataToBeTransformed.end());
 }
 
 template<class interator>
 void
-SymmetryOperation::rotate_radial_data(
+SymmetryOperation::rotate_radial_scalar_data(
 		int lMax,
 		int numDataPerLM,
 		interator dataToBeTransformedBegin,
@@ -174,6 +230,33 @@ SymmetryOperation::rotate_radial_data(
 				decltype(*wignerD_ptr)(0.0), buffer.data(), numDataPerLM );
 
 		std::copy(buffer.begin(), buffer.begin()+numDataPerLM*nl, expansionData_ptr);
+	}
+}
+
+template<class interator>
+void
+SymmetryOperation::rotate_radial_vector_data(
+		int lMax,
+		int numDataPerLM,
+		interator dataToBeTransformedBegin,
+		interator dataToBeTransformedEnd) const
+{
+	const int blockSize = std::pow(lMax+1,2)*numDataPerLM;
+	assert(std::distance(dataToBeTransformedBegin, dataToBeTransformedEnd) == 3*blockSize);
+
+	// First we transform the data in each channel, then we apply the symmetry operation to the channels
+	this->rotate_radial_scalar_data(lMax,numDataPerLM, dataToBeTransformedBegin, dataToBeTransformedBegin + blockSize);
+	this->rotate_radial_scalar_data(lMax,numDataPerLM, dataToBeTransformedBegin + blockSize, dataToBeTransformedBegin + 2*blockSize);
+	this->rotate_radial_scalar_data(lMax,numDataPerLM, dataToBeTransformedBegin + 2*blockSize, dataToBeTransformedEnd);
+
+	typedef typename std::iterator_traits<interator>::value_type T;
+	Auxillary::alignedvector::aligned_vector<T> buffer(dataToBeTransformedBegin, dataToBeTransformedEnd);
+	for (int i = 0 ; i < 3 ; ++i)
+	{
+		for (int id = 0 ; id < blockSize ; ++id)
+			*(dataToBeTransformedBegin + blockSize*i + id) = *(buffer.data() + id)*ptgCart[i*3+0]
+														+ *(buffer.data() + blockSize+id)*ptgCart[i*3+1]
+														+ *(buffer.data() + blockSize*2+id)*ptgCart[i*3+2];
 	}
 }
 

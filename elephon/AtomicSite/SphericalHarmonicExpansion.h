@@ -88,6 +88,13 @@ public:
 	void transform(symmetry::SymmetryOperation const & sop);
 
 	/**
+	 * Change the center of the expansion.
+	 *
+	 * @param[in] center	The 3 x,y and z components of the new center.
+	 */
+	void set_center(std::vector<double> center);
+
+	/**
 	 * Obtain the radial grid
 	 *
 	 * @return	a constant reference to the radial grid.
@@ -103,21 +110,27 @@ public:
 	/**
 	 * Given a set of arbitrary points, interpolate the data by multiplying the spherical harmonic basis.
 	 *
+	 * @tparam VT container type with linear storage such as vector
+	 *
 	 * @param[in] coordinates			A list of 3N coordinates, x1,y1,z1,x2,...,zN of N points where the function should be interpolated to.
 	 * @param[out] interpolated_data	Resized to fit the N data values of the function at the location of the N points.
 	 */
+	template<class VT>
 	void interpolate(
-			std::vector<double> const & coordinates,
+			VT const & coordinates,
 			Auxillary::alignedvector::ZV & interpolated_data) const;
 
 	/**
 	 * Given a set of arbitrary points, interpolate the data by multiplying the spherical harmonic basis.
 	 *
+	 * @tparam VT container type with linear storage such as vector
+	 *
 	 * @param[in] coordinates			A list of 3N coordinates, x1,y1,z1,x2,...,zN of N points where the function should be interpolated to.
 	 * @param[out] interpolated_data	Must be allocated to the size N. After calling it contains the N data values of the function at the location of the N points.
 	 */
+	template<class VT>
 	void interpolate(
-			std::vector<double> const & coordinates,
+			VT const & coordinates,
 			std::complex<double> * interpolated_data) const;
 
 	/**

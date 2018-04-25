@@ -27,9 +27,11 @@ namespace LatticeStructure
 template<typename T>
 void
 DataRegularAndRadialGrid<T>::initialize(
+		LatticeStructure::RegularBareGrid regularGrid,
 		Auxillary::alignedvector::aligned_vector<T> regularGridData,
 		std::vector<AtomicSite::AtomSiteData> radialGridData)
 {
+	regularGrid_ = std::move(regularGrid);
 	regularGridData_ = std::move(regularGridData);
 	radialGridData_ = std::move(radialGridData);
 }
@@ -48,14 +50,57 @@ template<typename T>
 int
 DataRegularAndRadialGrid<T>::get_max_num_angular_moment_channels() const
 {
-	int nChnlMax = 0;
+	auto lM = this->get_max_angular_moment();
+	return Auxillary::memlayout::angular_momentum_layout(lM+1,-lM-1);;
+}
+
+template<typename T>
+int
+DataRegularAndRadialGrid<T>::get_max_angular_moment() const
+{
+	int lmax = 0;
 	for (auto const & dv : radialGridData_)
+		lmax = std::max(lmax, dv.get_data().get_l_max());
+	return lmax;
+}
+
+template<typename T>
+void
+DataRegularAndRadialGrid<T>::transform(symmetry::SymmetryOperation const & sop)
+{
+	sop.transform_scalar_field_regular_grid(regularGrid_, regularGridData_);
+	// apply to each atom data, then reshuffle the atoms
+	for (auto & ad : radialGridData_)
+		ad.edit_data().transform(sop);
+
+	// todo this logic below is already implemented in the atom symmetry mappings
+	// unfortunately its not easy to get this information here without changing the logic of how
+	// a symmetry operation class works.
+	std::map<LatticeStructure::Atom,int> lookup;
+	for (int ia = 0 ; ia < radialGridData_.size(); ++ia)
+		lookup.insert(std::make_pair(radialGridData_[ia].get_atom(), ia));
+
+	std::vector<int> symMap(radialGridData_.size()); // tells where atom index i was before applying the symmetry operation
+	for (int ia = 0 ; ia < radialGridData_.size(); ++ia)
 	{
-		auto lM = dv.get_data().get_l_max();
-		int nchnl = Auxillary::memlayout::angular_momentum_layout(lM+1,-lM-1);
-		nChnlMax = std::max(nchnl,nChnlMax);
+		auto a = radialGridData_[ia].get_atom();
+		a.transform(sop);
+		auto ret = lookup.find(a);
+		if (ret == lookup.end())
+			throw std::logic_error(" awkwardly doubled atom symmetry mapping failed");
+		symMap[ia] = ret->second;
 	}
-	return nChnlMax;
+
+	// since the atoms are mapped into each other and we keep the order, only the data
+	// has to be moved around
+	decltype(radialGridData_) radialGridDataBuffer(radialGridData_.size());
+	for (int ia = 0 ; ia < radialGridData_.size(); ++ia)
+	{
+		const int iaMapped = symMap[ia];
+		radialGridDataBuffer[ia].initialize(radialGridData_[ia].get_atom(), std::move(radialGridData_[iaMapped].edit_data()));
+	}
+
+	std::swap(radialGridData_,radialGridDataBuffer);
 }
 
 template<typename T>

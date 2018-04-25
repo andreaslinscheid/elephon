@@ -30,7 +30,8 @@ WignerDMatrix::initialize(
 		int angularQuantumNumber,
 		double alpha,
 		double beta,
-		double gamma)
+		double gamma,
+		bool isProperRotation)
 {
 	l_ = angularQuantumNumber;
 	dim_ = 2*l_+1;
@@ -44,11 +45,16 @@ WignerDMatrix::initialize(
 	assert(smallDMatrix.size() == dim_*dim_);
 	matrix_.assign(smallDMatrix.begin(), smallDMatrix.end());
 
+	// (-1)^l as the parity operator in the space of spherical harmonics
+	double pref = 1.0;
+	if (not isProperRotation)
+		pref = angularQuantumNumber % 2 == 0 ? 1.0 : -1.0;
+
 	for ( int m = -l_; m <= l_; ++m )
 		for ( int mp = -l_; mp <= l_; ++mp )
 		{
-			matrix_[this->angular_layout(m,mp)] *= std::complex<double>(std::cos(alpha*m), std::sin(alpha*m))
-							*std::complex<double>(std::cos(gamma*mp), std::sin(gamma*mp));
+			matrix_[this->angular_layout(m,mp)] *= pref*std::complex<double>(std::cos(alpha*m),std::sin(alpha*m))
+							*std::complex<double>(std::cos(gamma*mp),std::sin(gamma*mp));
 		}
 }
 

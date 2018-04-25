@@ -362,14 +362,13 @@ VASPInterface::read_forces(
 void VASPInterface::read_electronic_potential(
 		std::string root_directory,
 		std::vector<int> & dims,
-		LatticeStructure::DataRegularAndRadialGrid<double> & output)
+		Auxillary::alignedvector::DV & regularGrid,
+		std::vector<AtomicSite::AtomSiteData> & radialPart)
 {
 	boost::filesystem::path rootdir(root_directory);
 	std::vector<double> regularGridPartV;
 	potReader_.read_scf_potential( (rootdir / "LOCPOT").string(), dims, regularGridPartV );
-	std::vector<AtomicSite::AtomSiteData> radialPart;
 	Auxillary::alignedvector::DV regularGridPart(regularGridPartV.begin(), regularGridPartV.end());
-	output.initialize(std::move(regularGridPart), std::move(radialPart));
 }
 
 void

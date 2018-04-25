@@ -19,6 +19,10 @@
 
 #include "fixtures/MockStartup.h"
 #include "IOMethods/Input.h"
+#include "AtomicSite/AtomSiteData.h"
+#include "AtomicSite/SphericalHarmonicExpansion.h"
+#include "symmetry/SymmetryOperation.h"
+#include "fixtures/DataLoader.h"
 #include <fstream>
 #include <stdexcept>
 
@@ -98,6 +102,51 @@ MockStartup::write_kpath_file_fcc(std::string filename) const
 	file << content << std::endl;
 	file.close();
 }
+
+std::shared_ptr<const AtomicSite::AtomSiteData>
+MockStartup::get_mock_AtomSiteData()
+{
+	if (! this->mockAtomSiteConstantPlusCosX_)
+	{
+		std::vector<double> pos{0.25, 0.125, 0.0625};
+		LatticeStructure::Atom testAtom(20.0, "Bs", pos, {false, false, false});
+
+		AtomicSite::RadialGrid rgrid;
+		const int numRadPts = 50;
+		std::vector<double> gridPoints(numRadPts);
+		const double radius = 0.5;
+		for (int ir = 0 ; ir < gridPoints.size(); ++ir)
+			gridPoints[ir] = radius*std::pow((0.5+ir)/static_cast<double>(gridPoints.size()), 2);
+		rgrid.initialize(testAtom.get_position(), radius, std::move(gridPoints));
+
+		const int lmax = 5;
+		Auxillary::alignedvector::ZV angularData(std::pow(lmax+1,2)*numRadPts, std::complex<double>(0));
+		AtomicSite::SphericalHarmonicExpansion she;
+		she.initialize(lmax, std::move(angularData), std::move(rgrid));
+
+		// constant
+		for (int ir = 0 ; ir <numRadPts; ++ir)
+			she(ir, 0, 0) = M_PI;
+		// ~cos(x)
+		for (int ir = 0 ; ir <numRadPts; ++ir)
+			she(ir, 0, 1) = 2.0*M_PI;
+
+		std::shared_ptr<AtomicSite::AtomSiteData> tmp = std::make_shared<AtomicSite::AtomSiteData>();
+		tmp->initialize(std::move(testAtom), std::move(she));
+		mockAtomSiteConstantPlusCosX_ = tmp;
+	}
+	return mockAtomSiteConstantPlusCosX_;
+}
+
+symmetry::SymmetryOperation
+MockStartup::get_90Deg_rot_about_z_trivial_cell()
+{
+	DataLoader dl;
+	if ( ! symmetry_ )
+		symmetry_ = std::make_shared<LatticeStructure::Symmetry>(dl.create_partial_sym());
+	return symmetry_->get_sym_op(2);
+}
+
 
 } /* namespace fixtures */
 } /* namespace test */

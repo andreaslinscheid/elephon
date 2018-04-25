@@ -66,6 +66,25 @@ BOOST_AUTO_TEST_CASE( EqualScaleEveryDirection )
 	BOOST_CHECK_CLOSE(checkVector[0], oldVector[0], 1e-6);
 	BOOST_CHECK_CLOSE(checkVector[1], oldVector[1], 1e-6);
 	BOOST_CHECK_CLOSE(checkVector[2], oldVector[2], 1e-6);
+
+	// Check the supercell vector functionality
+	elephon::Auxillary::Multi_array<int,2> RVectors;
+	elephon::Auxillary::Multi_array<int,3> indexMapRVectors;
+	primSCCon.get_supercell_vectors(RVectors, indexMapRVectors);
+	BOOST_CHECK_EQUAL( scX*scY*scZ, RVectors.shape()[0]);
+	std::vector<int> occurences(scX*scY*scZ, 0);
+	for (int iR = 0 ; iR < RVectors.shape()[0]; ++iR)
+	{
+		int consq =  RVectors[iR][0] + scY*(RVectors[iR][1]+scZ*RVectors[iR][2]);
+		BOOST_REQUIRE((consq>=0) && (consq<scX*scY*scZ));
+		occurences[consq]++;
+		auto R = primSCCon.get_supercell_vector(iR);
+		for (int i = 0 ; i < 3; ++i)
+			BOOST_CHECK_EQUAL(R[i], RVectors[iR][i]);
+		BOOST_CHECK_EQUAL(indexMapRVectors[RVectors[iR][0]][RVectors[iR][1]][RVectors[iR][2]], iR);
+	}
+
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()

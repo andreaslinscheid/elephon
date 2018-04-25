@@ -109,23 +109,27 @@ AtomDisplacementCollection::get_irreducible_displacements() const
 int
 AtomDisplacementCollection::get_num_red_displacements_for_atom(int atomIndex) const
 {
-	assert((atomIndex>=0)&&(atomIndex<redDispl_.size()));
-	return redDispl_[atomIndex].size();
+	assert((atomIndex>=0) && (atomIndex<mapReducibleToIrreducibleAtoms_.size()));
+	const int irredAtomIndex = mapReducibleToIrreducibleAtoms_[atomIndex];
+	assert((irredAtomIndex>=0) && (irredAtomIndex<redDispl_.size()));
+	return redDispl_[irredAtomIndex].size();
 }
 
 std::vector<std::pair<int,int>>
 AtomDisplacementCollection::get_symmetry_relation_red_displacements_for_atom(int atomIndex) const
 {
-	assert((atomIndex>=0) && (atomIndex<mapReducibleToIrreducibleAtoms_.size()));
+	const int nRedDispl = this->get_num_red_displacements_for_atom(atomIndex);
 	const int irredAtomIndex = mapReducibleToIrreducibleAtoms_[atomIndex];
-	const int nRedDispl = redDispl_[irredAtomIndex].size();
-	std::vector<std::pair<int,int>> result(nRedDispl);
-	for (int ird = 0; ird < nRedDispl; ++ird)
-	{
-		result[ird].first = redToIrredDispl_[irredAtomIndex][ird];
-		const int symRedToIrred = symRedToIrredDispl_[irredAtomIndex][ird];
-		result[ird].second = symIrredToRedDispl_[irredAtomIndex][result[ird].first][symRedToIrred];
-	}
+	std::vector<std::pair<int,int>> result(nRedDispl, std::make_pair(-1,-1));
+
+	for (int irred = 0 ; irred < irredDispl_[irredAtomIndex].size(); ++irred)
+		for (int displStarIndex = 0; displStarIndex < symIrredToRedDispl_[irredAtomIndex][irred].size(); ++displStarIndex)
+		{
+			const int reducibleIndex = irredToRedDispl_[irredAtomIndex][irred][displStarIndex];
+			result[reducibleIndex].first = irred;
+			result[reducibleIndex].second = symIrredToRedDispl_[irredAtomIndex][irred][displStarIndex];
+		}
+	assert(! std::any_of(result.begin(), result.end(), [] (std::pair<int,int> const & a){return (a.first < 0) || (a.second < 0);}));
 	return result;
 
 }

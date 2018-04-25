@@ -55,6 +55,13 @@ public:
 	int get_num_R() const;
 
 	/**
+	 * Return the radius of the sphere the grid samples.
+	 *
+	 * @return	supremum of the radial grid.
+	 */
+	double get_range_of_definition() const;
+
+	/**
 	 * Get the radius for radial point iR.
 	 * @param iR	Point number.
 	 * @return	The radius of the element referenced by iR.

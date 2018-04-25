@@ -37,6 +37,15 @@ class AtomSymmetryConnection
 {
 public:
 
+	/**
+	 * Initialize the data stored in this object.
+	 *
+	 * Establishes a symmetry mapping between atoms in the system, keeping track of the
+	 * set of irreducible atom indices and the information necessary to create the star of atoms.
+	 *
+	 * @param[in] atoms		A list of the atoms in the system.
+	 * @param[in] sym		The symmetry group of the system
+	 */
 	void initialize(
 			std::vector<Atom> const & atoms,
 			LatticeStructure::Symmetry const & sym);
@@ -72,7 +81,6 @@ public:
 	 */
 	bool check_atom_is_irreducible(int atomIndex) const;
 
-	int get_reducible_to_irreducible_atom_index(int atomIndex) const;
 private:
 
 	/// see symmetry::atom_transform_map()

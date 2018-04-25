@@ -33,10 +33,10 @@ namespace AtomicSite
  * See https://www.geometrictools.com/Documentation/EulerAngles.pdf
  * and https://en.wikipedia.org/wiki/Wigner_D-matrix
  *
- * @param rotationMatrix	C ordered unitary rotation matrix
- * @param alpha				angle of the second rotation about the z axis
- * @param beta				angle of the rotation about the y axis
- * @param gamma				angle of the first rotation about the z axis
+ * @param[in] rotationMatrix	C ordered unitary rotation matrix, interpreted as the an active rotation matrix
+ * @param[out] alpha			angle of the second rotation about the z axis, range -pi <= alpha < pi
+ * @param[out] beta				angle of the rotation about the y axis, range 0 <= beta < pi
+ * @param[out] gamma			angle of the first rotation about the z axis, range -pi <= gamma < pi
  */
 void eulerAngles(
 		std::vector<double> const & rotationMatrix,

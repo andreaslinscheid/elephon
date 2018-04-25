@@ -65,6 +65,8 @@ Forces::initialize(
 		assert(atomAndIrredIndex.first<indexMap_.shape()[0]);
 		indexMap_[atomAndIrredIndex.first][atomAndIrredIndex.second] = idispl;
 	}
+
+	displColl_ = displ;
 }
 
 Auxillary::Multi_array<double,2> const &
@@ -72,6 +74,60 @@ Forces::get_forces_for_atom( int atomIndex, int irredDisplIndex) const
 {
 	assert((indexMap_[atomIndex][irredDisplIndex] >= 0) && (indexMap_[atomIndex][irredDisplIndex] < forceData_.size()));
 	return forceData_[indexMap_[atomIndex][irredDisplIndex]];
+}
+
+void
+Forces::site_symmetry_expand_data(LatticeStructure::Symmetry const & siteSymmetry,
+		 int primitiveAtomIndex, int supercellAtomIndex,
+		std::vector<LatticeStructure::Atom> supercellAtomsList,
+		Auxillary::Multi_array<double,3> & symExpandedForces ) const
+{
+	const int nRedDispl = displColl_->get_num_red_displacements_for_atom(primitiveAtomIndex);
+	const int nASC = supercellAtomsList.size();
+	symExpandedForces.resize(boost::extents[nRedDispl][nASC][3]);
+
+	// obtain a symmetry mapping of the local environment at atom 'primitiveAtomIndex'
+	// a.k.a 'supercellAtomIndex' that tells for each given symmetry operation where
+	// an atom in the supercell is mapped to.
+	assert((supercellAtomIndex>=0) && (supercellAtomIndex<supercellAtomsList.size()));
+	auto const centerAtomPosition = supercellAtomsList[supercellAtomIndex].get_position();
+	std::map<LatticeStructure::Atom,int> shiftedSCLookup;
+	for (int iASC = 0 ; iASC < nASC; ++iASC)
+	{
+		auto pos = supercellAtomsList[iASC].get_position();
+		for (int xi = 0 ; xi < 3; ++xi)
+			pos[xi] -= centerAtomPosition[xi];
+		supercellAtomsList[iASC].set_position(std::move(pos));
+		shiftedSCLookup.insert(std::make_pair(supercellAtomsList[iASC],iASC));
+	}
+
+	auto starDisplacements = displColl_->get_symmetry_relation_red_displacements_for_atom(primitiveAtomIndex);
+	for (int redDispl = 0 ; redDispl < starDisplacements.size() ; ++redDispl  )
+	{
+		const int irredDispl = starDisplacements[redDispl].first;
+		const int symIrredToRedDispl = starDisplacements[redDispl].second;
+
+		// in a first step, we copy the force to the right atom location, as taken to by the symmetry
+		// and in the second step, we transform the entire set in x,y and z using the symmetry operation
+		auto sop = siteSymmetry.get_sym_op(symIrredToRedDispl);
+		Auxillary::Multi_array<double,2> const & irredForce = this->get_forces_for_atom(primitiveAtomIndex,irredDispl);
+
+		for (int iASC = 0 ; iASC < nASC; ++iASC)
+		{
+			auto a_rot = supercellAtomsList[iASC];
+			a_rot.transform(sop);
+			auto it = shiftedSCLookup.find(a_rot);
+			if ( it == shiftedSCLookup.end() )
+				throw std::logic_error(std::string("Problem locating supercell atom ")+std::to_string(iASC)+
+						" from the point of view of primitive cell atom "+std::to_string(primitiveAtomIndex)+
+						" for sym-op no. " + std::to_string(symIrredToRedDispl));
+			assert((it->second>=0) && (it->second<nASC));
+			for (int xi = 0 ; xi < 3 ; ++xi)
+				symExpandedForces[redDispl][it->second][xi] = irredForce[iASC][xi];
+		}
+
+		siteSymmetry.rotate_cartesian(symIrredToRedDispl, &symExpandedForces[redDispl][0][0], &symExpandedForces[redDispl][0][0]+3*nASC);
+	}
 }
 
 int

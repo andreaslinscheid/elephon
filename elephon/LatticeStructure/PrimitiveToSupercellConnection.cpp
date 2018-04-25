@@ -33,12 +33,12 @@ namespace LatticeStructure
 template<typename T>
 struct cmp_vec
 {
-	cmp_vec(double latPrec) : latPrec_(latPrec) {};
+	cmp_vec(double latPrec = 0) : latPrec_(latPrec) {};
 
 	bool operator() (std::array<T,3> const & a, std::array<T,3> const & b) const
 	{
-		for ( int i = 3; i-- ; )
-			if ( std::abs(a[i]-b[i]) >= latPrec_ )
+		for ( int i = 0; i < 3 ; ++i )
+			if ( std::abs(a[i]-b[i]) > latPrec_ )
 				return a[i] < b[i];
 		return false;
 	};
@@ -83,18 +83,16 @@ PrimitiveToSupercellConnection::initialize(
 		lookupSupercell_.insert(std::make_pair(superCell->get_atoms_list()[ia], ia));
 
 	// to make the connection we have to work in cartesian coordinates. To make search efficient,
-	// we define a comparison function similar to the one of LatticeStructure::Atom
-	const double latPrec = primitiveCell_->get_atoms_list().front().get_position_precision();
-
+	// we define a comparison function similar to the one of LatticeStructure::Atom but for integer
 	indexRVectorMap_.resize(boost::extents[scaleX][scaleY][scaleZ]);
 	std::fill_n(indexRVectorMap_.data(), indexRVectorMap_.size(), -1);
-	std::set<std::array<int,3>, cmp_vec<int>> rvectors(latPrec);
+	std::set<std::array<int,3>, cmp_vec<int>> rvectors(0);
 	auto hint = rvectors.end();
 	for (int iRx = 0; iRx < scaleX; ++iRx)
 		for (int iRy = 0; iRy < scaleY; ++iRy)
 			for (int iRz = 0; iRz < scaleZ; ++iRz)
 			{
-				hint = rvectors.insert(hint, std::array<int,3>({iRx,iRy,iRz}));
+				hint = rvectors.insert(hint, {iRx,iRy,iRz});
 			}
 	Rvectors_.resize(boost::extents[rvectors.size()][3]);
 	int iR = 0;
@@ -113,8 +111,11 @@ PrimitiveToSupercellConnection::initialize(
 	{
 		std::array<int,3> R;
 		this->compute_get_equiv_atom_primitive(iaSC, R, superCellToPrimitveAtomIndex_[iaSC]);
-		for (int xi = 0 ; xi < 3; ++xi)
-			superCellToPrimitveRVector_[iaSC][xi] = R[xi];
+		// R may be negative, but here we require only positive elements using supercell-periodic boundary
+		// conditions.
+		superCellToPrimitveRVector_[iaSC][0] = R[0] < 0 ? R[0] + scaleX : R[0];
+		superCellToPrimitveRVector_[iaSC][1] = R[1] < 0 ? R[1] + scaleY : R[1];
+		superCellToPrimitveRVector_[iaSC][2] = R[2] < 0 ? R[2] + scaleZ : R[2];
 	}
 }
 
@@ -131,11 +132,14 @@ PrimitiveToSupercellConnection::discover_primitive_cell(
 
 void
 PrimitiveToSupercellConnection::get_supercell_vectors(
-		Auxillary::Multi_array<int,2> & Rvectors) const
+		Auxillary::Multi_array<int,2> & Rvectors,
+		Auxillary::Multi_array<int,3> & RVectorIndexMap) const
 {
 	assert(Rvectors_.size() > 0);
 	Rvectors.resize(boost::extents[Rvectors_.shape()[0]][3]);
 	std::copy(Rvectors_.data(), Rvectors_.data()+Rvectors_.size(), Rvectors.data());
+	RVectorIndexMap.resize(boost::extents[indexRVectorMap_.shape()[0]][indexRVectorMap_.shape()[1]][indexRVectorMap_.shape()[2]]);
+	std::copy(indexRVectorMap_.data(), indexRVectorMap_.data()+indexRVectorMap_.size(), RVectorIndexMap.data());
 }
 
 std::array<int,3>
@@ -206,59 +210,6 @@ PrimitiveToSupercellConnection::supercell_to_primitive_coordinates(std::vector<d
 }
 
 void
-PrimitiveToSupercellConnection::get_embedded_supercell_vectors(
-		Auxillary::Multi_array<int,2> & Rvectors,
-		std::array<int,3> & MaxEachDirSpace,
-		Auxillary::Multi_array<int,3> & MapRToIndex) const
-{
-	// for the currently implemented functionality, this is fairly easy.
-	this->get_supercell_vectors(Rvectors);
-
-	std::array<std::pair<int,int>, 3> dims;
-	for (int iR = 0; iR < Rvectors.shape()[0] ; ++iR)
-		for (int ix = 0; ix < 3; ++ix)
-		{
-			dims[ix].first = std::min(dims[ix].first, Rvectors[iR][ix]);
-			dims[ix].second = std::max(dims[ix].second, Rvectors[iR][ix]);
-		}
-
-	// shift to the center
-	for (int ix = 0; ix < 3; ++ix)
-	{
-		MaxEachDirSpace[ix] = (dims[ix].second - dims[ix].first)/2 + 1;
-		for (int iR = 0; iR < Rvectors.shape()[0] ; ++iR)
-		{
-			Rvectors[iR][ix] -= (dims[ix].second + dims[ix].first)/2;
-			assert((-MaxEachDirSpace[ix] < Rvectors[iR][ix]) && (Rvectors[iR][ix] < MaxEachDirSpace[ix]));
-		}
-	}
-
-	// if we have unbalanced R vectors, add the inverse to the set and finally copy
-	// the balanced lattice vectors to Rvectors
-	const double latPrec = primitiveCell_->get_atoms_list().front().get_position_precision();
-	std::set<std::array<int,3>, cmp_vec<int> > balancedRset(latPrec);
-	for (int iRUB = 0 ;iRUB < Rvectors.shape()[0]; ++iRUB)
-	{
-		balancedRset.insert(std::array<int,3>({ Rvectors[iRUB][0],  Rvectors[iRUB][1],  Rvectors[iRUB][2]}));
-		balancedRset.insert(std::array<int,3>({-Rvectors[iRUB][0], -Rvectors[iRUB][1], -Rvectors[iRUB][2]}));
-	}
-	Rvectors.resize(boost::extents[balancedRset.size()][3]);
-	typedef boost::multi_array_types::extent_range range;
-	MapRToIndex.resize( boost::extents[range(-MaxEachDirSpace[0],MaxEachDirSpace[0])]
-									  [range(-MaxEachDirSpace[1],MaxEachDirSpace[1])]
-									  [range(-MaxEachDirSpace[2],MaxEachDirSpace[2])]);
-	std::fill_n(MapRToIndex.data(), MapRToIndex.size(), -1);
-	auto it = balancedRset.begin();
-	for (int iRB = 0 ;iRB < balancedRset.size(); ++iRB)
-	{
-		for (int ix = 0; ix < 3; ++ix)
-			Rvectors[iRB][ix] = (*it)[ix];
-		MapRToIndex[(*it)[0]][(*it)[1]][(*it)[2]] = iRB;
-		++it;
-	}
-}
-
-void
 PrimitiveToSupercellConnection::primitive_to_supercell_coordinates(std::vector<double> & vec) const
 {
 	this->primitive_to_supercell_coordinates_no_shift(vec);
@@ -285,19 +236,89 @@ PrimitiveToSupercellConnection::get_supercell_volume_factor() const
 }
 
 void
+PrimitiveToSupercellConnection::build_embedding_supercell(
+		LatticeStructure::RegularBareGrid const & primitiveCellGrid,
+		LatticeStructure::RegularBareGrid const & supercellGrid,
+		std::array<int,3> & minMaxEachDim,
+		Auxillary::Multi_array<int,2> & listRVectors,
+		Auxillary::Multi_array<int,3> & RVectorIndexMap,
+		LatticeStructure::RegularBareGrid & embeddingSuperCellGrid ) const
+{
+	const int nRSC = supercellGrid.get_num_points();
+
+	auto rVectorsSupercell = supercellGrid.get_all_vectors_grid();
+	this->supercell_to_primitive_coordinates_no_shift(rVectorsSupercell);
+
+	std::array<std::pair<int,int>,3> Rdims;
+	for ( int i = 0 ; i < 3 ; ++i )
+	{
+		Rdims[i].first = 0;
+		Rdims[i].second = 0;
+	}
+
+	Auxillary::Multi_array<int,2> latticeVector(boost::extents[nRSC][3]);
+	for ( int irSC = 0 ; irSC < nRSC ; ++irSC )
+		for ( int i = 0 ; i < 3 ; ++i )
+		{
+			latticeVector[irSC][i] = std::floor(rVectorsSupercell[irSC*3+i]+0.5);
+			// keep track of the minima and maxima of the lattice vectors in each direction
+			Rdims[i].first = std::min(Rdims[i].first, latticeVector[irSC][i]);
+			Rdims[i].second = std::max(Rdims[i].second, latticeVector[irSC][i]);
+
+		}
+
+	// we ensure that we choose a supercell for this purpose where the center is aligned with the primitive cell center.
+	// with the redefined cell, repeat min and max dimension
+	for ( int i = 0 ; i < 3 ; ++i )
+	{
+		const int dim = Rdims[i].second - Rdims[i].first + 1;//+1 because both borders are included
+		minMaxEachDim[i] = dim/2;
+	}
+
+	typedef boost::multi_array_types::extent_range range;
+	RVectorIndexMap.resize( boost::extents[range(-minMaxEachDim[0],minMaxEachDim[0]+1)]
+									  [range(-minMaxEachDim[1],minMaxEachDim[1]+1)]
+									  [range(-minMaxEachDim[2],minMaxEachDim[2]+1)]);
+	std::fill(RVectorIndexMap.data(), RVectorIndexMap.data()+RVectorIndexMap.size(),-1);
+
+	int nR = 0;
+		for ( int irSC = 0 ; irSC < nRSC ; ++irSC )
+		{
+			for ( int i = 0 ; i < 3 ; ++i )
+			{
+				const int dim = Rdims[i].second - Rdims[i].first + 1;//+1 because both borders are included
+				latticeVector[irSC][i] = latticeVector[irSC][i] > dim / 2 ? latticeVector[irSC][i] - dim : latticeVector[irSC][i];
+				latticeVector[irSC][i] = latticeVector[irSC][i] < -dim / 2 ? latticeVector[irSC][i] + dim : latticeVector[irSC][i];
+			}
+			if ( RVectorIndexMap[latticeVector[irSC][0]][latticeVector[irSC][1]][latticeVector[irSC][2]] < 0 )
+				RVectorIndexMap[latticeVector[irSC][0]][latticeVector[irSC][1]][latticeVector[irSC][2]] = nR++;
+		}
+
+	listRVectors.resize(boost::extents[nR][3]);
+	for (int iRx = -minMaxEachDim[0]; iRx <= minMaxEachDim[0]; ++iRx )
+		for (int iRy = -minMaxEachDim[1]; iRy <= minMaxEachDim[1]; ++iRy )
+			for (int iRz = -minMaxEachDim[2]; iRz <= minMaxEachDim[2]; ++iRz )
+				if ( RVectorIndexMap[iRx][iRy][iRz] >= 0 )
+				{
+					const int iR = RVectorIndexMap[iRx][iRy][iRz];
+					assert(iR < nR);
+					listRVectors[iR][0] = iRx;
+					listRVectors[iR][1] = iRy;
+					listRVectors[iR][2] = iRz;
+				}
+}
+
+void
 PrimitiveToSupercellConnection::build_supercell_to_primitive(
 		LatticeStructure::RegularBareGrid const & primitiveCellGrid,
 		LatticeStructure::RegularBareGrid const & supercellGrid,
 		std::vector<LatticeStructure::Atom> const & atomsUC,
+		std::array<int,3> const & minMaxEachDim,
 		Auxillary::Multi_array<int,2> & indexMap,
-		Auxillary::Multi_array<int,3> & latticeVectorMap,
-		std::array<std::pair<int,int>,3> & Rdims,
-		Auxillary::Multi_array<int,2> & listAllRVectors,
-		Auxillary::Multi_array<int,3> & RVectorIndexMap ) const
+		Auxillary::Multi_array<int,3> & latticeVectorMap) const
 {
 	const int nRSC = supercellGrid.get_num_points();
 	const double gp = primitiveCellGrid.get_grid_prec();
-
 	auto rVectorsSupercell = supercellGrid.get_all_vectors_grid();
 
 	const int nA = static_cast<int>(atomsUC.size());
@@ -330,9 +351,12 @@ PrimitiveToSupercellConnection::build_supercell_to_primitive(
 			{
 				latticeVectorMap[ia][irSC][i] = std::floor(rVectorsShiftedSupercell[irSC*3+i]+0.5);
 				double rPC = rVectorsShiftedSupercell[irSC*3+i] - latticeVectorMap[ia][irSC][i];
-				// keep track of the minima and maxima of the lattice vectors in each direction
-				Rdims[i].first = std::min(Rdims[i].first, latticeVectorMap[ia][irSC][i]);
-				Rdims[i].second = std::max(Rdims[i].second, latticeVectorMap[ia][irSC][i]);
+
+				// map back to the embedding cell
+				if ( latticeVectorMap[ia][irSC][i] < -minMaxEachDim[i])
+					latticeVectorMap[ia][irSC][i] += 2*minMaxEachDim[i]+1;
+				if ( latticeVectorMap[ia][irSC][i] > minMaxEachDim[i])
+					latticeVectorMap[ia][irSC][i] -= 2*minMaxEachDim[i]+1;
 
 				// numerical inaccuracy may occur. For margins within the grid precision,
 				// we take the liberty to reset so that the resulting vectors is strictly in
@@ -355,6 +379,7 @@ PrimitiveToSupercellConnection::build_supercell_to_primitive(
 			int cnsq = primitiveCellGrid.get_xyz_to_reducible_periodic(xyz);
 			assert( (cnsq >= 0) and ( cnsq < primitiveCellGrid.get_num_points() ) );
 			indexMap[ia][irSC] = cnsq;
+
 		}
 	}
 }

@@ -110,6 +110,12 @@ public:
 	int get_max_num_radial_elements() const;
 
 	/**
+	 * Get the maximal angular momentum quantum number that occurs.
+	 * @return The maximal angular momentum quantum number l.
+	 */
+	int get_max_angular_moment() const;
+
+	/**
 	 * Get number of angular momentum channels of the data stored in the object.
 	 * @return	the number of angular momentum channels
 	 */
@@ -129,6 +135,14 @@ public:
 	Auxillary::alignedvector::ZV::const_iterator begin_radial_data(int atomIndex) const;
 
 	Auxillary::alignedvector::ZV::const_iterator end_radial_data(int atomIndex) const;
+
+	/**
+	 *	Inspect the data stored in this object.
+	 *
+	 * @return constant reference to the internal data storage
+	 */
+	LatticeStructure::DataRegularAndRadialGrid<double> const &
+	view_data() const;
 
 private:
 

@@ -34,6 +34,9 @@ namespace test
 namespace fixtures
 {
 
+/**
+ * Class that creates data that is used in unit tests.
+ */
 class DataLoader
 {
 public:
@@ -56,6 +59,20 @@ public:
 				std::vector<double> gridshift) const;
 
 	elephon::LatticeStructure::Symmetry create_partial_sym() const;
+
+	/**
+	 * Create a symmetry group that features 90deg rotations
+	 * about all 3 axis for a trivial lattice of length 1 in each direction.
+	 *
+	 * @return The symmetry group object representing this group.
+	 */
+	elephon::LatticeStructure::Symmetry create_4fold_symmetry() const;
+
+	/**
+	 * Get hard coded force data from vasp for the 4x4x4 primitive supercell
+	 * @return	a vector set to the force data.
+	 */
+	std::vector<double> get_reference_force_data_vasp_Al_sc4x4x4() const;
 private:
 
 	void process_fileName(std::string & fileName ) const;

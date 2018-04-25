@@ -42,13 +42,15 @@ PotentialChangeIrredDisplacement::initialize(
 		std::shared_ptr<const LatticeStructure::RegularBareGrid> supercellGrid,
 		std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> scPrimMap)
 {
+#ifndef NDEBUG
 	const int nGridRegularGS = std::distance(groundStatePotential.begin_regular_data(), groundStatePotential.end_regular_data());
 	const int nGridRegularDS = std::distance(displacedPotential.begin_regular_data(), displacedPotential.end_regular_data());
 	assert(nGridRegularGS == unitcellGrid->get_num_points());
 	assert(nGridRegularDS == supercellGrid->get_num_points());
 	// check that both ways of specifying the number of primitive cells in a supercell is equal
-	assert(nGridRegularGS/nGridRegularDS
+	assert(nGridRegularDS/nGridRegularGS
 			== supercellGrid->get_num_points()/unitcellGrid->get_num_points());
+#endif
 
 	// regular grid data is first
 	auto ucDim = unitcellGrid->get_grid_dim();
@@ -68,7 +70,8 @@ PotentialChangeIrredDisplacement::initialize(
 	// build the unperturbed data in the supercell
 	std::vector<AtomicSite::AtomSiteData> radialGridData(displacedPotential.get_num_atom_data_sets(), AtomicSite::AtomSiteData());
 	Auxillary::Multi_array<int,2> Rvectors;
-	scPrimMap->get_supercell_vectors(Rvectors);
+	Auxillary::Multi_array<int,3> indexMapRvectors;
+	scPrimMap->get_supercell_vectors(Rvectors, indexMapRvectors);
 
 	for (int iAPC = 0; iAPC < groundStatePotential.get_num_atom_data_sets(); ++iAPC)
 	{
@@ -126,7 +129,7 @@ PotentialChangeIrredDisplacement::initialize(
 	// perform the calculation of the displaced site. The formula is given in the documentation of the main class.
 	// copy the grid but then set it back to the original position - this is where we will evaluate the data
 	auto rGridUperturbedPos = dispAtomData_ptr->get_data().get_radial_grid();
-	rGridUperturbedPos.set_center(dispAtomData_ptr->get_atom().get_position());
+	rGridUperturbedPos.set_center(radialGridData[displacedAtomIndexSupercell].get_atom().get_position());
 
 	AtomicSite::SphericalHarmonicExpansion shiftedBackFit;
 	shiftedBackFit.fit_to_data(
@@ -144,7 +147,7 @@ PotentialChangeIrredDisplacement::initialize(
 		*itUnperturb -= (*itPerturb);
 	}
 
-	data_.initialize(std::move(regularGridData), std::move(radialGridData));
+	data_.initialize(*supercellGrid, std::move(regularGridData), std::move(radialGridData));
 }
 
 int
@@ -154,9 +157,21 @@ PotentialChangeIrredDisplacement::get_max_num_radial_elements() const
 }
 
 int
+PotentialChangeIrredDisplacement::get_max_angular_moment() const
+{
+	return data_.get_max_angular_moment();
+}
+
+int
 PotentialChangeIrredDisplacement::get_max_num_angular_moment_channels() const
 {
 	return data_.get_max_num_angular_moment_channels();
+}
+
+void
+PotentialChangeIrredDisplacement::transform(symmetry::SymmetryOperation const & sop)
+{
+	data_.transform(sop);
 }
 
 Auxillary::alignedvector::DV::const_iterator
@@ -181,6 +196,12 @@ Auxillary::alignedvector::ZV::const_iterator
 PotentialChangeIrredDisplacement::end_radial_data(int atomIndex) const
 {
 	return data_.end_radial_data(atomIndex);
+}
+
+LatticeStructure::DataRegularAndRadialGrid<double> const &
+PotentialChangeIrredDisplacement::view_data() const
+{
+	return data_;
 }
 
 } /* namespace PhononStructure */

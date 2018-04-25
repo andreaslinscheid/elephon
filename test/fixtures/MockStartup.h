@@ -27,6 +27,10 @@
 
 namespace elephon
 {
+namespace AtomicSite {class AtomSiteData;};
+namespace symmetry { class SymmetryOperation; };
+namespace LatticeStructure { class Symmetry; } ;
+
 namespace test
 {
 namespace fixtures
@@ -46,6 +50,30 @@ public:
 	void write_kpath_file_fcc(std::string filename) const;
 
 	void write_kpath_file_tetra(std::string filename) const;
+
+	/**
+	 * Obtain sample data of an atom at site (0.25 0.125 0.0625) with
+	 * max l quantum number 5. Only the constant and the ~cos(x) channel
+	 * is set to PI and 2PI, respectively. The number of radial points is 50
+	 * and the radius of that data 0.5
+	 *
+	 * @return	shared ptr with the data
+	 */
+	std::shared_ptr<const AtomicSite::AtomSiteData> get_mock_AtomSiteData();
+
+	/**
+	 * Return the symmetry operation that rotates by 90 degrees about the z axis
+	 * for a trivial unit cell with extend of 1 in each direction.
+	 *
+	 * @return the symmetry operation.
+	 */
+	symmetry::SymmetryOperation get_90Deg_rot_about_z_trivial_cell();
+
+private:
+
+	std::shared_ptr<const AtomicSite::AtomSiteData> mockAtomSiteConstantPlusCosX_;
+
+	std::shared_ptr<LatticeStructure::Symmetry> symmetry_;
 };
 
 } /* namespace fixtures */

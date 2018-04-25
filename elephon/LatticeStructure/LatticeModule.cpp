@@ -267,10 +267,15 @@ void
 LatticeModule::direct_to_cartesian(double * p, int nelem) const
 {
 	assert( latticeMatrix_.size() == 9 );
+	assert(nelem%3 == 0);
 	double b[3];
-	std::copy(p,p+3,b);
-	for ( int i = 0 ; i < 3; i++)
-		p[i] = latticeMatrix_[i*3+0]*b[0]+latticeMatrix_[i*3+1]*b[1]+latticeMatrix_[i*3+2]*b[2];
+	for (int iele = 0 ; iele < nelem/3; ++iele)
+	{
+		double * p_this_ele = p + 3*iele;
+		std::copy(p_this_ele,p_this_ele+3,b);
+		for ( int i = 0 ; i < 3; i++)
+			p_this_ele[i] = latticeMatrix_[i*3+0]*b[0]+latticeMatrix_[i*3+1]*b[1]+latticeMatrix_[i*3+2]*b[2];
+	}
 }
 
 void LatticeModule::direct_to_cartesian(std::vector<double> & v) const

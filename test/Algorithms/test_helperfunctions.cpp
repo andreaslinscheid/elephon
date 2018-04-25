@@ -45,7 +45,7 @@ test_transform_vector_field(
 
 	double sumDiff = 0.0;
 	for (int i = 0 ; i < grid.get_num_points(); ++i)
-		sumDiff += (field[i*3+1] - (xVal*map[i])/grid.get_grid_dim()[0]);
+		sumDiff += (field[map[i]*3+1] + (xVal*i)/grid.get_grid_dim()[0]);
 	BOOST_CHECK_SMALL(sumDiff, 1e-5);
 }
 

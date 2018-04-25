@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE( test_rotation )
 
 	std::vector<elephon::AtomicSite::WignerDMatrix> wd(6);
 	for (int l = 0; l <= 5; ++l)
-		wd[l].initialize(l, alpha, beta, gamma);
+		wd[l].initialize(l, alpha, beta, gamma, /*proper rotation =*/true);
 	auto rotOp = std::make_shared<decltype(wd)>(std::move(wd));
 
 	// construct a formal symmetry operation. In this test, only the angular part is used.
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE( test_data_fit )
 			assert(c_.size()==3);
 		};
 
-		void interpolate( std::vector<double> & coordinates, std::complex<double> * data) const
+		void interpolate( elephon::Auxillary::alignedvector::DV & coordinates, std::complex<double> * data) const
 		{
 			const int np = coordinates.size()/3;
 			for (int ip = 0 ; ip < np; ++ip )

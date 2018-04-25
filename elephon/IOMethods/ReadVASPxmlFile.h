@@ -21,6 +21,7 @@
 #define ELEPHON_IOMETHODS_READVASPXMLFILE_H_
 
 #include "LatticeStructure/Atom.h"
+#include <boost/property_tree/ptree.hpp>
 #include <vector>
 #include <string>
 
@@ -29,6 +30,9 @@ namespace elephon
 namespace IOMethods
 {
 
+/**
+ * This class handles the reading of data from the vasprun.xml file.
+ */
 class ReadVASPxmlFile
 {
 public:
@@ -37,29 +41,29 @@ public:
 
 	void parse_file( std::string filename );
 
-	std::vector<double> const & get_forces() const;
+	std::vector<double> const & get_forces();
 
-	std::vector<double> const & get_k_points() const;
+	std::vector<double> const & get_k_points();
 
-	double get_Fermi_energy() const;
+	double get_Fermi_energy();
 
-	std::vector<double> const & get_energies() const;
+	std::vector<double> const & get_energies();
 
-	int get_nBnd() const;
+	int get_nBnd();
 
-	int get_nkp() const;
+	int get_nkp();
 
-	std::vector<double> const & get_lattice_matrix() const;
+	std::vector<double> const & get_lattice_matrix();
 
-	std::vector<LatticeStructure::Atom> const & get_atoms_list() const;
+	std::vector<LatticeStructure::Atom> const & get_atoms_list();
 
-	std::vector<int> get_wfct_fourier_dim() const;
+	std::vector<int> get_wfct_fourier_dim();
 
-	std::vector<int> get_charge_fourier_dim() const;
+	std::vector<int> get_charge_fourier_dim();
 
-	std::vector<int> get_k_grid_dim() const;
+	std::vector<int> get_k_grid_dim();
 
-	std::vector<double> get_k_grid_shift() const;
+	std::vector<double> get_k_grid_shift();
 private:
 
 	int nBnd_ = 0;
@@ -68,23 +72,43 @@ private:
 
 	std::string filename_;
 
+	bool parseForces_ = true;
 	std::vector<double> forces_;
 
+	bool parseKPoints_ = true;
 	std::vector<double> kpoints_;
 
+	bool parseEnergies_ = true;
 	std::vector<double> energies_;
 
+	bool parseLatticeMatrix_ = true;
 	std::vector<double> latticeMat_;
 
+	bool parseAtoms_ = true;
 	std::vector<LatticeStructure::Atom> atoms_;
 
 	std::vector<int> kDim_;
 
 	std::vector<double> kShift_;
 
+	bool parseFFTDims_ = true;
 	std::vector<int> wfctFourierDim_;
 
 	std::vector<int> chargeFourierDim_;
+
+	boost::property_tree::ptree pt_;
+
+	void parse_forces();
+
+	void parse_latticeMat();
+
+	void parse_atoms();
+
+	void parse_energies();
+
+	void parse_kpoints();
+
+	void parse_fftdims();
 };
 
 } /* namespace IOMethods */

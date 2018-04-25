@@ -42,18 +42,21 @@ public:
 	 * we are computing the complex conjugate. The convention means, we have the following transformation
 	 * property for spherical harmonics:
 	 *   Ylm(r') = sum m'=-l,...,+l D^l(alpha, beta, gamma)_m,m' Ylm'(r)
-	 * l is the angular quantum number
+	 * l is the angular quantum number.
+	 * This matrix includes improper rotations where the reflection part leads to a (-1)^l.
 	 *
-	 * @param angularQuantumNumber	dimensionality of the representation, l=0 scalar, l=1 vector ...
-	 * @param alpha					Euler angle of the second rotation about the z axis
-	 * @param beta					Euler angle of the rotation about the y axis
-	 * @param gamma					Euler angle of the first rotation about the z axis
+	 * @param[in] angularQuantumNumber	dimensionality of the representation, l=0 scalar, l=1 vector ...
+	 * @param[in] alpha					Euler angle of the second rotation about the z axis
+	 * @param[in] beta					Euler angle of the rotation about the y axis
+	 * @param[in] gamma					Euler angle of the first rotation about the z axis
+	 * @param[in] isProperRotation		True indicates a proper ration (det R = 1) and false a relection (improper, det R = -1)
 	 */
 	void initialize(
 			int angularQuantumNumber,
 			double alpha,
 			double beta,
-			double gamma);
+			double gamma,
+			bool isProperRotation);
 
 	/**
 	 * Obtain a single element of the Wigner matrix.

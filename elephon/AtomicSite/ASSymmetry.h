@@ -44,8 +44,9 @@ public:
 	/**
 	 * Set the symmetry operations for up to within lmax based on the carthesian rotation matrices.
 	 *
-	 * @param lmax							Maximal angular moment that will be considered. Thus we have a range of [0,lmax] rotation matrices.
-	 * @param carthesianSymmetryOperations	List of rotation matrices. Each block of 9 elements is interpreted as one C-layout matrix.
+	 * @param[in] lmax							Maximal angular moment that will be considered. Thus we have a range of [0,lmax] rotation matrices.
+	 * @param[in] carthesianSymmetryOperations	List of rotation matrices describing rotations in the passive sense (rotation of the coordinate system).
+	 * 											Each block of 9 elements is interpreted as one C-layout matrix.
 	 */
 	void initialize(
 			int lmax,

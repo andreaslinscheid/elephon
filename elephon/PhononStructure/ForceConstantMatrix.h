@@ -115,6 +115,9 @@ private:
 	/// and the set of R vectors, indexed by iR, [a][b][iR] a set with vectors of atom positions
 	Auxillary::Multi_array< Auxillary::Multi_array<double,2>, 3 > tau_;
 
+	/// Same as tau_ but in cartesian coordinates in units of Angstroem
+	Auxillary::Multi_array< Auxillary::Multi_array<double,2>, 3 > tauCart_;
+
 	/// If from the perspective of an atom index 'ia' in the primitive cell, the atom 'ib'
 	/// plus the lattice vector indexed by 'iR' is on the border of the supercell, we have to
 	/// place a copy on the respective opposite border which is not in the supercell to maintain
@@ -127,10 +130,6 @@ private:
 
 	void drift_clean_forces(
 			std::vector<std::vector<double>> forces) const;
-
-	void site_symmetry_expand_data(	LatticeStructure::Symmetry const & siteSymmetry,
-									Auxillary::Multi_array<double,3> const & forces,
-									Auxillary::Multi_array<double,3> & symExpandedForces ) const;
 
 	void set_tau_vectors_and_multiplicity(std::shared_ptr<const LatticeStructure::UnitCell> primitiveCell,
 			std::shared_ptr<const LatticeStructure::UnitCell> superCell,

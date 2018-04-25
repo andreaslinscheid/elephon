@@ -104,5 +104,4 @@ bool operator== (Atom const & a1, Atom const & a2);
 
 } /* namespace LatticeStructure */
 } /* namespace elephon */
-
 #endif /* ELEPHON_LATTICESTRUCTURE_ATOM_H_ */

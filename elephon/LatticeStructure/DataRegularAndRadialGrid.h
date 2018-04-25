@@ -23,6 +23,7 @@
 #include "Auxillary/AlignedVector.h"
 #include "AtomicSite/AtomSiteData.h"
 #include "symmetry/SymmetryOperation.h"
+#include "LatticeStructure/RegularBareGrid.h"
 
 namespace elephon
 {
@@ -41,10 +42,12 @@ public:
 	/**
 	 * Set this object by providing the data explicitly.
 	 *
-	 * @param regularGridData[in]	Copy of the regular grid data.
-	 * @param radialGridData[in]	Copy of the radial grid data.
+	 * @param[in] regularGrid		The grid on which the regular grid lives.
+	 * @param[in] regularGridData	Copy of the regular grid data.
+	 * @param[in] radialGridData	Copy of the radial grid data.
 	 */
 	void initialize(
+			LatticeStructure::RegularBareGrid regularGrid,
 			Auxillary::alignedvector::aligned_vector<T> regularGridData,
 			std::vector<AtomicSite::AtomSiteData> radialGridData);
 
@@ -59,6 +62,12 @@ public:
 	 * @return	the number of angular momentum channels
 	 */
 	int get_max_num_angular_moment_channels() const;
+
+	/**
+	 * Get max angular moment
+	 * @return	The maximal angular moment quantum number.
+	 */
+	int get_max_angular_moment() const;
 
 	/**
 	 * Re-shuffel the internal data according to the symmetry operation sop.
@@ -90,6 +99,8 @@ public:
 private:
 
 	int numElementsRadialTotal_ = 0;
+
+	LatticeStructure::RegularBareGrid regularGrid_;
 
 	Auxillary::alignedvector::aligned_vector<T> regularGridData_;
 

@@ -355,14 +355,18 @@ ResourceHandler::initialize_displacement_potential_obj()
 	auto rsGridSC = std::make_shared<LatticeStructure::RegularBareGrid>();
 
 	// Read the normal periodic potential form the root dir
-	LatticeStructure::DataRegularAndRadialGrid<double> primitiveCellPotential;
+	Auxillary::alignedvector::DV regularGridData;
+	std::vector<AtomicSite::AtomSiteData> radialPartData;
 	std::vector<int> dimPCGrid;
 	dataLoader_->read_electronic_potential(
 			dataLoader_->get_optns().get_root_dir(),
 			dimPCGrid,
-			primitiveCellPotential);
+			regularGridData,
+			radialPartData);
 	auto rsGridPC = std::make_shared<LatticeStructure::RegularBareGrid>();
 	rsGridPC->initialize( dimPCGrid, false, gPrec, {0.0, 0.0, 0.0}, primitiveCell->get_lattice());
+	LatticeStructure::DataRegularAndRadialGrid<double> primitiveCellPotential;
+	primitiveCellPotential.initialize(*rsGridPC,std::move(regularGridData),std::move(radialPartData));
 
 	// Here, we read the potential from the calculator output
 	std::vector<std::shared_ptr<const PhononStructure::PotentialChangeIrredDisplacement>> displPot( nIrdDispl );
@@ -374,11 +378,11 @@ ResourceHandler::initialize_displacement_potential_obj()
 			std::vector<int> dimSCGrid;
 
 			// regular grid part
-			LatticeStructure::DataRegularAndRadialGrid<double> thisDisplPot;
 			dataLoader_->read_electronic_potential(
-					( phononDir / ("displ_"+std::to_string(idispl)) ).string(),
+					( phononDir / displColl->get_relative_folder_structure_displ_run(idispl) ).string(),
 					dimSCGrid,
-					thisDisplPot);
+					regularGridData,
+					radialPartData);
 
 			if (idispl == 0 )
 				rsGridSC->initialize( dimSCGrid, false, gPrec, {0.0, 0.0, 0.0}, supercell->get_lattice());
@@ -386,6 +390,8 @@ ResourceHandler::initialize_displacement_potential_obj()
 			for (int ix = 0 ; ix < 3 ; ++ix)
 				if ( dimSCGrid[ix] % rsGridSC->get_grid_dim()[ix] )
 					throw std::runtime_error("Input error: The Fourier grid of the supercell is not consistent among displacements.");
+			LatticeStructure::DataRegularAndRadialGrid<double> thisDisplPot;
+			thisDisplPot.initialize(*rsGridSC,std::move(regularGridData),std::move(radialPartData));
 
 
 			PhononStructure::PotentialChangeIrredDisplacement potChangeDispl;

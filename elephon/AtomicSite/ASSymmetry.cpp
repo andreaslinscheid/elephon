@@ -19,7 +19,8 @@
 
 #include "AtomicSite/ASSymmetry.h"
 #include "AtomicSite/EulerAngles.h"
-#include <cassert>
+#include "Algorithms/helperfunctions.hpp"
+#include <assert.h>
 
 namespace elephon
 {
@@ -35,18 +36,33 @@ ASSymmetry::initialize(
 	lMax_ = lmax;
 	numSymOps_= carthesianSymmetryOperations.size()/9;
 	eulerAngles_.resize(numSymOps_*3);
+	rotMatricesPtr_.clear();
 	rotMatricesPtr_.reserve(numSymOps_);
 	for (int isym = 0 ; isym < numSymOps_; ++isym)
 	{
 		auto thisMat_ptr = carthesianSymmetryOperations.begin()+isym*9;
 		auto rotMat = std::vector<double>(thisMat_ptr, thisMat_ptr + 9);
+		bool isProperRotation = Algorithms::helperfunctions::determinant_3by3_matrix(rotMat) > 0.0;
+		if (not isProperRotation) // remove the inversion from this matrix, the result is a proper rotation matrix
+		{
+			for (auto & mij : rotMat )
+				mij *= -1.0;
+		}
 		eulerAngles(rotMat, eulerAngles_[isym*3+0], eulerAngles_[isym*3+1], eulerAngles_[isym*3+2]);
+
+		// active / passive rotation conversion
+		auto mapAngle = [] (double & angle) {
+			angle = -angle;
+			angle -= 2.0*M_PI*std::floor(angle/(2.0*M_PI));
+		};
+		mapAngle(eulerAngles_[isym*3+1]);
+
 		RadSym rotationOperator;
 		rotationOperator.reserve(lMax_+1);
 		for (int l = 0; l <= lMax_; ++l)
 		{
 			WignerDMatrix wd;
-			wd.initialize(l, eulerAngles_[isym*3+0], eulerAngles_[isym*3+1], eulerAngles_[isym*3+2]);
+			wd.initialize(l, eulerAngles_[isym*3+0], eulerAngles_[isym*3+1], eulerAngles_[isym*3+2], isProperRotation);
 			rotationOperator.push_back(std::move(wd));
 		}
 		rotMatricesPtr_.push_back(std::make_shared<RadSym>(std::move(rotationOperator)));

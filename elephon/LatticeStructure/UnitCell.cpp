@@ -48,6 +48,7 @@ void UnitCell::initialize(
 	this->set_symmetry_to_lattice( symmetry_);
 	this->generate_site_symmetries(atoms_,symmetry_,siteSymmetries_);
 
+	atomSymmetryModule_ = std::make_shared<LatticeStructure::AtomSymmetryConnection>();
 	atomSymmetryModule_->initialize(atoms_, symmetry_);
 }
 

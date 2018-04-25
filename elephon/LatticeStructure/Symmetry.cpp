@@ -348,6 +348,15 @@ std::vector<int>
 Symmetry::small_group(
 		std::vector<double> const& point)
 {
+	std::vector<int> dropIndices = this->get_list_incompatible_symops_in_group(point);
+ 	this->symmetry_reduction(dropIndices);
+ 	return dropIndices;
+}
+
+std::vector<int>
+Symmetry::get_list_incompatible_symops_in_group(
+		std::vector<double> const& point) const
+{
 	//apply all symmetry operations and discard those who map point somewhere else
 	std::vector<int> dropIndices;
  	for (int isym = 0 ; isym < numRotations_; ++isym)
@@ -361,7 +370,6 @@ Symmetry::small_group(
 				break;
 			}
 	}
- 	this->symmetry_reduction(dropIndices);
  	return dropIndices;
 }
 
@@ -505,7 +513,7 @@ Symmetry::get_sym_op( int isym ) const
 			fracTrans.begin(), fracTrans.end(),
 			symmCart.begin(), symmCart.end(),
 			fracTransCart.begin(), fracTransCart.end(),
-			radialSiteSymmetry_.get_wigner_rotation_matrices_symop(isym));
+			radialSiteSymmetry_.get_wigner_rotation_matrices_symop(inverseMap_[isym]));
 	return res;
 }
 

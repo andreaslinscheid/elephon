@@ -18,7 +18,6 @@
  */
 
 #include "AtomicSite/SphericalHarmonicExpansion.h"
-#include <boost/math/special_functions/spherical_harmonic.hpp>
 #include "Auxillary/memory_layout_functions.hpp"
 #include "symmetry/SymmetryOperation.h"
 #include "Algorithms/helperfunctions.hpp"
@@ -41,61 +40,17 @@ SphericalHarmonicExpansion::initialize(
 }
 
 void
-SphericalHarmonicExpansion::interpolate(
-		std::vector<double> const & coordinates,
-		Auxillary::alignedvector::ZV & interpolated_data) const
-{
-	assert(coordinates.size()%3 == 0);
-	int numPts = coordinates.size()/3;
-	interpolated_data.resize(numPts);
-	this->interpolate(coordinates, interpolated_data.data());
-}
-
-void
-SphericalHarmonicExpansion::interpolate(
-		std::vector<double> const & coordinates,
-		std::complex<double> * interpolated_data) const
-{
-	assert(coordinates.size()%3 == 0);
-
-	// calculate the spherical coordinates
-	int numPts = coordinates.size()/3;
-	std::vector<double> spherical_r(numPts);
-	std::vector<double> spherical_phi(numPts);
-	std::vector<double> spherical_theta(numPts);
-	for (int ip = 0 ; ip < numPts; ++ip)
-		Algorithms::helperfunctions::compute_spherical_coords(
-				coordinates[ip*3+0], coordinates[ip*3+1], coordinates[ip*3+2],
-				spherical_r[ip], spherical_theta[ip], spherical_phi[ip]);
-
-	// for each l and m interpolate the radial data to the r-values and multiply the spherical harmonics
-	Auxillary::alignedvector::ZV radial_interpol(numPts, std::complex<double>(0.0));
-	for (int l = 0 ; l <= lmax_; ++l)
-		for (int m = -l ; m <= l; ++m)
-		{
-			auto itBegin = data_.begin() + Auxillary::memlayout::angular_momentum_layout(l,m)*rMax_;
-			auto itEnd = itBegin + rMax_;
-			rgrid_.interpolate(
-					spherical_r,
-					1,
-					itBegin,
-					itEnd,
-					radial_interpol.begin());
-
-			for (int ip = 0 ; ip < numPts; ++ip)
-			{
-				auto ylm = boost::math::spherical_harmonic(l, m, spherical_theta[ip], spherical_phi[ip] );
-				interpolated_data[ip] += ylm*radial_interpol[ip];
-			}
-		}
-}
-
-void
 SphericalHarmonicExpansion::transform(
 		symmetry::SymmetryOperation const & sop)
 {
 	rgrid_.transform(sop);
-	sop.rotate_radial_data(lmax_, rMax_, data_);
+	sop.rotate_radial_scalar_data(lmax_, rMax_, data_);
+}
+
+void
+SphericalHarmonicExpansion::set_center(std::vector<double> center)
+{
+	rgrid_.set_center(std::move(center));
 }
 
 void

@@ -24,6 +24,9 @@
 #include <complex>
 #include <vector>
 #include <algorithm>
+#include <utility>
+#include <type_traits>
+#include <assert.h>
 
 namespace elephon
 {
@@ -209,8 +212,67 @@ determinant_3by3_matrix(M const & mat)
 			 matrix[0][1]*matrix[1][0]*matrix[2][2] + matrix[0][0]*matrix[1][1]*matrix[2][2];
 }
 
+namespace detail {
+// a type trait that calls operator[] if it exists or operator() else
+template<class T>
+struct has_op_bracket
+{
+	template<class A, class B>
+	static auto check(A * p, B * q) -> typename std::is_same<decltype((*p)(std::declval<int>())), decltype((*q)(std::declval<int>()))>::type;
+
+	template<typename  ... Args>
+	static auto check(Args ... args) -> std::false_type;
+
+	static constexpr bool value = decltype(check(static_cast<T *>(0),static_cast<T *>(0)))::value;
+};
+
+template<class T, bool has_op_bracket> struct map_trait { };
+template<class T>
+struct map_trait<T,true> {
+	template<typename ...Args>
+	static int call(T const & a, Args ... args) {return a(args...);};
+};
+template<class T>
+struct map_trait<T,false> {
+	static int call(T const & a, int index) {return a[index];};
+};
+}
+
+
 /**
- * Apply the inverse of the rotation operator to the data at a given point in 3D space.
+ * Apply the inverse of the rotation operator to the scalar field data at a given point in 3D space.
+ *
+ * Since the symmetry operation rotates a position vector, after a transformation, the data at
+ * a given point belongs to the target of the transformation. Hence for a forward transformation
+ * the data field transform with the inverse.
+ *
+ * @param[in,out] scalarFieldBegin	Iterator pointing to the beginning of the range.
+ * @param[in,out] scalarFieldEnd	Iterator pointing to the element behind the last of the range.
+ * @param[in] map					A class that implements the operator[] and tells for a given index i where i ends up
+ */
+template<class iterator, class indexMap>
+void transform_scalar_field_cart(
+		iterator scalarFieldBegin, iterator scalarFieldEnd,
+		indexMap const & map)
+{
+	assert((std::distance(scalarFieldBegin, scalarFieldEnd)>0));
+	const int nD = std::distance(scalarFieldBegin, scalarFieldEnd);
+	typedef typename std::iterator_traits<iterator>::value_type T;
+	auto runnerIt = scalarFieldBegin;
+
+	Auxillary::alignedvector::aligned_vector<T> bufferField(scalarFieldBegin, scalarFieldEnd);
+	// re-shuffle the scalar field
+	for (int iD = 0 ; iD < nD; ++iD)
+	{
+		int mapped_index = detail::map_trait<indexMap,detail::has_op_bracket<indexMap>::value>::call(map,iD);
+		assert((mapped_index>=0) && (mapped_index < bufferField.size()));
+		bufferField[mapped_index] = *runnerIt++;
+	}
+	std::copy(bufferField.begin(), bufferField.end(), scalarFieldBegin);
+}
+
+/**
+ * Apply the inverse of the rotation operator to the vector field data at a given point in 3D space.
  *
  * Since the symmetry operation rotates a position vector, after a transformation, the data at
  * a given point belongs to the target of the transformation. Hence for a forward transformation
@@ -237,19 +299,24 @@ void transform_vector_field_cart(
 	assert((std::distance(vectorFieldBegin, vectorFieldEnd)%3 == 0)&&(std::distance(vectorFieldBegin, vectorFieldEnd)>0));
 	const int nD = std::distance(vectorFieldBegin, vectorFieldEnd)/3;
 	typedef typename std::iterator_traits<iterator>::value_type T;
+	auto currentIterator = vectorFieldBegin;
 
 	T LocalBuffer[3];
 	Auxillary::alignedvector::aligned_vector<T> bufferField(vectorFieldBegin, vectorFieldEnd);
 	// re-shuffle the vector field and rotate the vector at each point
 	for (int iD = 0 ; iD < nD; ++iD)
 	{
-		LocalBuffer[0] = bufferField[iD*3+0];
-		LocalBuffer[1] = bufferField[iD*3+1];
-		LocalBuffer[2] = bufferField[iD*3+2];
-		*(vectorFieldBegin++) = matrix[0][0]*LocalBuffer[0] + matrix[0][1]*LocalBuffer[1] + matrix[0][2]*LocalBuffer[2];
-		*(vectorFieldBegin++) = matrix[1][0]*LocalBuffer[0] + matrix[1][1]*LocalBuffer[1] + matrix[1][2]*LocalBuffer[2];
-		*(vectorFieldBegin++) = matrix[2][0]*LocalBuffer[0] + matrix[2][1]*LocalBuffer[1] + matrix[2][2]*LocalBuffer[2];
+		LocalBuffer[0] = *currentIterator++;
+		LocalBuffer[1] = *currentIterator++;
+		LocalBuffer[2] = *currentIterator++;
+		int mapped_index = detail::map_trait<indexMap,detail::has_op_bracket<indexMap>::value>::call(map,iD);
+		assert((mapped_index>=0) && (mapped_index < bufferField.size()/3));
+		bufferField[mapped_index*3+0] = T(matrix[0][0])*LocalBuffer[0] + T(matrix[0][1])*LocalBuffer[1] + T(matrix[0][2])*LocalBuffer[2];
+		bufferField[mapped_index*3+1] = T(matrix[1][0])*LocalBuffer[0] + T(matrix[1][1])*LocalBuffer[1] + T(matrix[1][2])*LocalBuffer[2];
+		bufferField[mapped_index*3+2] = T(matrix[2][0])*LocalBuffer[0] + T(matrix[2][1])*LocalBuffer[1] + T(matrix[2][2])*LocalBuffer[2];
 	}
+
+	std::copy(bufferField.begin(), bufferField.end(), vectorFieldBegin);
 }
 
 /**

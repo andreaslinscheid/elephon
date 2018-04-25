@@ -125,7 +125,7 @@ Phonon::evaluate_derivative(
 	Algorithms::LinearAlgebraInterface linalg;
 
 	Auxillary::alignedvector::ZV matrixBuffer(nM*nM);
-	std::vector< std::complex<double> > matrixBufferResult(nM*nM);
+	Auxillary::alignedvector::ZV matrixBufferResult(nM*nM);
 	dwdq.resize( 3*nq*nM );
 	for ( int iq = 0 ; iq < nq ; ++iq)
 	{

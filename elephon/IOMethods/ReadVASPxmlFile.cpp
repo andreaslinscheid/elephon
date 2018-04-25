@@ -21,7 +21,6 @@
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/optional/optional.hpp>
 #include <algorithm>
 #include <iostream>
@@ -50,26 +49,65 @@ ReadVASPxmlFile::parse_file( std::string filename )
 		throw std::runtime_error( std::string("Problem opening file ")+filename_);
 
 	using boost::property_tree::ptree;
-	boost::property_tree::ptree pt;
-	read_xml(file, pt);
+	read_xml(file, pt_);
+	parseForces_ = true;
+	parseAtoms_ = true;
+	parseEnergies_ = true;
+	parseKPoints_ = true;
+	parseFFTDims_ = true;
+}
 
-	// at this point we determine the last modeling.calculation node, where the data
-	// will be read from
-	auto calculationLeaf = pt.get_child("modeling");
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling") )
+std::vector<double> const &
+ReadVASPxmlFile::get_forces()
+{
+	if ( parseForces_ )
+		this->parse_forces();
+	return forces_;
+}
+
+void
+ReadVASPxmlFile::parse_forces()
+{
+	using boost::property_tree::ptree;
+	auto calculationLeaf = pt_.get_child("modeling.calculation");
+	std::vector<double> newForces;
+	std::vector<double> newEV;
+	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf )
 	{
-	    if(val.first == "calculation")
+	    if(val.first == "varray")
 	    {
-	    	boost::optional< const ptree& > child = val.second.get_child_optional("eigenvalues");
-	    	if ( child )
-	    		calculationLeaf = val.second;
+	        std::string temp = val.second.get_child("<xmlattr>.name").data();
+	        if ( temp == "forces")
+	        {
+	        	BOOST_FOREACH( ptree::value_type const& val2, val.second )
+				{
+	        		if ( val2.first == "v" )
+	        		{
+	        			double tmp;
+	        			std::stringstream ss( val2.second.data() );
+	        			for ( int i = 0 ; i < 3 ; ++i)
+	        			{
+	        				ss >> tmp;
+	        				newForces.push_back( tmp );
+	        			}
+	        		}
+				}
+	        }
 	    }
-	}
-	if ( calculationLeaf == pt.get_child("modeling"))
-		throw std::runtime_error("Could not locate the caluclation with the eigenvalues in vasprun.xml");
+	};
 
+	if (newForces.empty())
+		throw std::runtime_error(std::string("Error parsing")+filename_+": Unable to find the atomic force data");
+	forces_ = newForces;
+	parseForces_ = false;
+}
+
+void
+ReadVASPxmlFile::parse_latticeMat()
+{
+	using boost::property_tree::ptree;
 	std::vector<double> lmat;
-	BOOST_FOREACH( ptree::value_type const& val0, pt.get_child("modeling") )
+	BOOST_FOREACH( ptree::value_type const& val0, pt_.get_child("modeling") )
 	{
 		if(val0.first == "structure")
 		{
@@ -108,9 +146,16 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	for ( int  i = 0 ; i < 3 ; ++i)
 		for ( int  j = 0 ; j < 3 ; ++j)
 			latticeMat_[i*3+j] = lmat[j*3+i];
+	parseLatticeMatrix_ = false;
+}
+
+void
+ReadVASPxmlFile::parse_atoms()
+{
+	using boost::property_tree::ptree;
 
 	std::vector<std::vector<double>> atomicPos;
-	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf.get_child("structure") )
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling.calculation.structure") )
 	{
 	    if(val.first == "varray")
 	    {
@@ -131,8 +176,9 @@ ReadVASPxmlFile::parse_file( std::string filename )
 			}
 	    }
 	}
+
 	std::map<int,std::vector<std::string>> typeInfo;
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.atominfo") )
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling.atominfo") )
 	{
 	    if(val.first == "array")
 	    	if(val.second.get_child("<xmlattr>.name").data().compare("atomtypes") == 0 )
@@ -158,8 +204,9 @@ ReadVASPxmlFile::parse_file( std::string filename )
 				}
 	    	}
 	}
+
 	atoms_.clear();
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.atominfo") )
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling.atominfo") )
 	{
 	    if(val.first == "array")
 	    	if(val.second.get_child("<xmlattr>.name").data().compare("atoms") == 0 )
@@ -186,37 +233,121 @@ ReadVASPxmlFile::parse_file( std::string filename )
 						if ( it == typeInfo.end())
 							throw std::runtime_error("Problem finding atom typeinfo.");
 						double mass = std::stof(it->second.at(2));
+						if ((numAtom<0)||(numAtom>= atomicPos.size()))
+							throw std::runtime_error("Problem with atom number outside of range of atomic positions.");
 						atoms_.push_back( LatticeStructure::Atom(mass, atomInfo[0], atomicPos[numAtom], {false, false, false}, 1e-6) );
 					}
 				}
 	    	}
 	}
+	parseAtoms_ = false;
+}
 
-	std::vector<double> newForces;
-	std::vector<double> newEV;
+std::vector<double> const &
+ReadVASPxmlFile::get_k_points()
+{
+	if (parseKPoints_)
+		this->parse_kpoints();
+	return kpoints_;
+}
+
+double
+ReadVASPxmlFile::get_Fermi_energy()
+{
+	if (parseEnergies_)
+		this->parse_energies();
+	return eFermi_;
+}
+
+std::vector<double> const &
+ReadVASPxmlFile::get_energies()
+{
+	if (parseEnergies_)
+		this->parse_energies();
+	return energies_;
+}
+
+int
+ReadVASPxmlFile::get_nBnd()
+{
+	if (parseEnergies_)
+		this->parse_energies();
+	return nBnd_;
+}
+
+int
+ReadVASPxmlFile::get_nkp()
+{
+	if (parseKPoints_)
+		this->parse_kpoints();
+	return kpoints_.size()/3;
+}
+
+std::vector<double> const &
+ReadVASPxmlFile::get_lattice_matrix()
+{
+	if (parseLatticeMatrix_)
+		this->parse_latticeMat();
+	return latticeMat_;
+}
+
+std::vector<LatticeStructure::Atom> const &
+ReadVASPxmlFile::get_atoms_list()
+{
+	if (parseAtoms_)
+		this->parse_atoms();
+	return atoms_;
+}
+
+std::vector<int>
+ReadVASPxmlFile::get_wfct_fourier_dim()
+{
+	if (parseFFTDims_)
+		this->parse_fftdims();
+	return wfctFourierDim_;
+}
+
+std::vector<int>
+ReadVASPxmlFile::get_charge_fourier_dim()
+{
+	if (parseFFTDims_)
+		this->parse_fftdims();
+	return chargeFourierDim_;
+}
+
+std::vector<int>
+ReadVASPxmlFile::get_k_grid_dim()
+{
+	if (parseKPoints_)
+		this->parse_kpoints();
+	return kDim_;
+}
+
+std::vector<double>
+ReadVASPxmlFile::get_k_grid_shift()
+{
+	if (parseKPoints_)
+		this->parse_kpoints();
+	return kShift_;
+}
+
+void
+ReadVASPxmlFile::parse_energies()
+{
+	using boost::property_tree::ptree;
+	auto calculationLeaf = pt_.get_child("modeling");
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling") )
+	{
+	    if(val.first == "calculation")
+	    {
+	    	boost::optional< const ptree& > child = val.second.get_child_optional("eigenvalues");
+	    	if ( child )
+	    		calculationLeaf = val.second;
+	    }
+	}
+
 	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf )
 	{
-	    if(val.first == "varray")
-	    {
-	        std::string temp = val.second.get_child("<xmlattr>.name").data();
-	        if ( temp == "forces")
-	        {
-	        	BOOST_FOREACH( ptree::value_type const& val2, val.second )
-				{
-	        		if ( val2.first == "v" )
-	        		{
-	        			double tmp;
-	        			std::stringstream ss( val2.second.data() );
-	        			for ( int i = 0 ; i < 3 ; ++i)
-	        			{
-	        				ss >> tmp;
-	        				newForces.push_back( tmp );
-	        			}
-	        		}
-				}
-	        }
-	    }
-
 	    if(val.first == "dos")
 	    {
 	    	BOOST_FOREACH(  ptree::value_type const& val2, val.second )
@@ -230,39 +361,13 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	    }
 	};
 
-	forces_ = newForces;
-
-	std::vector<double> newKpts;
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.kpoints") )
-	{
-	    if(val.first == "varray")
-	    {
-	        std::string temp = val.second.get_child("<xmlattr>.name").data();
-	        if ( temp == "kpointlist")
-	        {
-	        	BOOST_FOREACH( ptree::value_type const& val2, val.second )
-				{
-					if ( val2.first == "v" )
-					{
-						double tmp;
-						std::stringstream ss( val2.second.data() );
-						for ( int i = 0 ; i < 3 ; ++i)
-						{
-							ss >> tmp;
-							//apply the elephon 1.BZ convention [-0.5,0.5[. NOTE: VASP uses ]-0.5,0.5]
-							tmp -= std::floor(tmp+0.5);
-							newKpts.push_back( tmp );
-						}
-					}
-				}
-	        }
-	    }
-	}
-	kpoints_ = newKpts;
-
 	std::vector<double> bandBuffer;
 	energies_.clear();
 	nBnd_ = 0;
+
+	// We need the k points to make sense of the energies
+	this->parse_kpoints();
+
 	int nkp = kpoints_.size()/3;
 	BOOST_FOREACH( ptree::value_type const& val, calculationLeaf.get_child("eigenvalues.array.set") )
 	{
@@ -307,10 +412,75 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	auto m = std::max_element(energies_.begin(), energies_.end());
 	if ( *m == std::numeric_limits<double>::infinity() )
 		throw std::runtime_error("Problem parsing energy values from vasprun.xml - energies missing");
+	parseEnergies_ = false;
+}
 
+void
+ReadVASPxmlFile::parse_kpoints()
+{
+	using boost::property_tree::ptree;
+	std::vector<double> newKpts;
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling.kpoints") )
+	{
+	    if(val.first == "varray")
+	    {
+	        std::string temp = val.second.get_child("<xmlattr>.name").data();
+	        if ( temp == "kpointlist")
+	        {
+	        	BOOST_FOREACH( ptree::value_type const& val2, val.second )
+				{
+					if ( val2.first == "v" )
+					{
+						double tmp;
+						std::stringstream ss( val2.second.data() );
+						for ( int i = 0 ; i < 3 ; ++i)
+						{
+							ss >> tmp;
+							//apply the elephon 1.BZ convention [-0.5,0.5[. NOTE: VASP uses ]-0.5,0.5]
+							tmp -= std::floor(tmp+0.5);
+							newKpts.push_back( tmp );
+						}
+					}
+				}
+	        }
+	    }
+	}
+	kpoints_ = newKpts;
+
+	kDim_.assign(3, -1);
+	kShift_.assign(3, 0.0);
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling.kpoints.generation") )
+	{
+		if (  val.first != "v")
+			continue;
+        std::string temp = val.second.get_child("<xmlattr>.name").data();
+        if ( temp == "divisions" )
+        {
+        	std::stringstream ss(val.second.data());
+        	ss >> kDim_[0] >> kDim_[1] >> kDim_[2];
+        }
+        if ( (temp == "usershift") or (temp == "shift") )
+        {
+        	std::stringstream ss(val.second.data());
+        	std::vector<double> kShiftLocal(3,0);
+        	ss >> kShiftLocal[0] >> kShiftLocal[1] >> kShiftLocal[2];
+        	for ( int i = 0 ; i < 3 ; ++i )
+        		kShift_[i] += kShiftLocal[i];
+        }
+	}
+	if ( *std::min_element(kDim_.begin(), kDim_.end()) <= 0 )
+		throw std::runtime_error("Problem parsing k grid dimensions from vasprun.xml");
+
+	parseKPoints_ = false;
+}
+
+void
+ReadVASPxmlFile::parse_fftdims()
+{
+	using boost::property_tree::ptree;
 	wfctFourierDim_.assign(3, 0);
 	chargeFourierDim_.assign(3, 0);
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.parameters") )
+	BOOST_FOREACH( ptree::value_type const& val, pt_.get_child("modeling.parameters") )
 	{
 	    if(val.first == "separator")
 	    {
@@ -344,101 +514,6 @@ ReadVASPxmlFile::parse_file( std::string filename )
 	if ( *std::min_element(chargeFourierDim_.begin(), chargeFourierDim_.end()) <= 0 )
 		throw std::runtime_error("Problem parsing fourier grids for the charge from vasprun.xml");
 
-	kDim_.assign(3, -1);
-	kShift_.assign(3, 0.0);
-	BOOST_FOREACH( ptree::value_type const& val, pt.get_child("modeling.kpoints.generation") )
-	{
-		if (  val.first != "v")
-			continue;
-        std::string temp = val.second.get_child("<xmlattr>.name").data();
-        if ( temp == "divisions" )
-        {
-        	std::stringstream ss(val.second.data());
-        	ss >> kDim_[0] >> kDim_[1] >> kDim_[2];
-        }
-        if ( (temp == "usershift") or (temp == "shift") )
-        {
-        	std::stringstream ss(val.second.data());
-        	std::vector<double> kShiftLocal(3,0);
-        	ss >> kShiftLocal[0] >> kShiftLocal[1] >> kShiftLocal[2];
-        	for ( int i = 0 ; i < 3 ; ++i )
-        		kShift_[i] += kShiftLocal[i];
-        }
-	}
-	if ( *std::min_element(kDim_.begin(), kDim_.end()) <= 0 )
-		throw std::runtime_error("Problem parsing k grid dimensions from vasprun.xml");
-}
-
-std::vector<double> const &
-ReadVASPxmlFile::get_forces() const
-{
-	return forces_;
-}
-
-std::vector<double> const &
-ReadVASPxmlFile::get_k_points() const
-{
-	return kpoints_;
-}
-
-double
-ReadVASPxmlFile::get_Fermi_energy() const
-{
-	return eFermi_;
-}
-
-std::vector<double> const &
-ReadVASPxmlFile::get_energies() const
-{
-	return energies_;
-}
-
-int
-ReadVASPxmlFile::get_nBnd() const
-{
-	return nBnd_;
-}
-
-int
-ReadVASPxmlFile::get_nkp() const
-{
-	return kpoints_.size()/3;
-}
-
-std::vector<double> const &
-ReadVASPxmlFile::get_lattice_matrix() const
-{
-	return latticeMat_;
-}
-
-std::vector<LatticeStructure::Atom> const &
-ReadVASPxmlFile::get_atoms_list() const
-{
-	return atoms_;
-}
-
-std::vector<int>
-ReadVASPxmlFile::get_wfct_fourier_dim() const
-{
-	return wfctFourierDim_;
-}
-
-std::vector<int>
-ReadVASPxmlFile::get_charge_fourier_dim() const
-{
-	return chargeFourierDim_;
-}
-
-std::vector<int>
-ReadVASPxmlFile::get_k_grid_dim() const
-{
-	return kDim_;
-}
-
-std::vector<double>
-ReadVASPxmlFile::get_k_grid_shift() const
-{
-	return kShift_;
 }
 
 } /* namespace IOMethods */

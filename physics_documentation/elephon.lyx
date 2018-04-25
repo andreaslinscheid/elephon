@@ -2761,6 +2761,15 @@ Y_{l}^{m}(\boldsymbol{r}^{\prime})=\sum_{m^{\prime}}D_{mm^{\prime}}^{l\ast}(\alp
 
 \end_inset
 
+Consequently, the convention in the passive rotation (of the coordinate
+ system) is given by
+\begin_inset Formula 
+\begin{equation}
+Y_{l}^{m}(\boldsymbol{r}^{\prime})=\sum_{m^{\prime}}Y_{l}^{m^{\prime}}(\boldsymbol{r})D_{m^{\prime}m}^{l}(\alpha,\beta,\gamma)
+\end{equation}
+
+\end_inset
+
 
 \end_layout
 
@@ -3055,6 +3064,105 @@ There is some indication that it is possible to get through a analytic shift
  There is also an addition theorem for solid harmonics and sphereical harmonics.
  The formula however are very complicated and make it very likely not worth
  it.
+\end_layout
+
+\begin_layout Subsubsection
+Rotating spherical harmonic expansion data
+\end_layout
+
+\begin_layout Standard
+If we have a scalar function 
+\begin_inset Formula $A(\boldsymbol{r})$
+\end_inset
+
+, represented in terms of spherical harmonics, and we want to apply a proper
+ rotation 
+\begin_inset Formula 
+\begin{eqnarray}
+\hat{R}\cdot A(\boldsymbol{r}) & = & \sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}a_{lm}(\vert\boldsymbol{r}\vert)\hat{R}\cdot Y_{l}^{m}(\frac{\boldsymbol{r}}{\vert\boldsymbol{r}\vert})\\
+ & = & \sum_{l=0}^{l_{{\rm Max}}}\sum_{m,m^{\prime}=-l}^{l}a_{lm}(\vert\boldsymbol{r}\vert)D_{mm^{\prime}}^{l\ast}(\alpha,\beta,\gamma)Y_{l}^{m^{\prime}}(\boldsymbol{r})\\
+ &  & \equiv A^{\prime}(\boldsymbol{r})=\sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}a_{lm}^{\prime}(\vert\boldsymbol{r}\vert)Y_{l}^{m}(\frac{\boldsymbol{r}}{\vert\boldsymbol{r}\vert})
+\end{eqnarray}
+
+\end_inset
+
+such that
+\begin_inset Formula 
+\begin{equation}
+a_{lm}^{\prime}(\vert\boldsymbol{r}\vert)=\sum_{m^{\prime}=-l}^{l}a_{lm^{\prime}}(\vert\boldsymbol{r}\vert)D_{m^{\prime}m}^{l\ast}(\alpha,\beta,\gamma)
+\end{equation}
+
+\end_inset
+
+Similarly, if the function is vector valued,
+\begin_inset Formula 
+\begin{equation}
+\hat{R}\cdot\boldsymbol{B}(\boldsymbol{r})=\sum_{l=0}^{l_{{\rm Max}}}\sum_{m=-l}^{l}g\cdot\boldsymbol{b}_{lm}(\vert\boldsymbol{r}\vert)\hat{R}\cdot Y_{l}^{m}(\frac{\boldsymbol{r}}{\vert\boldsymbol{r}\vert})
+\end{equation}
+
+\end_inset
+
+and we find by the same analysis
+\begin_inset Formula 
+\begin{equation}
+\boldsymbol{b}_{lm}^{\prime}(\vert\boldsymbol{r}\vert)=g\cdot\sum_{m^{\prime}=-l}^{l}\boldsymbol{b}_{lm^{\prime}}(\vert\boldsymbol{r}\vert)D_{m^{\prime}m}^{l\ast}(\alpha,\beta,\gamma)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Rotating spherical harmonic expansion data using improper rotations
+\end_layout
+
+\begin_layout Standard
+An improper rotation 
+\begin_inset Formula $\hat{\bar{R}}$
+\end_inset
+
+ is a rotation about a principle axis 
+\begin_inset Formula $\boldsymbol{n}$
+\end_inset
+
+ by angle 
+\begin_inset Formula $\theta$
+\end_inset
+
+, followed by a reflection on the plane orthogonal to 
+\begin_inset Formula $\boldsymbol{n}$
+\end_inset
+
+.
+ The reference where the derivation below was taken from is https://pdfs.semantic
+scholar.org/9934/061eedc830fab32edd97cd677b95f21248e1.pdf.
+\begin_inset Formula 
+\begin{equation}
+\bar{R}(\boldsymbol{n},\theta)=-R(\boldsymbol{n},\theta+\pi)
+\end{equation}
+
+\end_inset
+
+at which point 
+\begin_inset Formula $R(\boldsymbol{n},\theta+\pi)$
+\end_inset
+
+ will be decomposed into euler angles while the action of the inversion
+ matrix 
+\begin_inset Formula $-{\rm I}$
+\end_inset
+
+ (that is the pairity operator) on the spherical harmonics is known.
+ It is a simple factor 
+\begin_inset Formula $(-1)^{l}$
+\end_inset
+
+ that will be included in the Wigner 
+\begin_inset Formula $D$
+\end_inset
+
+ matrix.
 \end_layout
 
 \begin_layout Subsection

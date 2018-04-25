@@ -20,6 +20,7 @@
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include "Algorithms/helperfunctions.hpp"
 #include "Algorithms/SphereIntegrator.h"
+#include <boost/math/special_functions/spherical_harmonic.hpp>
 
 namespace elephon
 {
@@ -42,6 +43,59 @@ SphericalHarmonicExpansion::operator() (int r, int m, int l) const
 	assert((data_.size() > r+rMax_*angular_momentum_layout(l,m))
 			&& (r+rMax_*angular_momentum_layout(l,m) >= 0));
 	return data_[r+rMax_*angular_momentum_layout(l,m)];
+}
+
+template<class VT>
+void
+SphericalHarmonicExpansion::interpolate(
+		VT const & coordinates,
+		Auxillary::alignedvector::ZV & interpolated_data) const
+{
+	assert(coordinates.size()%3 == 0);
+	int numPts = coordinates.size()/3;
+	interpolated_data.resize(numPts);
+	this->interpolate(coordinates, interpolated_data.data());
+}
+
+template<class VT>
+void
+SphericalHarmonicExpansion::interpolate(
+		VT const & coordinates,
+		std::complex<double> * interpolated_data) const
+{
+	assert(coordinates.size()%3 == 0);
+
+	// calculate the spherical coordinates
+	int numPts = coordinates.size()/3;
+	std::vector<double> spherical_r(numPts);
+	std::vector<double> spherical_phi(numPts);
+	std::vector<double> spherical_theta(numPts);
+	std::vector<double> const & c = rgrid_.get_center();
+	for (int ip = 0 ; ip < numPts; ++ip)
+		Algorithms::helperfunctions::compute_spherical_coords(
+				coordinates[ip*3+0] - c[0], coordinates[ip*3+1]- c[1], coordinates[ip*3+2] - c[2],
+				spherical_r[ip], spherical_theta[ip], spherical_phi[ip]);
+
+	// for each l and m interpolate the radial data to the r-values and multiply the spherical harmonics
+	Auxillary::alignedvector::ZV radial_interpol(numPts, std::complex<double>(0.0));
+	for (int l = 0 ; l <= lmax_; ++l)
+		for (int m = -l ; m <= l; ++m)
+		{
+			auto itBegin = data_.begin() + Auxillary::memlayout::angular_momentum_layout(l,m)*rMax_;
+			auto itEnd = itBegin + rMax_;
+			rgrid_.interpolate(
+					spherical_r,
+					1,
+					itBegin,
+					itEnd,
+					radial_interpol.begin());
+
+			for (int ip = 0 ; ip < numPts; ++ip)
+			{
+				auto ylm = boost::math::spherical_harmonic(l, m, spherical_theta[ip], spherical_phi[ip] );
+				interpolated_data[ip] += ylm*radial_interpol[ip];
+			}
+		}
 }
 
 template<class F>
@@ -73,14 +127,14 @@ SphericalHarmonicExpansion::fit_to_data(
 				std::complex<double> * fvalues) const
 		{
 			assert(numEvals == ylmData_.size());
-			std::vector<double> coords(numEvals*3);
+			coordsBuffer_.resize(numEvals*3);
 			for (int iPt = 0; iPt < numEvals; ++iPt)
 			{
-				coords[iPt*3+0] = r_* std::sin(thetas[iPt])*std::cos(phis[iPt]) + r0x_;
-				coords[iPt*3+1] = r_* std::sin(thetas[iPt])*std::sin(phis[iPt]) + r0y_;
-				coords[iPt*3+2] = r_* std::cos(thetas[iPt])                     + r0z_;
+				coordsBuffer_[iPt*3+0] = r_* std::sin(thetas[iPt])*std::cos(phis[iPt]) + r0x_;
+				coordsBuffer_[iPt*3+1] = r_* std::sin(thetas[iPt])*std::sin(phis[iPt]) + r0y_;
+				coordsBuffer_[iPt*3+2] = r_* std::cos(thetas[iPt])                     + r0z_;
 			}
-			f_.interpolate(coords, fvalues);
+			f_.interpolate(coordsBuffer_, fvalues);
 
 			// multiply by the ylm data
 			for (int iPt = 0; iPt < numEvals; ++iPt)
@@ -94,6 +148,8 @@ SphericalHarmonicExpansion::fit_to_data(
 		const double r0x_, r0y_, r0z_;
 
 		Auxillary::alignedvector::ZV const & ylmData_;
+
+		mutable Auxillary::alignedvector::DV coordsBuffer_;
 	}; // end struct SphericalPart
 
 	Algorithms::SphereIntegrator<SphericalPart> integrator;

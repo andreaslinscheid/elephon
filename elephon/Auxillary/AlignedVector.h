@@ -81,6 +81,7 @@ public:
 	 using boost::multi_array<T, NumDims, Allocator>::end;
 	 using boost::multi_array<T, NumDims, Allocator>::shape;
 	 using boost::multi_array<T, NumDims, Allocator>::resize;
+	 using boost::multi_array<T, NumDims, Allocator>::reshape;
 
 	 typedef typename boost::multi_array<T, NumDims, Allocator>::element value_type;
 

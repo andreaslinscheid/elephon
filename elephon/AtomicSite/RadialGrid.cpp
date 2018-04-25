@@ -45,6 +45,12 @@ RadialGrid::get_num_R() const
 }
 
 double
+RadialGrid::get_range_of_definition() const
+{
+	return radius_;
+}
+
+double
 RadialGrid::get_radius(int iR) const
 {
 	assert((iR >= 0)&&(iR<numR_));

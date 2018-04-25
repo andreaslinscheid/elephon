@@ -36,6 +36,17 @@ class RegularBareGrid;
 
 /**
  * Handles the transformation of 3D vectors in coordinates of either primitive cell or supercell to the respective other.
+ *
+ * There are essentially 4 potential cells we worry about.
+ *	@todo Input cell must be primitive right now, change that!
+ *	There is an input cell (1.) that can be a supercell. We provide functionality (not yet, but later ...) to identify a primitive (2.)
+ *	cell in this input cell.
+ *	Then, we have a supercell for the vibrational calculation (3.). Furthermore, we have an embedding supercell (4.).
+ *	This is the normal supercell for vibrational calculation, (3.), extended to be symmetetrically arranged, so that the primitve cell
+ *	is in the middle.  For a regular grid in the primitive cell, the regular grid of the embedding cell is characterized by the property:
+ *		1. Each point in Cartesian coordinates corresponds to a primitive grid vector by adding a lattice vector.
+ *			In particular for \f$ \bf{R} = \bf{0}\f$ the primitive points are a subset of the embedding grid.
+ *		2. Each point has an inverse w.r.p.t. the center which coincides with the primitive cell.
  */
 class PrimitiveToSupercellConnection
 {
@@ -53,19 +64,6 @@ public:
 	void initialize(
 			std::shared_ptr<const UnitCell> primitiveCell,
 			std::shared_ptr<const UnitCell> superCell );
-
-	/**
-	 * Enter a vector in the cell and get the vector in the primitive cell plus Lattice vector.
-	 *
-	 * Let the vector in the supercell be \f$ {\bf r}\f$, then \f$ {\bf r} = {\bf r_{\rm UC}} + {\bf R}\f$ .
-	 *
-	 * @param scVec					A 3 component vector x y and z
-	 * @param primVecPlusLatticeVec	A pair with the 3 component vector \f${\bf r_{\rm UC}}\f$ first and
-	 * 								the 3 component vector \f${\bf R}\f$ second.
-	 */
-	void supercell_to_primitive_plus_lattice_vector(
-			std::vector<double> const & scVec,
-			std::pair<std::vector<double>, std::vector<int>> & primVecPlusLatticeVec) const;
 
 	/**
 	 * For an atom index in the supercell, return the atom index of the primitive cell.
@@ -99,17 +97,33 @@ public:
 	 */
 	int find_atom(Atom const & a, bool primitiveCell) const;
 
-	void get_supercell_vectors(Auxillary::Multi_array<int,2> & Rvectors) const;
+	/**
+	 * Get the list of supercell vectors and index map.
+	 * @param[out] Rvectors			Resizes to the N x 3 supercell vectors.
+	 * @param[out] RVectorIndexMap	A multiarray [MaxRVectorX]...[MaxRVectorZ] that returns the index of a vector or -1 if that vector
+	 * 								is not in the set.
+	 */
+	void get_supercell_vectors(Auxillary::Multi_array<int,2> & Rvectors,
+			Auxillary::Multi_array<int,3> & RVectorIndexMap) const;
 
 	/**
 	 * Get a supercell vector.
-	 * @param iR	Index of the vector in the list of supercell vectors.
+	 * @param[in] iR	Index of the vector in the list of supercell vectors.
 	 * @return	an array with the 3 components x,y and z of a supercell vector.
 	 */
 	std::array<int,3> get_supercell_vector(int iR) const;
 
+	/**
+	 * Transform a vector represented in the supercell to coordinates of the primitive cell.
+	 *
+	 * @param[in,out] vec	A 3 component vector that will overwritten with the coordintes in units of the primitive cell.
+	 */
 	void supercell_to_primitive_coordinates(std::vector<double> & vec) const;
 
+	/**
+	 * Transform a vector represented in coorinates of the primitive cell to coordinates of the supercell.
+	 * @param[in,out] vec	A 3 component vector that will overwritten with the coordintes in units of the supercell.
+	 */
 	void primitive_to_supercell_coordinates(std::vector<double> & vec) const;
 
 	/**
@@ -128,6 +142,30 @@ public:
 	 * @return	the number of times how often the primitive cell fits into the supercell.
 	 */
 	int get_supercell_volume_factor() const;
+
+	/**
+	 * Generate the data for the embedding supercell.
+	 *
+	 * See PrimitiveToSupercellConnection documentation for what the embedding cell is.
+	 *
+	 * @todo: The algorithm to figure out the embedding cell is not optimal. It can be improved by only considering
+	 * the primitive cell vectors and the grid dimension. Current implemention loops all grid points which can get heavy...
+	 *
+	 * @param[in] primitiveCellGrid		Regular grid sampling the primitive cell
+	 * @param[in] supercellGrid			Regular grid sampling the supercell
+	 * @param[out] minMaxEachDim		Set to the -min (which equals max) of the box in lattice vector space enclosing the embedding cell.
+	 * @param[out] listAllRVectors		resized to hold [N_em][3] embedding lattice vector indices and the coordinates.
+	 * @param[out] RVectorIndexMap		resized to the 'Box' [-minMaxEachDim[0]:minMaxEachDim[0]][...][-minMaxEachDim[2]:minMaxEachDim[2]] and returns
+	 * 									the index of the respective vector index in \p listAllRVectors or -1 if that vector is not in the list
+	 * @param[out] embeddingSuperCellGrid
+	 */
+	void build_embedding_supercell(
+			LatticeStructure::RegularBareGrid const & primitiveCellGrid,
+			LatticeStructure::RegularBareGrid const & supercellGrid,
+			std::array<int,3> & minMaxEachDim,
+			Auxillary::Multi_array<int,2> & listRVectors,
+			Auxillary::Multi_array<int,3> & RVectorIndexMap,
+			LatticeStructure::RegularBareGrid & embeddingSuperCellGrid ) const;
 
 	/**
 	 * Find a map from a point in the supercell to the primitive cell centered around a given atom.
@@ -154,27 +192,23 @@ public:
 	 * 									Taken to sample the primitive cell shifted to every of the atoms in \p atomsUC.
 	 * @param[in] supercellGrid			The grid which describes the real space of the supercell. Taken to sample the supercell
 	 * 									shifted to every of the atoms in \p atomsUC.
+	 * 									The grid which describes the real space of the supercell. Taken to sample the supercell
 	 * @param[in] atomsUC				A list of atoms in the primitive cell. An index map and lattice vector map
 	 * 									will be computed for each of these atoms, assuming any one of them in the center
 	 * 									of a variable primitive cell.
+	 * @param[in] minMaxEachDim			The Box enclosing the entire embedding cell.
 	 * @param[out] indexMap				a multiarray that will be resized to hold 1) for each atom 2) a list of real space indices
 	 * 									referencing the consecutively ordered real space index in the primitive cell
 	 * @param[out] latticeVectorMap		a multiarray that will be resized to hold 1) for each atom 2) a list
 	 * 									real space index in the supercell and the 3 dimension is the x,y and z coordinate of the R vectors
-	 * @param[out] Rdims				Set to the Box enclosing the entire embedding cell.
-	 * @param[out] listAllRVectors		resized to hold [N_em][3] embedding lattice vector indices and the coordinates.
-	 * @param[out] RVectorIndexMap		resized to the 'Box' [Rdims[0].first:Rdims[0].second][...][Rdims[2].first:Rdims[2].second] and returns
-	 * 									the index of the respective vector index in \p listAllRVectors or -1 if that vector is not in the list
 	 */
 	void build_supercell_to_primitive(
 			LatticeStructure::RegularBareGrid const & primitiveCellGrid,
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector<LatticeStructure::Atom> const & atomsUC,
+			std::array<int,3> const & minMaxEachDim,
 			Auxillary::Multi_array<int,2> & indexMap,
-			Auxillary::Multi_array<int,3> & latticeVectorMap,
-			std::array<std::pair<int,int>,3> & Rdims,
-			Auxillary::Multi_array<int,2> & listAllRVectors,
-			Auxillary::Multi_array<int,3> & RVectorIndexMap ) const;
+			Auxillary::Multi_array<int,3> & latticeVectorMap ) const;
 
 	/**
 	 * Get the matrix that transforms vector in the supercell to coordinates of the primitive cell when multiplied from the left.
@@ -215,21 +249,6 @@ private:
 	void discover_primitive_cell(
 			std::shared_ptr<const UnitCell> superCell,
 			UnitCell & primitiveCell) const;
-
-	/**
-	 * Set a list to the N x 3 lattice vectors, such that in coordinates of the primitive cell, any point in the supercell
-	 * including all borders can be reached by a primitive vectors plus one of the lattice vectors when the primitive cell
-	 * and the supercell are shifted such that their middle is on top of each other.
-	 *	@todo	Allow discovery of more complex relationships between primitive and composite cells.
-	 *
-	 * @param[out] Rvectors			Resized to [N][3] to fit the N lattice vectors.
-	 * @param[out] MaxEachDirSpace	Set to (Nx, Ny, Nz), the maximal occurring R vector length in each direction.
-	 * @param[out] MapRToIndex		Resized to [-Nx:Nx][-Ny:Ny][-Nz:Nz] to hold the map that tells for given tuple
-	 * 								the index of that vector or -1 if that vector is not part of the set.
-	 */
-	void get_embedded_supercell_vectors(Auxillary::Multi_array<int,2> & Rvectors,
-			std::array<int,3> & MaxEachDirSpace,
-			Auxillary::Multi_array<int,3> & MapRToIndex) const;
 
 	void supercell_to_primitive_coordinates_no_shift(std::vector<double> & vec) const;
 

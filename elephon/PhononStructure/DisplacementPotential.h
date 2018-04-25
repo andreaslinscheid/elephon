@@ -37,15 +37,34 @@ namespace PhononStructure
 class PotentialChangeIrredDisplacement;
 
 /**
- * Structure to store the data and provide methods related to the linear displacement potential due to a lattice perturbation.
+ * 	Structure to store the data and provide methods related to the linear displacement potential due to a lattice perturbation.
  *
- * @todo This function is in some sense similar to ForceConstantMatrix.
- * 		 These two must be the first target of a refactor once the general logic is working ...
+ *	We denote the object this class handles as the row vector
+ *	\f{eqnarray*}{
+ *	{\bf{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\kappa^{\prime}}(\bf{r}-\bf{R})
+ *	& = &
+ *	(\delta v_{{\rm {\scriptscriptstyle scf}}}^{\kappa x}(\bf{r}-\bf{R})\;\delta v_{{\rm {\scriptscriptstyle scf}}}^{\kappa y}(\bf{r}-\bf{R})\;
+ *	\delta v_{{\rm {\scriptscriptstyle scf}}}^{\kappa z})(\bf{r}-\bf{R})
+ *	\f}
+ *	The central functionalities are first compute this data from irreducible input data in DisplacementPotential::initialize()
+ *	and second compute the lattice Fourier DisplacementPotential::compute_dvscf_q().
  */
 class DisplacementPotential
 {
 public:
 
+	/**
+	 * Compute \f$ {\bf{\delta v}_{{\rm {\scriptscriptstyle scf}}}^{\Sigma}}_{\kappa^{\prime}}(\bf{r}-\bf{R})\f$ from
+	 * irreducible input data and store it in this object.
+	 *
+	 * @param[in] unitCell
+	 * @param[in] superCell
+	 * @param[in] displCollection
+	 * @param[in] primToSCCon
+	 * @param[in] unitcellGrid
+	 * @param[in] supercellGrid
+	 * @param[in] potentialChange
+	 */
 	void initialize(
 			std::shared_ptr<const LatticeStructure::UnitCell> unitCell,
 			std::shared_ptr<const LatticeStructure::UnitCell> superCell,
@@ -55,12 +74,23 @@ public:
 			LatticeStructure::RegularBareGrid const & supercellGrid,
 			std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> const & potentialChange);
 
+	/**
+	 * Compute \f$ \delta v_{{\rm {\scriptscriptstyle scf}}}(\bf{r}) / \delta u_{\bf{q}\nu} \f$ from
+	 * data stored in this object at a requested list of q vectors.
+	 *
+	 * @param[in] qVect
+	 * @param[in] modes
+	 * @param[in] dynamicalMatrices
+	 * @param[in] masses
+	 * @param[out] dvscf
+	 * @param[in,out] buffer
+	 * @param[in] freqCutoff
+	 */
 	void compute_dvscf_q(
 			std::vector<double> const & qVect,
 			Auxillary::Multi_array<double,2> const & modes,
 			Auxillary::Multi_array<std::complex<double>,3> const & dynamicalMatrices,
 			std::vector<double> const & masses,
-			std::vector<double> const & rVectors,
 			Auxillary::alignedvector::CV & dvscf,
 			std::vector<Auxillary::alignedvector::CV> & buffer,
 			double freqCutoff = 0.0) const;
@@ -93,6 +123,10 @@ public:
 			Auxillary::Multi_array<std::complex<double>,3> const & dynamicalMatrices,
 			std::vector<double> const & masses,
 			std::string filename) const;
+
+	Auxillary::Multi_array<float,3> const & get_data_regular_grid() const;
+
+	Auxillary::Multi_array<std::complex<float>,4> const & get_data_radial_grid() const;
 private:
 
 	int numModes_ = 0;
@@ -101,7 +135,7 @@ private:
 
 	LatticeStructure::RegularBareGrid primitiveCellGrid_;
 
-	LatticeStructure::RegularBareGrid superCellGrid_;
+	LatticeStructure::RegularBareGrid embeddingSuperCellGrid_;
 
 	std::shared_ptr<const LatticeStructure::UnitCell> primitiveCell_;
 
@@ -135,8 +169,8 @@ private:
 
 	std::vector<int> numRSpacePointsForLatticeVector_;
 
-	/// For x,y and z the min (first) or max (second) of lattice vectors that occur in the embedding supercell.
-	std::array<std::pair<int,int>, 3> embeddingRVectorBox_;
+	/// For x,y and z the min and max of lattice vectors that occur in the embedding supercell.
+	std::array<int, 3> embeddingRVectorBox_;
 
 	/// A buffer for the embedding R vectors with the first coordinate is the index and the second of dim 3 has the x,y and z
 	/// coordinates in units of the primitive cell. Note that in contrast to LatticeStructure::PrimitiveToSupercellConnection
@@ -151,9 +185,21 @@ private:
 
 	void clean_displacement_potential();
 
+	/**
+	 * Given potential change data for irreducible displacements of an atom,
+	 * generate the data for the full reducible set of displacements.
+	 *
+	 *
+	 * @param siteSymmetry				The site symmetry operations of the atom
+	 * @param potentialChange
+	 * @param deltaVRegularSymExpanded
+	 * @param deltaVRadialSymExpanded
+	 */
 	void symmetry_expand_displacement_data(
 			LatticeStructure::Symmetry const & siteSymmetry,
-			std::vector<int> symmetryGroupIndices,
+			std::shared_ptr<const LatticeStructure::AtomDisplacementCollection> displColl,
+			int atomIndex,
+			int numAtomsSupercell,
 			std::vector<std::shared_ptr<const PotentialChangeIrredDisplacement>> const & potentialChange,
 			Auxillary::Multi_array<double,2> & deltaVRegularSymExpanded,
 			Auxillary::Multi_array<std::complex<double>,4> & deltaVRadialSymExpanded) const;
@@ -167,6 +213,8 @@ private:
 			Auxillary::alignedvector::CV &dvscf_q) const;
 
 	int R_vector_to_index(int Rx, int Ry, int Rz) const;
+
+	void lattice_vector_map_back_embedding(std::array<int,3> & latticeVector) const;
 };
 
 } /* namespace PhononStructure */

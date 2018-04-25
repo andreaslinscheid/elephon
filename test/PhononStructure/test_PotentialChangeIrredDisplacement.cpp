@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	const double Radius = 0.5;
 	const int nRad = 10;
 
-	auto ucGrid_ptr = std::make_shared<LatticeStructure::RegularBareGrid>(std::move(LatticeStructure::RegularBareGrid({10, 10, 10})));
+	auto pcGrid_ptr = std::make_shared<LatticeStructure::RegularBareGrid>(std::move(LatticeStructure::RegularBareGrid({10, 10, 10})));
 	auto scGrid_ptr = std::make_shared<LatticeStructure::RegularBareGrid>(std::move(LatticeStructure::RegularBareGrid({30, 30, 30})));
 	auto primCell_ptr = std::make_shared<LatticeStructure::UnitCell>();
 	primCell_ptr->initialize(
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	primScCon->initialize(primCell_ptr, superCell_ptr);
 
 	// here we set the ground state "potential" on the regular grid to Pi
-	Auxillary::alignedvector::DV regularGridGroundStatePotential(ucGrid_ptr->get_num_points(), M_PI);
+	Auxillary::alignedvector::DV regularGridGroundStatePotential(pcGrid_ptr->get_num_points(), M_PI);
 
 	// here we set the displaced "potential" on the regular grid to Pi
 	Auxillary::alignedvector::DV regularGridDisplacedPotential(scGrid_ptr->get_num_points(), M_PI);
@@ -92,16 +92,16 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 		radialDisplacedPotential[ia].initialize(superCell_ptr->get_atoms_list()[ia], sexp);
 
 	LatticeStructure::DataRegularAndRadialGrid<double> groundStatePotential;
-	groundStatePotential.initialize(regularGridGroundStatePotential, radialGroundStatePotential);
+	groundStatePotential.initialize(*pcGrid_ptr,regularGridGroundStatePotential, radialGroundStatePotential);
 	LatticeStructure::DataRegularAndRadialGrid<double> displacedPotential;
-	displacedPotential.initialize(regularGridDisplacedPotential, radialDisplacedPotential);
+	displacedPotential.initialize(*scGrid_ptr,regularGridDisplacedPotential, radialDisplacedPotential);
 
 	PhononStructure::PotentialChangeIrredDisplacement chng;
 	chng.initialize(
 			displ_ptr,
 			groundStatePotential,
 			displacedPotential,
-			ucGrid_ptr,
+			pcGrid_ptr,
 			scGrid_ptr,
 			primScCon);
 
@@ -138,13 +138,13 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	adata.initialize(radialDisplacedPotential[lastElem].get_atom(), sexp);
 	radialDisplacedPotential[lastElem] = adata;
 
-	groundStatePotential.initialize(regularGridGroundStatePotential, radialGroundStatePotential);
-	displacedPotential.initialize(regularGridDisplacedPotential, radialDisplacedPotential);
+	groundStatePotential.initialize(*pcGrid_ptr,regularGridGroundStatePotential, radialGroundStatePotential);
+	displacedPotential.initialize(*scGrid_ptr,regularGridDisplacedPotential, radialDisplacedPotential);
 	chng.initialize(
 			displ_ptr,
 			groundStatePotential,
 			displacedPotential,
-			ucGrid_ptr,
+			pcGrid_ptr,
 			scGrid_ptr,
 			primScCon);
 

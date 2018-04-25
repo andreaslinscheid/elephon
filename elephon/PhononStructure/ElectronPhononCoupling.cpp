@@ -112,7 +112,6 @@ ElectronPhononCoupling::generate_gkkp_mod_2_of_q(
 	std::vector<int> potentialFFTGrid = realSpaceGrid.get_grid_dim();
 
 	int nr = potentialFFTGrid[0]*potentialFFTGrid[1]*potentialFFTGrid[2];
-	std::vector<double> rVectors = dvscf->get_real_space_grid().get_all_vectors_grid();
 
 	Algorithms::FFTInterface fft1, fft2;
 	fft1.plan_fft(potentialFFTGrid, nB,  1, false, nK);
@@ -125,7 +124,7 @@ ElectronPhononCoupling::generate_gkkp_mod_2_of_q(
 	Auxillary::alignedvector::ZV localGkkpMod2(nM*nM), localGkkpMod2Buffer(nM*nM);
 
 	ph->compute_at_q( gridQ, modes, dynmat );
-	dvscf->compute_dvscf_q( gridQ, modes, dynmat, ph->get_masses(), rVectors, dvscfData, dvscfBuffers);
+	dvscf->compute_dvscf_q( gridQ, modes, dynmat, ph->get_masses(), dvscfData, dvscfBuffers);
 
 	// Pre-compute all the Umklapp phases that occur
 	std::map<int, Auxillary::alignedvector::CV> expG0dot_r_buffer;

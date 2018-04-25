@@ -52,6 +52,8 @@
 #include "LatticeStructure/test_UnitCell.cpp"
 #include "LatticeStructure/test_PrimitiveToSupercellConnection.cpp"
 #include "LatticeStructure/test_AtomDisplacementCollection.cpp"
+#include "LatticeStructure/test_AtomSymmetryConnection.cpp"
+#include "LatticeStructure/test_DataRegularAndRadialGrid.cpp"
 
 // include all test suits for namespace PhononStructure
 #include "PhononStructure/test_AlphaSquaredF.cpp"
@@ -61,6 +63,7 @@
 #include "PhononStructure/test_Phonon.cpp"
 #include "PhononStructure/test_PhononGrid.cpp"
 #include "PhononStructure/test_PotentialChangeIrredDisplacement.cpp"
+#include "PhononStructure/test_Forces.cpp"
 
 // include all test suits for namespace symmetry
 #include "symmetry/test_SymmetryOperation.cpp"

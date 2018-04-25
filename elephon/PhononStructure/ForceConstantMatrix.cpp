@@ -51,6 +51,7 @@ ForceConstantMatrix::initialize(std::shared_ptr<const LatticeStructure::UnitCell
 		std::shared_ptr<const PhononStructure::Forces> forces)
 {
 	assert( forces->get_num_total_irred_displacements() == irredDispl->get_tota_num_irred_displacements() );
+	primitiveCell_ = primitiveCell;
 	this->set_tau_vectors_and_multiplicity(
 			primitiveCell,
 			superCell,
@@ -72,25 +73,14 @@ ForceConstantMatrix::initialize(std::shared_ptr<const LatticeStructure::UnitCell
 		LatticeStructure::Symmetry const & siteSym = primitiveCell->get_site_symmetry(atomIndex);
 
 		// copy the irreducible displacement data for this atom
-		int nIrredDispl = irredDispl->get_num_irred_displacements_for_atom(atomIndex);
-		Auxillary::Multi_array<double,3> forceIrreducible(boost::extents[nIrredDispl][nASC][3]);
-		for (int iIrDipl = 0 ; iIrDipl<nIrredDispl; ++iIrDipl)
-		{
-			assert(forces->get_forces_for_atom(atomIndex,iIrDipl).size() == nASC*3);
-			std::copy_n(forces->get_forces_for_atom(atomIndex,iIrDipl).data(),
-					forces->get_forces_for_atom(atomIndex,iIrDipl).size(),
-					forceIrreducible.data()+iIrDipl*nASC*3);
-		}
-
 		int nRedDispl = irredDispl->get_num_red_displacements_for_atom(atomIndex);
-		Auxillary::Multi_array<double,3> forceSymExpanded(boost::extents[nRedDispl][nASC][3]);
 
+		// symmetry - expand the irreducible displacements and the forces
 		Auxillary::Multi_array<double,2> uInv;
 		irredDispl->generate_pseudo_inverse_reducible_displacements_for_atom(atomIndex,uInv);
-
-		this->site_symmetry_expand_data(siteSym,
-										forceIrreducible,
-										forceSymExpanded);
+		Auxillary::Multi_array<double,3> forceSymExpanded;
+		const int aSC = primToSupercell->primitive_to_supercell_atom_index(atomIndex);
+		forces->site_symmetry_expand_data(siteSym, atomIndex, aSC, superCell->get_atoms_list(), forceSymExpanded);
 
 		// multiplying the Moore-Penrose pseudo inverse, of the displacements,
 		// we obtain the least square fit of transpose of the force constant matrix
@@ -145,8 +135,18 @@ ForceConstantMatrix::initialize(std::shared_ptr<const LatticeStructure::UnitCell
 			}
 		}
 	}
-	primitiveCell_ = primitiveCell;
 	data_.resize(boost::extents[nR][numModes_][numModes_]);
+
+	for (int iR = 0 ; iR < nR ; ++iR)
+		for (int ia = 0; ia < nAPC; ++ia)
+			for (int ib = 0; ib < nAPC; ++ib)
+				for ( int xi = 0 ; xi < 3; ++xi)
+					for ( int xj = 0 ; xj < 3; ++xj)
+					{
+						int mu1 = Auxillary::memlayout::mode_layout(ia,xi);
+						int mu2 = Auxillary::memlayout::mode_layout(ib,xj);
+						data_[iR][mu1][mu2] = dataLML[iR][ia][ib][xi][xj];
+					}
 }
 
 double
@@ -239,14 +239,15 @@ ForceConstantMatrix::symmetrize_q(
 
 	auto fullSymmetryGroup = unitCell->get_symmetry();
 
+	auto fullSymmetryGroupReci = fullSymmetryGroup;
+	fullSymmetryGroupReci.set_reciprocal_space_sym(true);
 	Auxillary::alignedvector::ZV rotBuffer(3*3);
 	for ( int iq = 0 ; iq < nq ; ++iq)
 	{
 		std::vector<double> q(&qpoints[iq*3], &qpoints[iq*3]+3);
-		auto smallGroupQ = fullSymmetryGroup;
-		smallGroupQ.set_reciprocal_space_sym(true);
-		auto dropedSymmetries = smallGroupQ.small_group(q);
-		const int nsymQ = smallGroupQ.get_num_symmetries_no_T_rev();
+		auto dropedSymmetries = fullSymmetryGroupReci.get_list_incompatible_symops_in_group(q);
+		const int nsymQ = fullSymmetryGroupReci.get_num_symmetries_no_T_rev() - static_cast<int>(dropedSymmetries.size());
+		assert((nsymQ>0) && (nsymQ <= fullSymmetryGroupReci.get_num_symmetries_no_T_rev()));
 
 		// for the pure identity symmetry there is nothing to be done.
 		if (nsymQ == 1)
@@ -341,15 +342,8 @@ ForceConstantMatrix::fourier_transform_derivative(std::vector<double> const & qV
 		Auxillary::alignedvector::ZV & data) const
 {
 	assert( qVect.size()%3 == 0 );
-	const int nAPC = numModes_/3;
 	const int nR = this->get_num_R();
 	const int nq = int(qVect.size())/3;
-
-	auto tauCart = tau_;
-	for (int ia = 0 ; ia < nAPC; ++ia)
-		for (int ib = 0 ; ib < nAPC; ++ib)
-			for ( int ir = 0 ; ir < nR; ++ir )
-				primitiveCell_->get_lattice().direct_to_cartesian_angstroem( tauCart[ia][ib][ir].data(), tauCart[ia][ib][ir].size());
 
 	data.assign( nq*numModes_*numModes_*3 , 0.0 );
 	for ( int iq = 0 ; iq < nq ; ++iq)
@@ -358,8 +352,8 @@ ForceConstantMatrix::fourier_transform_derivative(std::vector<double> const & qV
 			for ( int mu1 = 0 ; mu1 < numModes_; ++mu1 )
 				for ( int mu2 = 0 ; mu2 < numModes_; ++mu2 )
 				{
-					int ia = mu1/3;
-					int ib = mu2/3;
+					int ia = Auxillary::memlayout::atomIndex_of_mode(mu1);
+					int ib = Auxillary::memlayout::atomIndex_of_mode(mu2);
 					for ( int ir = 0 ; ir < nR; ++ir )
 					{
 						for ( int im = 0 ; im < multiplicity_[ia][ib][ir]; ++im )
@@ -371,7 +365,7 @@ ForceConstantMatrix::fourier_transform_derivative(std::vector<double> const & qV
 													/ double(multiplicity_[ia][ib][ir]);
 
 							data[((iq*3+i)*numModes_ + mu1)*numModes_+mu2] +=
-										std::complex<double>(0,-tauCart[ia][ib][ir][im][i])*
+										std::complex<double>(0,-tauCart_[ia][ib][ir][im][i])*
 										phase* data_[ir][mu1][mu2];
 						}
 					}
@@ -400,36 +394,13 @@ ForceConstantMatrix::drift_clean_forces(
 }
 
 void
-ForceConstantMatrix::site_symmetry_expand_data(LatticeStructure::Symmetry const & siteSymmetry,
-		Auxillary::Multi_array<double,3> const & forces,
-		Auxillary::Multi_array<double,3> & symExpandedForces ) const
-{
-//
-//	for ( int idir = 0 ; idir < irredDispl->get_num_irred_displacements_for_atom(atomIndex); ++idir)
-//	{
-//		prim
-//		for ( int istar = 0 ; istar < symIrredToRedDispl[idir].size(); ++istar)
-//		{
-//			int id = irredToRedDispl[idir][istar];
-//			int iForceAtom = rotMapsSiteSymmetry[symIrredToRedDispl[idir][istar]][iaS];
-//			std::copy( &forces[iForceField+idir][iForceAtom*3],
-//					&forces[iForceField+idir][iForceAtom*3]+3,
-//					&F[id*3] );
-//			sSym.rotate_cartesian( symIrredToRedDispl[idir][istar],
-//					F.begin()+id*3, F.begin()+(id+1)*3 );
-//		}
-//	}
-	throw std::logic_error("Not implemented");
-}
-
-void
 ForceConstantMatrix::set_tau_vectors_and_multiplicity(
 		std::shared_ptr<const LatticeStructure::UnitCell> primitiveCell,
 		std::shared_ptr<const LatticeStructure::UnitCell> superCell,
 		std::shared_ptr<const LatticeStructure::PrimitiveToSupercellConnection> primToSupercell )
 {
 	Auxillary::Multi_array<int,2> RVectors;
-	primToSupercell->get_supercell_vectors(RVectors);
+	primToSupercell->get_supercell_vectors(RVectors, indexLatticVectorMap_);
 	const int nR = RVectors.shape()[0];
 	const int nAPC = primitiveCell->get_atoms_list().size();
 	const int nASC = superCell->get_atoms_list().size();
@@ -456,7 +427,7 @@ ForceConstantMatrix::set_tau_vectors_and_multiplicity(
 		{
 			const int ib = primToSupercell->get_equiv_atom_primitive(iASC);
 			const int iR = primToSupercell->get_equiv_atom_primitive_lattice_vector_index(iASC);
-			auto pos = atomsSC[ib].get_position();
+			auto pos = atomsSC[iASC].get_position();
 			std::vector<std::vector<double>> vects(1,pos);
 			for ( int xi = 0 ; xi < 3; ++xi)
 				if ( std::abs(std::abs(pos[xi])-0.5) < 1e-4 )
@@ -480,6 +451,16 @@ ForceConstantMatrix::set_tau_vectors_and_multiplicity(
 			}
 		}
 	}
+
+	tauCart_.resize(boost::extents[nAPC][nAPC][nR]);
+	for (int ia = 0 ; ia < nAPC; ++ia)
+		for (int ib = 0 ; ib < nAPC; ++ib)
+			for ( int iR = 0 ; iR < nR; ++iR )
+			{
+				tauCart_[ia][ib][iR].resize(boost::extents[tau_[ia][ib][iR].shape()[0]][3]);
+				std::copy_n(tau_[ia][ib][iR].data(), tau_[ia][ib][iR].size(), tauCart_[ia][ib][iR].data());
+				primitiveCell_->get_lattice().direct_to_cartesian_angstroem( tauCart_[ia][ib][iR].data(), tauCart_[ia][ib][iR].size());
+			}
 }
 
 } /* namespace PhononStructure */
