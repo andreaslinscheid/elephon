@@ -40,6 +40,7 @@
 #include "IOMethods/test_ReadVASPWaveFunction.cpp"
 #include "IOMethods/test_ReadVASPxmlFile.cpp"
 #include "IOMethods/test_WriteVASPRealSpaceData.cpp"
+#include "IOMethods/test_ReadVASPPotential.cpp"
 
 // include all test suits for namespace LatticeStructure
 #include "LatticeStructure/test_DataRegularGrid.cpp"

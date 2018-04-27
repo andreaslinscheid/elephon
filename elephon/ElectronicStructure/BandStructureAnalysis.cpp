@@ -38,22 +38,9 @@ namespace BandStructureAnalysis
 std::vector<double>
 read_mass_tens_file(boost::filesystem::path massTens)
 {
-	std::ifstream file(massTens.c_str(), std::ios::binary);
-	if ( ! file.good() )
-		throw std::runtime_error("cannot open mass tensor file");
-
-	file.seekg(0, std::ios::beg);
-	int size = file.tellg();
-	file.seekg(0, std::ios::end);
-	size = int(file.tellg()) - size;
-	std::vector<char> buf(size);
-	file.seekg(0, std::ios::beg);
-	file.read(&buf[0], size);
-
-	int numElem = size/sizeof(float);
-
-	auto ptr = reinterpret_cast<float*>(buf.data());
-	return std::vector<double>(ptr, ptr+numElem);
+	std::vector<double> data;
+	Algorithms::helperfunctions::read_binary_file<std::vector<double>,float>(massTens.c_str(), data);
+	return data;
 }
 
 void find_band_extrema(

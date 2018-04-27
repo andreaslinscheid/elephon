@@ -27,6 +27,8 @@
 #include <utility>
 #include <type_traits>
 #include <assert.h>
+#include <typeinfo>
+#include <fstream>
 
 namespace elephon
 {
@@ -331,6 +333,41 @@ template<typename T>
 int nint(T v)
 {
 	return std::floor(v+T(0.5));
+}
+
+template<class VT, typename ReadT = typename VT::value_type>
+void
+read_binary_file(const char * filename_ctr, VT & data)
+{
+	std::ifstream file(filename_ctr, std::ios::binary);
+	if ( ! file.good() )
+		throw std::runtime_error(std::string("Failed to open binary file ") + filename_ctr + " for reading!");
+
+	file.seekg(0, std::ios::beg);
+	std::int64_t begin = file.tellg();
+	file.seekg(0, std::ios::end);
+	std::int64_t end = file.tellg();
+	std::int64_t size = end - begin;
+
+	if (size % sizeof(ReadT) != 0)
+		throw std::runtime_error(std::string("Error reading ") + filename_ctr
+				+ ": interpreting content as " + typeid(ReadT).name() + " leads to left-over bytes");
+
+	const std::int64_t numElem = size/sizeof(ReadT);
+	data.resize(numElem);
+	file.seekg(0, std::ios::beg);
+
+	if ( typeid(ReadT) == typeid(typename VT::value_type))
+	{
+		file.read(reinterpret_cast<char*>(data.data()), size);
+	}
+	else
+	{
+		ReadT  * buffer = new ReadT [numElem];
+		file.read(reinterpret_cast<char*>(buffer), size);
+		std::copy(buffer, buffer+numElem, data.data());
+		delete [] buffer;
+	}
 }
 
 } /* namespace helperfunctions */
