@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( Mimimal_example)
 	for (int ir = 0 ; ir < rgrid.get_num_R(); ++ir)
 		she(ir, 0, 0) = -(std::sin(M_PI*rgrid.get_radius(ir)*2.0)/rgrid.get_radius(ir))
 							*(0.25-std::pow(rgrid.get_radius(ir),2))*std::sqrt(4.0*M_PI); // -sin(pi|r|)/|r|*(0.5^2-r^2)
-	atomData[0].initialize(atom, she);
+	atomData[0].initialize(atom, she, elephon::AtomicSite::FrozenCore());
 	LatticeStructure::DataRegularAndRadialGrid<double> gsData;
 	gsData.initialize(pcGrid,regularGridData, atomData);
 
@@ -137,12 +137,12 @@ BOOST_AUTO_TEST_CASE( Mimimal_example)
 		if ( iaSC == ptos->primitive_to_supercell_atom_index(0) )
 		{
 			she.set_center(displAtom.get_position());
-			atomDataSC[iaSC].initialize(displAtom, she);
+			atomDataSC[iaSC].initialize(displAtom, she, elephon::AtomicSite::FrozenCore());
 		}
 		else
 		{
 			she.set_center(sc->get_atoms_list()[iaSC].get_position());
-			atomDataSC[iaSC].initialize(sc->get_atoms_list()[iaSC], she);
+			atomDataSC[iaSC].initialize(sc->get_atoms_list()[iaSC], she, elephon::AtomicSite::FrozenCore());
 		}
 	}
 	dsData.initialize(scGrid,regularGridData, atomDataSC);
@@ -216,61 +216,38 @@ BOOST_AUTO_TEST_CASE( Mimimal_example)
 	BOOST_CHECK_SMALL(diff, 1e-6);
 
 	// define the grid where we verify the data
-	diff = 0.0;
 	const int nPtsCheckGrid = 30;
-	const double minX = rgrid.get_center()[0]-rgrid.get_range_of_definition();
-	const double minY = rgrid.get_center()[1]-rgrid.get_range_of_definition();
-	const double minZ = rgrid.get_center()[2]-rgrid.get_range_of_definition();
-	auto setXYZ_within_radius = [&] (int ix, int iy, int iz, double &x, double &y, double &z) {
-		x = minX + 2.0*(ix*rgrid.get_range_of_definition())/nPtsCheckGrid;
-		y = minY + 2.0*(iy*rgrid.get_range_of_definition())/nPtsCheckGrid;
-		z = minZ + 2.0*(iz*rgrid.get_range_of_definition())/nPtsCheckGrid;
-		double r = std::sqrt(	  std::pow(x-rgrid.get_center()[0],2)
-					+ std::pow(y-rgrid.get_center()[1],2)
-					+ std::pow(z-rgrid.get_center()[2],2));
-		if ( (r > 1e-4) && (r < rgrid.get_range_of_definition()) )
-			return true;
-		return false;
-	};
-	std::vector<double> atomGridCheck;
-	double x, y, z;
-	for (int ix = 0 ; ix < nPtsCheckGrid; ++ix)
-		for (int iy = 0 ; iy < nPtsCheckGrid; ++iy)
-			for (int iz = 0 ; iz < nPtsCheckGrid; ++iz)
-				if ( setXYZ_within_radius(ix,iy,iz,x,y,z) )
-					atomGridCheck.insert(atomGridCheck.end(), {x, y, z});
+	elephon::test::fixtures::DataLoader::RegularGridAtom atomGrid(nPtsCheckGrid, rgrid);
 
 	// we start with the x direction
-	Auxillary::alignedvector::ZV displPotExpansionData(&displDataRadial[0][0][0][0], &displDataRadial[0][1][0][0]);
 	Auxillary::alignedvector::ZV outputDataX, outputDataY, outputDataZ;
+	Auxillary::alignedvector::ZV displPotExpansionData(&displDataRadial[0][0][0][0], &displDataRadial[0][1][0][0]);
 	AtomicSite::SphericalHarmonicExpansion shX;
 	shX.initialize(she.get_l_max(), displPotExpansionData, rgrid);
-	shX.interpolate(atomGridCheck, outputDataX);
-	BOOST_REQUIRE_EQUAL(outputDataX.size(), atomGridCheck.size()/3);
+	shX.interpolate(atomGrid.get_atom_grid(), outputDataX);
+	BOOST_REQUIRE_EQUAL(outputDataX.size(), atomGrid.get_atom_grid().size()/3);
 
 	// next is the y direction
 	std::copy(&displDataRadial[0][1][0][0], &displDataRadial[0][2][0][0], displPotExpansionData.data());
 	AtomicSite::SphericalHarmonicExpansion shY;
 	shY.initialize(she.get_l_max(), displPotExpansionData, rgrid);
-	shY.interpolate(atomGridCheck, outputDataY);
-	BOOST_REQUIRE_EQUAL(outputDataY.size(), atomGridCheck.size()/3);
+	shY.interpolate(atomGrid.get_atom_grid(), outputDataY);
+	BOOST_REQUIRE_EQUAL(outputDataY.size(), atomGrid.get_atom_grid().size()/3);
 
 	// and finally the z direction
 	std::copy(&displDataRadial[0][2][0][0], &displDataRadial[0][2][0][0]+displPotExpansionData.size(), displPotExpansionData.data());
 	AtomicSite::SphericalHarmonicExpansion shZ;
 	shZ.initialize(she.get_l_max(), displPotExpansionData, rgrid);
-	shZ.interpolate(atomGridCheck, outputDataZ);
-	BOOST_REQUIRE_EQUAL(outputDataZ.size(), atomGridCheck.size()/3);
+	shZ.interpolate(atomGrid.get_atom_grid(), outputDataZ);
+	BOOST_REQUIRE_EQUAL(outputDataZ.size(), atomGrid.get_atom_grid().size()/3);
 
 	int c = 0;
+	double diffReal = 0.0, diffImag = 0.0;
+	double x,y,z;
 	for (int ix = 0 ; ix < nPtsCheckGrid; ++ix)
-	{
 		for (int iy = 0 ; iy < nPtsCheckGrid; ++iy)
-		{
 			for (int iz = 0 ; iz < nPtsCheckGrid; ++iz)
-			{
-				setXYZ_within_radius(ix,iy,iz,x,y,z);
-				if ( setXYZ_within_radius(ix,iy,iz,x,y,z) )
+				if ( atomGrid.check_coord_in_atomic_sphere(ix,iy,iz,x,y,z) )
 				{
 					auto driv = [] (double x, double y, double z, double d) {
 						return (-2*M_PI*d*(0.25 - std::pow(x,2) - std::pow(y,2) - std::pow(z,2))*
@@ -283,27 +260,26 @@ BOOST_AUTO_TEST_CASE( Mimimal_example)
 							    std::sqrt(std::pow(x,2) + std::pow(y,2) + std::pow(z,2));
 					};
 					double referenceValue = driv(x,y,z,x);
-					diff += std::abs(std::real(outputDataX[c])-referenceValue);
-					diff += std::abs(std::imag(outputDataX[c]));
+					diffReal += std::abs(std::real(outputDataX[c])-referenceValue);
+					diffImag += std::abs(std::imag(outputDataX[c]));
 
 					referenceValue = driv(x,y,z,y);
-					diff += std::abs(std::real(outputDataY[c])-referenceValue);
-					diff += std::abs(std::imag(outputDataY[c]));
+					diffReal += std::abs(std::real(outputDataY[c])-referenceValue);
+					diffImag += std::abs(std::imag(outputDataY[c]));
 
 					referenceValue = driv(x,y,z,z);
-					diff += std::abs(std::real(outputDataZ[c])-referenceValue);
-					diff += std::abs(std::imag(outputDataZ[c]));
+					diffReal += std::abs(std::real(outputDataZ[c])-referenceValue);
+					diffImag += std::abs(std::imag(outputDataZ[c]));
 					++c;
 				}
-			}
-		}
-	}
 
-	diff /= atomGridCheck.size()/3;
+	diffReal /= atomGrid.get_atom_grid().size();
+	diffImag /= atomGrid.get_atom_grid().size();
 	// For the small number of radial points that we use, this result is not
 	// very accurate. Since re-fitting is a rather expensive operation and essentially O(n_radial^2),
-	// we don't run a more approprite number of points.
-	BOOST_CHECK_SMALL(diff, 0.01);
+	// we don't run a more appropriate number of points.
+	BOOST_CHECK_SMALL(diffReal, 0.01);
+	BOOST_CHECK_SMALL(diffImag, 0.01);
 }
 //
 //BOOST_AUTO_TEST_CASE( build_Al_fcc_primitive )

@@ -76,7 +76,8 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	AtomicSite::AtomSiteData adata;
 	adata.initialize(
 			primCell_ptr->get_atoms_list().front(),
-			sexp);
+			sexp,
+			elephon::AtomicSite::FrozenCore());
 	auto radialGroundStatePotential = std::vector<AtomicSite::AtomSiteData>(1, adata);
 	auto radialDisplacedPotential = std::vector<AtomicSite::AtomSiteData>(primScCon->get_supercell_volume_factor());
 
@@ -84,12 +85,12 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 	auto displacedAtom = primCell_ptr->get_atoms_list().front();
 	LatticeStructure::AtomDisplacement displ_ptr(displacedAtom, 0.001, std::vector<double>({1.0, 0.0, 0.0}));
 	displacedAtom.apply_displacement(displ_ptr);
-	adata.initialize(displacedAtom, sexp);
+	adata.initialize(displacedAtom, sexp, elephon::AtomicSite::FrozenCore());
 	radialDisplacedPotential[0] = AtomicSite::AtomSiteData(std::move(adata));
 	// set the remainder non-displaced atoms
 	for (int ia = 1 ; ia < primScCon->get_supercell_volume_factor(); ++ia)
 
-		radialDisplacedPotential[ia].initialize(superCell_ptr->get_atoms_list()[ia], sexp);
+		radialDisplacedPotential[ia].initialize(superCell_ptr->get_atoms_list()[ia], sexp, elephon::AtomicSite::FrozenCore());
 
 	LatticeStructure::DataRegularAndRadialGrid<double> groundStatePotential;
 	groundStatePotential.initialize(*pcGrid_ptr,regularGridGroundStatePotential, radialGroundStatePotential);
@@ -132,10 +133,10 @@ BOOST_AUTO_TEST_CASE( test_explicit_example )
 		sexp(ir, 0, 0) = zeroLM;
 		sexp(ir, mCheck, lCheck) = finiteLM;
 	}
-	adata.initialize(primCell_ptr->get_atoms_list().front(), sexp);
+	adata.initialize(primCell_ptr->get_atoms_list().front(), sexp, elephon::AtomicSite::FrozenCore());
 	radialDisplacedPotential[0] = adata;
 	const int lastElem = static_cast<int>(radialDisplacedPotential.size()) - 1;
-	adata.initialize(radialDisplacedPotential[lastElem].get_atom(), sexp);
+	adata.initialize(radialDisplacedPotential[lastElem].get_atom(), sexp, elephon::AtomicSite::FrozenCore());
 	radialDisplacedPotential[lastElem] = adata;
 
 	groundStatePotential.initialize(*pcGrid_ptr,regularGridGroundStatePotential, radialGroundStatePotential);

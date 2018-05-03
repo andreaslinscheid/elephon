@@ -1,4 +1,4 @@
-/*	This file ReadVASPElephonData.h is part of elephon.
+/*	This file FrozenCore.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,34 +13,39 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Dec 29, 2017
+ *  Created on: Apr 27, 2018
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_IOMETHODS_READVASPELEPHONDATA_H_
-#define ELEPHON_IOMETHODS_READVASPELEPHONDATA_H_
+#ifndef ELEPHON_ATOMICSITE_FROZENCORE_H_
+#define ELEPHON_ATOMICSITE_FROZENCORE_H_
 
-#include <string>
+#include "AtomicSite/RadialGrid.h"
 #include <vector>
 
 namespace elephon
 {
-namespace IOMethods
+namespace AtomicSite
 {
 
-class ReadVASPElephonData
+class FrozenCore
 {
 public:
 
-	void read_data_file(
-			std::string const & filename,
-			int & regular_dim_x,
-			int & regular_dim_y,
-			int & regular_dim_z,
-			std::vector<double> & regularGridPotential);
+	void initialize(double corePointCharge,
+			std::vector<double> electronicFrozenCoreCharge,
+			RadialGrid radialGrid);
+
+private:
+
+	double corePointCharge_ = 0.0;
+
+	std::vector<double> electronicFrozenCoreCharge_;
+
+	RadialGrid rgrid_;
 };
 
-} /* namespace IOMethods */
+} /* namespace AtomicSite */
 } /* namespace elephon */
 
-#endif /* ELEPHON_IOMETHODS_READVASPELEPHONDATA_H_ */
+#endif /* ELEPHON_ATOMICSITE_FROZENCORE_H_ */

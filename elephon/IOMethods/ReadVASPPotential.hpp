@@ -22,6 +22,7 @@
 #include "Auxillary/memory_layout_functions.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <cstring>
 
 namespace elephon
 {
@@ -36,6 +37,9 @@ ReadVASPPotential::read_potential_file(
 		std::vector<int> & angularLMaxPerAtom,
 		std::vector<std::vector<double>> & radialPointsPerAtom,
 		std::vector<double> & radiusPerAtom,
+		std::vector<std::array<double,3>> & centerAtom,
+		std::vector<std::string> & namesAtom,
+		std::vector<double> & massAtom,
 		std::vector<VTRad> & radialData,
 		std::vector<double> & coreChargeZ,
 		std::vector<VTChg> & frozenCoreElectronChg) const
@@ -65,6 +69,9 @@ ReadVASPPotential::read_potential_file(
 	radialData.resize(numAtoms);
 	coreChargeZ.resize(numAtoms);
 	frozenCoreElectronChg.resize(numAtoms);
+	centerAtom.resize(numAtoms);
+	namesAtom.resize(numAtoms);
+	massAtom.resize(numAtoms);
 
 	// regular grid and its data
 	regularGridDim[0] = std::floor(buffer[c++]+0.5);
@@ -76,6 +83,18 @@ ReadVASPPotential::read_potential_file(
 
 	for (int atomIndex = 0 ; atomIndex < numAtoms; ++atomIndex)
 	{
+		// fetch center and atomic mass
+		std::array<double,3> center;
+		for (auto & xi : center)
+			xi = buffer[c++];
+		centerAtom[atomIndex] = center;
+		massAtom[atomIndex] = buffer[c++];
+
+		// fetch atom symbol
+		char firstLatter = static_cast<char>(std::floor(buffer[c++]+0.5));
+		char secondLatter = static_cast<char>(std::floor(buffer[c++]+0.5));
+		namesAtom[atomIndex] = secondLatter == ' '? std::string({firstLatter}) : std::string({firstLatter, secondLatter});
+
 		// radial grid for this atom
 		int numRadPtsGrid = std::floor(buffer[c++]+0.5);
 		if(c + 2*numRadPtsGrid + 3 >= buffer.size())
@@ -85,6 +104,7 @@ ReadVASPPotential::read_potential_file(
 		radialPointsPerAtom[atomIndex].resize(numRadPtsGrid);
 		for (int ir = 0 ; ir < numRadPtsGrid; ++ir)
 			radialPointsPerAtom[atomIndex][ir] = buffer[c++];
+		radiusPerAtom[atomIndex] = *radialPointsPerAtom[atomIndex].rbegin();
 
 		// angular moment max
 		angularLMaxPerAtom[atomIndex] = std::floor(buffer[c++]+0.5);
@@ -116,7 +136,14 @@ ReadVASPPotential::read_potential_file(
 				const int readM = std::floor(buffer[c++]+0.5);
 				const int cnsqChannel = Auxillary::memlayout::angular_momentum_layout(readL, readM);
 				for (int ir = 0 ; ir < numRadPtsGrid; ++ir)
+				{
 					radialData[atomIndex][ir + numRadPtsGrid*cnsqChannel] = buffer[c++];
+					if ( std::isnan(std::abs(radialData[atomIndex][ir + numRadPtsGrid*cnsqChannel])) )
+						throw std::runtime_error(
+								std::string("\nError processing file ")+filepath_.c_str()+":\n" +
+								"For atom index "+std::to_string(atomIndex)+" element with angular momentum quantum numbers (l,m)=("+
+								std::to_string(l)+","+std::to_string(m)+"), radial index ir="+std::to_string(ir)+" is NaN!\n Exiting ...");
+				}
 			}
 	}
 	if (c != buffer.size())

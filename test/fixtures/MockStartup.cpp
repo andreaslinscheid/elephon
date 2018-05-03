@@ -122,7 +122,7 @@ MockStartup::get_mock_AtomSiteData()
 		const int lmax = 5;
 		Auxillary::alignedvector::ZV angularData(std::pow(lmax+1,2)*numRadPts, std::complex<double>(0));
 		AtomicSite::SphericalHarmonicExpansion she;
-		she.initialize(lmax, std::move(angularData), std::move(rgrid));
+		she.initialize(lmax, std::move(angularData), rgrid);
 
 		// constant
 		for (int ir = 0 ; ir <numRadPts; ++ir)
@@ -131,8 +131,11 @@ MockStartup::get_mock_AtomSiteData()
 		for (int ir = 0 ; ir <numRadPts; ++ir)
 			she(ir, 0, 1) = 2.0*M_PI;
 
+		AtomicSite::FrozenCore fc;
+		fc.initialize(-1.0, std::vector<double>(rgrid.get_num_R(),0.0), std::move(rgrid));
+
 		std::shared_ptr<AtomicSite::AtomSiteData> tmp = std::make_shared<AtomicSite::AtomSiteData>();
-		tmp->initialize(std::move(testAtom), std::move(she));
+		tmp->initialize(std::move(testAtom), std::move(she), std::move(fc));
 		mockAtomSiteConstantPlusCosX_ = tmp;
 	}
 	return mockAtomSiteConstantPlusCosX_;

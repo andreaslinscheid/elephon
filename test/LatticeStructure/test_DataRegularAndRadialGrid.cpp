@@ -23,6 +23,7 @@
 #include "AtomicSite/AtomSiteData.h"
 #include "AtomicSite/SphericalHarmonicExpansion.h"
 #include "fixtures/MockStartup.h"
+#include "AtomicSite/FrozenCore.h"
 
 BOOST_AUTO_TEST_SUITE( DataRegularAndRadialGrid )
 
@@ -50,9 +51,9 @@ void test_basic()
 	const int atomIndex = 0;
 	auto atom = ms.get_mock_AtomSiteData()->get_atom();
 	atom.set_position({0,0,0});
-	auto dataAtom = ms.get_mock_AtomSiteData()->get_data();
+	auto dataAtom = ms.get_mock_AtomSiteData()->get_potential_data();
 	dataAtom.set_center(atom.get_position());
-	radialGridData[atomIndex].initialize(atom, dataAtom);
+	radialGridData[atomIndex].initialize(atom, dataAtom, elephon::AtomicSite::FrozenCore());
 	d.initialize(LatticeStructure::RegularBareGrid({5,5,5}), regularGridData, radialGridData);
 
 	BOOST_CHECK_EQUAL(d.get_max_num_radial_elements(), 50);

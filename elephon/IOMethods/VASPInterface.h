@@ -28,9 +28,9 @@
 #include "IOMethods/ReadVASPxmlFile.h"
 #include "IOMethods/ReadVASPKpoints.h"
 #include "LatticeStructure/Atom.h"
+#include "IOMethods/ReadVASPPotential.h"
 #include <vector>
 #include <map>
-#include "ReadVASPLocpot.h"
 
 namespace elephon
 {
@@ -162,7 +162,7 @@ private:
 
 	ReadVASPPoscar posReader_;
 
-	ReadVASPLocpot potReader_;
+	ReadVASPPotential potReader_;
 
 	ReadVASPSymmetries symReader_;
 

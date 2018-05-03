@@ -61,6 +61,59 @@ public:
 			RadialGrid rgrid);
 
 	/**
+	 * Set the internal data from expansion data within real spherical harmonics.
+	 *
+	 * The potential is described e.g. in VASP in terms of real spherical harmonics
+	 * \f{eqnarray*}
+	 * 	\tilde{Y}_{l}^{m}(\theta,\phi)
+	 * 		& = & \begin{cases}
+	 *			\frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)] & m<0\\
+	 *			Y_{l}^{m}(\theta,\phi) & m=0\\
+	 *			\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)] & m>0
+	 *			\end{cases}
+	 * \f}
+	 *	 as the series
+	 * \f{eqnarray*}{
+	 *	 v_{{\rm scf}}^{{\rm AE}-1}({\bf r}) & = & \sum_{lm}\tilde{Y}_{l}^{m}({\bf r}/\vert{\bf r}\vert)v_{lm}^{{\rm R}}(\vert{\bf r}\vert)
+	 * \f}
+	 *	 which can be written, again, in terms of the complex spherical harmonics as we need in this class via
+	 * \f{eqnarray*}{
+	 * v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})
+	 * &=&	\sum_{l,m<0}\frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)]v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert) \\
+	 * &&	+\sum_{l}Y_{l}^{0}(\theta,\phi)v_{l0}^{{\rm R}}(\vert\boldsymbol{r}\vert)\\
+	 * &&	+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)]v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)\\
+	 * &=&	\sum_{l}Y_{l}^{0}(\theta,\phi)v_{l0}^{{\rm R}}(\vert\boldsymbol{r}\vert)+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi){\rm i}
+	 * 			v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)-(-1)^{-m}Y_{l}^{m}(\theta,\phi){\rm i}v_{l,-m}^{{\rm R}}(\boldsymbol{\vert\boldsymbol{r}}\vert)\\
+	 * &&	+Y_{l}^{-m}(\theta,\phi)v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)+(-1)^{m}Y_{l}^{m}(\theta,\phi)v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)]\\
+	 * &=&	\sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\vert\boldsymbol{r}\vert)+\sum_{l,m<0}Y_{l}^{m}(\theta,\phi)\frac{1}{\sqrt{2}}
+	 * 			[v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)+{\rm i}v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)]\\
+	 * &&	+\sum_{l,m>0}Y_{l}^{m}(\theta,\phi)\frac{(-1)^{m}}{\sqrt{2}}[v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)
+	 * 			-{\rm i}v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)]\\
+	 * &&	\equiv\sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(\vert\boldsymbol{r}\vert)	 v_{{\rm scf}}^{{\rm AE}-1}({\bf r})
+	 * \f}
+	 *	 with
+	 * \f{eqnarray*}{
+	 * v_{l,m}^{{\rm AE}}(\vert{\bf r}\vert)
+	 * 	& = & \begin{cases}
+	 *		\frac{1}{\sqrt{2}}[v_{l,-m}^{{\rm R}}(\vert{\bf r}\vert)+{\rm i}v_{lm}^{{\rm R}}(\vert{\bf r}\vert)] & m<0	\\
+	 *		v_{l0}^{{\rm R}}(\boldsymbol{\vert{\bf r}}\vert) & m=0	\\
+	 *		\frac{(-1)^{m}}{\sqrt{2}}[v_{lm}^{{\rm R}}(\vert{\bf r}\vert)-{\rm i}v_{l,-m}^{{\rm R}}(\vert{\bf r}\vert)] & m>0
+	 *	\end{cases}
+	 * \f}
+	 *
+	 *	@tparam VT a container type with linear storage such as vector
+	 *
+	 * @param[in] lmax					maximal angular momentum that occurs l=(0,...,lmax)
+	 * @param[in] dataExpansionRealSH	Data with the expansion data in terms of real spherical harmonics. Layout is the same as in initialize()
+	 * @param[in] rgrid					The radial grid.
+	 */
+	template<class VT>
+	void initialize_from_real(
+			int lmax,
+			VT const & dataExpansionRealSH,
+			RadialGrid rgrid);
+
+	/**
 	 * Access an element of the expansion
 	 *
 	 * @param[in] r		remainder index per l and m quantum number

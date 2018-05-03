@@ -44,6 +44,9 @@ public:
 			std::vector<int> & angularLMaxPerAtom,
 			std::vector<std::vector<double>> & radialPointsPerAtom,
 			std::vector<double> & radiusPerAtom,
+			std::vector<std::array<double,3>> & centerAtom,
+			std::vector<std::string> & namesAtom,
+			std::vector<double> & massAtom,
 			std::vector<VTRad> & radialData,
 			std::vector<double> & coreChargeZ,
 			std::vector<VTChg> & frozenCoreElectronChg) const;

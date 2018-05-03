@@ -1,4 +1,4 @@
-/*	This file ReadVASPElephonData.cpp is part of elephon.
+/*	This file FrozenCore.cpp is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,14 +13,26 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Dec 29, 2017
+ *  Created on: Apr 27, 2018
  *      Author: A. Linscheid
  */
 
-#include "ReadVASPElephonData.h"
+#include "AtomicSite/FrozenCore.h"
 
-namespace elephon {
-namespace IOMethods {
+namespace elephon
+{
+namespace AtomicSite
+{
 
-} /* namespace IOMethods */
+void
+FrozenCore::initialize(double corePointCharge,
+		std::vector<double> electronicFrozenCoreCharge,
+		RadialGrid radialGrid)
+{
+	corePointCharge_ = corePointCharge;
+	electronicFrozenCoreCharge_= std::move(electronicFrozenCoreCharge);
+	rgrid_ = std::move(radialGrid);
+}
+
+} /* namespace AtomicSite */
 } /* namespace elephon */

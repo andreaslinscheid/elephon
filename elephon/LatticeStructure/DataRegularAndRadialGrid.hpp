@@ -42,7 +42,7 @@ DataRegularAndRadialGrid<T>::get_max_num_radial_elements() const
 {
 	int nRadMax = 0;
 	for (auto const & dv : radialGridData_)
-		nRadMax = std::max(dv.get_data().get_radial_grid().get_num_R(),nRadMax);
+		nRadMax = std::max(dv.get_potential_data().get_radial_grid().get_num_R(),nRadMax);
 	return nRadMax;
 }
 
@@ -60,7 +60,7 @@ DataRegularAndRadialGrid<T>::get_max_angular_moment() const
 {
 	int lmax = 0;
 	for (auto const & dv : radialGridData_)
-		lmax = std::max(lmax, dv.get_data().get_l_max());
+		lmax = std::max(lmax, dv.get_potential_data().get_l_max());
 	return lmax;
 }
 
@@ -71,7 +71,7 @@ DataRegularAndRadialGrid<T>::transform(symmetry::SymmetryOperation const & sop)
 	sop.transform_scalar_field_regular_grid(regularGrid_, regularGridData_);
 	// apply to each atom data, then reshuffle the atoms
 	for (auto & ad : radialGridData_)
-		ad.edit_data().transform(sop);
+		ad.edit_potential_data().transform(sop);
 
 	// todo this logic below is already implemented in the atom symmetry mappings
 	// unfortunately its not easy to get this information here without changing the logic of how
@@ -97,7 +97,8 @@ DataRegularAndRadialGrid<T>::transform(symmetry::SymmetryOperation const & sop)
 	for (int ia = 0 ; ia < radialGridData_.size(); ++ia)
 	{
 		const int iaMapped = symMap[ia];
-		radialGridDataBuffer[ia].initialize(radialGridData_[ia].get_atom(), std::move(radialGridData_[iaMapped].edit_data()));
+		radialGridDataBuffer[ia].initialize(radialGridData_[ia].get_atom(),
+				std::move(radialGridData_[iaMapped].edit_potential_data()), radialGridData_[iaMapped].get_frozen_core_data());
 	}
 
 	std::swap(radialGridData_,radialGridDataBuffer);
@@ -122,7 +123,7 @@ Auxillary::alignedvector::ZV::const_iterator
 DataRegularAndRadialGrid<T>::begin_radial_data(int atomIndex) const
 {
 	assert((atomIndex>=0)&&(atomIndex<radialGridData_.size()));
-	return radialGridData_[atomIndex].get_data().begin();
+	return radialGridData_[atomIndex].get_potential_data().begin();
 }
 
 template<typename T>
@@ -130,7 +131,7 @@ Auxillary::alignedvector::ZV::const_iterator
 DataRegularAndRadialGrid<T>::end_radial_data(int atomIndex) const
 {
 	assert((atomIndex>=0)&&(atomIndex<radialGridData_.size()));
-	return radialGridData_[atomIndex].get_data().end();
+	return radialGridData_[atomIndex].get_potential_data().end();
 }
 
 template<typename T>

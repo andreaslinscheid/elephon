@@ -21,6 +21,7 @@
 #include "IOMethods/InputFile.h"
 #include "IOMethods/ReadVASPxmlFile.h"
 #include "AtomicSite/AtomSiteData.h"
+#include "LatticeStructure/Atom.h"
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <map>
@@ -366,9 +367,60 @@ void VASPInterface::read_electronic_potential(
 		std::vector<AtomicSite::AtomSiteData> & radialPart)
 {
 	boost::filesystem::path rootdir(root_directory);
-	std::vector<double> regularGridPartV;
-	potReader_.read_scf_potential( (rootdir / "LOCPOT").string(), dims, regularGridPartV );
-	Auxillary::alignedvector::DV regularGridPart(regularGridPartV.begin(), regularGridPartV.end());
+	potReader_.set_filepath((rootdir / potReader_.get_default_filename()).string());
+
+	std::array<int,3> regularGridDims;
+	std::vector<double> radiusPerAtom, coreChargeZ;
+	std::vector<int> angularL;
+	std::vector<std::vector<double>> radialGrid, coreFrozenElectronicCharge;
+	std::vector<std::vector<std::complex<double>>> radialPotentialDatal;
+	std::vector<std::string> atomSymbolds;
+	std::vector<std::array<double,3>> atomCenters;
+	std::vector<double> atomicMass;
+	potReader_.read_potential_file(
+			regularGridDims,
+			regularGrid,
+			angularL,
+			radialGrid,
+			radiusPerAtom,
+			atomCenters,
+			atomSymbolds,
+			atomicMass,
+			radialPotentialDatal,
+			coreChargeZ,
+			coreFrozenElectronicCharge);
+
+	dims.assign(regularGridDims.begin(), regularGridDims.end());
+	const int numAtoms = radialGrid.size();
+
+	radialPart.clear();
+	radialPart.reserve(numAtoms);
+	for (int atomIndex = 0 ; atomIndex < numAtoms; ++atomIndex)
+	{
+		AtomicSite::AtomSiteData dataThisAtom;
+
+		LatticeStructure::Atom atom( atomicMass[atomIndex],
+				atomSymbolds[atomIndex],
+				std::vector<double>(atomCenters[atomIndex].begin(), atomCenters[atomIndex].end()),
+				{false, false, false}, 1e-6);
+
+		AtomicSite::RadialGrid rgrid;
+		rgrid.initialize(std::vector<double>(atomCenters[atomIndex].begin(),atomCenters[atomIndex].end()),
+				radiusPerAtom[atomIndex],
+				std::move(radialGrid[atomIndex]));
+
+		AtomicSite::SphericalHarmonicExpansion she;
+		she.initialize_from_real(angularL[atomIndex], radialPotentialDatal[atomIndex], rgrid);
+
+		AtomicSite::FrozenCore fc;
+		fc.initialize(coreChargeZ[atomIndex], std::move(coreFrozenElectronicCharge[atomIndex]), std::move(rgrid));
+
+		dataThisAtom.initialize(std::move(atom),
+				std::move(she),
+				std::move(fc));
+
+		radialPart.push_back(std::move(dataThisAtom));
+	}
 }
 
 void

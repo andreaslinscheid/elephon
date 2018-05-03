@@ -73,6 +73,24 @@ public:
 	 * @return	a vector set to the force data.
 	 */
 	std::vector<double> get_reference_force_data_vasp_Al_sc4x4x4() const;
+
+	/**
+	 *  A helper class to generate a regular grid in a box around an atom
+	 */
+	class RegularGridAtom {
+	public:
+		RegularGridAtom(int numPtsEachDir, AtomicSite::RadialGrid const & rgrid);
+
+		bool check_coord_in_atomic_sphere(int ix, int iy, int iz, double &x, double &y, double &z) const;
+
+		std::vector<double> const & get_atom_grid() const;
+	private:
+		int numPtsEachDir_;
+		AtomicSite::RadialGrid const & rgrid_;
+		std::vector<double> atomGridCheck_;
+		double minX_, minY_, minZ_;
+		const double cutoffCenter_ = 1e-5;
+	};
 private:
 
 	void process_fileName(std::string & fileName ) const;

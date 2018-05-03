@@ -2669,20 +2669,20 @@ Transformation of real spherical harmonics
 \begin_layout Standard
 The potential is described in VASP in terms of real spherical harmonics
 \begin_inset Formula 
-\begin{equation}
-\tilde{Y}_{l}^{m}(\theta,\phi)=\begin{cases}
+\begin{eqnarray}
+\tilde{Y}_{l}^{m}(\theta,\phi) & = & \begin{cases}
 \frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)] & m<0\\
 Y_{l}^{m}(\theta,\phi) & m=0\\
 \frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)] & m>0
 \end{cases}
-\end{equation}
+\end{eqnarray}
 
 \end_inset
 
 as the series
 \begin_inset Formula 
 \begin{equation}
-v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})=\sum_{lm}\tilde{Y}_{l}^{m}(\boldsymbol{r}/\vert\boldsymbol{r}\vert)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})=\sum_{lm}\tilde{Y}_{l}^{m}(\boldsymbol{r}/\vert\boldsymbol{r}\vert)v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)
 \end{equation}
 
 \end_inset
@@ -2690,13 +2690,14 @@ v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r})=\sum_{lm}\tilde{Y}_{l}^{m}(\boldsymbo
 which can be written again in terms of the complex spherical harmonics as
 \begin_inset Formula 
 \begin{eqnarray}
-v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}) & = & \sum_{l,m<0}\frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)]v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)\nonumber \\
- &  & +\sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)]v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)\\
- & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi){\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-(-1)^{-m}Y_{l}^{m}(\theta,\phi){\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)\nonumber \\
- &  & +Y_{l}^{-m}(\theta,\phi)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+(-1)^{m}Y_{l}^{m}(\theta,\phi)v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\\
- & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert)+\sum_{l,m<0}Y_{l}^{m}(\theta,\phi)\frac{1}{\sqrt{2}}[v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+{\rm i}v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\nonumber \\
- &  & +\sum_{l,m>0}Y_{l}^{m}(\theta,\phi)\frac{(-1)^{m}}{\sqrt{2}}[v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-{\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)]\\
- & = & \sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(\boldsymbol{\vert\boldsymbol{r}}\vert)\label{eq:AEpotentialSHexpansion}
+v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}) & = & \sum_{l,m<0}\frac{{\rm i}}{\sqrt{2}}[Y_{l}^{m}(\theta,\phi)-(-1)^{m}Y_{l}^{-m}(\theta,\phi)]v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)\nonumber \\
+ &  & +\sum_{l}Y_{l}^{0}(\theta,\phi)v_{l0}^{{\rm R}}(\vert\boldsymbol{r}\vert)\nonumber \\
+ &  & +\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi)+(-1)^{m}Y_{l}^{m}(\theta,\phi)]v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)\\
+ & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l0}^{{\rm R}}(\vert\boldsymbol{r}\vert)+\sum_{l,m>0}\frac{1}{\sqrt{2}}[Y_{l}^{-m}(\theta,\phi){\rm i}v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)-(-1)^{-m}Y_{l}^{m}(\theta,\phi){\rm i}v_{l,-m}^{{\rm R}}(\boldsymbol{\vert\boldsymbol{r}}\vert)\nonumber \\
+ &  & +Y_{l}^{-m}(\theta,\phi)v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)+(-1)^{m}Y_{l}^{m}(\theta,\phi)v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)]\\
+ & = & \sum_{l}Y_{l}^{0}(\theta,\phi)v_{l}^{0}(\vert\boldsymbol{r}\vert)+\sum_{l,m<0}Y_{l}^{m}(\theta,\phi)\frac{1}{\sqrt{2}}[v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)+{\rm i}v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)]\nonumber \\
+ &  & +\sum_{l,m>0}Y_{l}^{m}(\theta,\phi)\frac{(-1)^{m}}{\sqrt{2}}[v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)-{\rm i}v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)]\\
+ &  & \equiv\sum_{l=0}^{l_{max}}\sum_{m=-l}^{l}Y_{l}^{m}(\theta,\phi)v_{l,m}^{{\rm AE}}(\vert\boldsymbol{r}\vert)\label{eq:AEpotentialSHexpansion}
 \end{eqnarray}
 
 \end_inset
@@ -2704,10 +2705,10 @@ v_{{\rm scf}}^{{\rm AE}-1}(\boldsymbol{r}) & = & \sum_{l,m<0}\frac{{\rm i}}{\sqr
 with
 \begin_inset Formula 
 \begin{equation}
-v_{l,m}^{{\rm AE}}(\boldsymbol{\vert\boldsymbol{r}}\vert)=\begin{cases}
-\frac{1}{\sqrt{2}}[v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)+{\rm i}v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)] & m<0\\
-v_{l}^{0}(\boldsymbol{\vert\boldsymbol{r}}\vert) & m=0\\
-\frac{(-1)^{m}}{\sqrt{2}}[v_{l}^{m}(\boldsymbol{\vert\boldsymbol{r}}\vert)-{\rm i}v_{l}^{-m}(\boldsymbol{\vert\boldsymbol{r}}\vert)] & m>0
+v_{l,m}^{{\rm AE}}(\vert\boldsymbol{r}\vert)=\begin{cases}
+\frac{1}{\sqrt{2}}[v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)+{\rm i}v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)] & m<0\\
+v_{l0}^{{\rm R}}(\vert\boldsymbol{r}\vert) & m=0\\
+\frac{(-1)^{m}}{\sqrt{2}}[v_{lm}^{{\rm R}}(\vert\boldsymbol{r}\vert)-{\rm i}v_{l,-m}^{{\rm R}}(\vert\boldsymbol{r}\vert)] & m>0
 \end{cases}
 \end{equation}
 

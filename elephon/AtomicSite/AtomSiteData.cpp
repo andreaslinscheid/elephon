@@ -27,10 +27,12 @@ namespace AtomicSite
 void
 AtomSiteData::initialize(
 		LatticeStructure::Atom a,
-		SphericalHarmonicExpansion data)
+		SphericalHarmonicExpansion data,
+		FrozenCore coreData)
 {
 	a_ = std::move(a);
-	data_ = std::move(data);
+	dataPotential_ = std::move(data);
+	coreData_ = std::move(coreData);
 }
 
 LatticeStructure::Atom const &
@@ -40,15 +42,21 @@ AtomSiteData::get_atom() const
 }
 
 SphericalHarmonicExpansion const &
-AtomSiteData::get_data() const
+AtomSiteData::get_potential_data() const
 {
-	return data_;
+	return dataPotential_;
 }
 
 SphericalHarmonicExpansion &
-AtomSiteData::edit_data()
+AtomSiteData::edit_potential_data()
 {
-	return data_;
+	return dataPotential_;
+}
+
+FrozenCore const &
+AtomSiteData::get_frozen_core_data() const
+{
+	return coreData_;
 }
 
 } /* namespace AtomicSite */

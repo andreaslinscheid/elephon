@@ -22,6 +22,7 @@
 
 #include "LatticeStructure/Atom.h"
 #include "AtomicSite/SphericalHarmonicExpansion.h"
+#include "AtomicSite/FrozenCore.h"
 
 namespace elephon
 {
@@ -35,20 +36,32 @@ class AtomSiteData
 {
 public:
 
+	/**
+	 * Initialize this container for atomic site data.
+	 *
+	 * @param[in] a
+	 * @param[in] dataPotential
+	 * @param[in] coreData
+	 */
 	void initialize(
 			LatticeStructure::Atom a,
-			SphericalHarmonicExpansion data);
+			SphericalHarmonicExpansion dataPotential,
+			FrozenCore coreData);
 
 	LatticeStructure::Atom const & get_atom() const;
 
-	SphericalHarmonicExpansion const & get_data() const;
+	SphericalHarmonicExpansion const & get_potential_data() const;
 
-	SphericalHarmonicExpansion & edit_data();
+	SphericalHarmonicExpansion & edit_potential_data();
+
+	FrozenCore const & get_frozen_core_data() const;
 private:
 
 	LatticeStructure::Atom a_;
 
-	SphericalHarmonicExpansion data_;
+	SphericalHarmonicExpansion dataPotential_;
+
+	FrozenCore coreData_;
 };
 
 } /* namespace AtomicSite */

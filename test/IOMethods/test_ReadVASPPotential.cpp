@@ -39,8 +39,12 @@ BOOST_AUTO_TEST_CASE( Read_Al_LOCPOT_AE )
 	std::vector<int> angularL;
 	std::vector<std::vector<double>> radialGrid, coreFrozenElectronicCharge;
 	std::vector<std::vector<std::complex<double>>> radialPotentialDatal;
+	std::vector<std::string> atomSymbolds;
+	std::vector<std::array<double,3>> atomCenters;
+	std::vector<double> atomicMass;
 	filerreader.read_potential_file(regularGridDims, regularData, angularL,
-			radialGrid, radiusPerAtom, radialPotentialDatal, coreChargeZ, coreFrozenElectronicCharge);
+			radialGrid, radiusPerAtom, atomCenters, atomSymbolds, atomicMass,
+			radialPotentialDatal, coreChargeZ, coreFrozenElectronicCharge);
 
 	BOOST_REQUIRE_EQUAL( radialGrid.size(), 1u ); // one Atom in this unit cell
 	BOOST_REQUIRE_EQUAL( radialGrid.size(), angularL.size() );
@@ -59,6 +63,29 @@ BOOST_AUTO_TEST_CASE( Read_Al_LOCPOT_AE )
 	BOOST_CHECK_SMALL( std::abs(regularData[0] - firstVal), 1e-5 );
 	double testVal = *(++regularData.rbegin());
 	BOOST_CHECK_SMALL( std::abs( testVal - butLastVal), 1e-5 );
+
+	BOOST_CHECK(atomSymbolds[0].compare("Al") == 0);
+	BOOST_CHECK_EQUAL(atomCenters[0][0],0.0);
+	BOOST_CHECK_EQUAL(atomCenters[0][1],0.0);
+	BOOST_CHECK_EQUAL(atomCenters[0][2],0.0);
+	BOOST_CHECK_SMALL(atomicMass[0]-26.981539, 1e-2);
+
+	BOOST_REQUIRE_EQUAL( radialGrid[0].size(), 357 );
+	using elephon::Auxillary::memlayout::angular_momentum_layout;
+
+	// check a few specific elements of the atomic potential data
+	// (l=0, m=0; ir=0) = 117.65782
+	int ir =  0;
+	int l = 0;
+	int m = 0;
+	BOOST_CHECK_SMALL(std::abs(radialPotentialDatal[0][ir+radialGrid[0].size()*angular_momentum_layout(l,m)]
+							  -std::complex<double>(117.65782)), 1e-5);
+	// (l=2, m=1, ir=323) = -2.2017197e-16
+	ir =  323;
+	l = 2;
+	m = 1;
+	BOOST_CHECK_SMALL(std::abs(radialPotentialDatal[0][ir+radialGrid[0].size()*angular_momentum_layout(l,m)]
+							  -std::complex<double>(-2.2017197e-16)), 1e-5);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -27,6 +27,42 @@ namespace elephon
 namespace AtomicSite
 {
 
+template<class VT>
+void
+SphericalHarmonicExpansion::initialize_from_real(
+		int lmax,
+		VT const & dataExpansionRealSH,
+		RadialGrid rgrid)
+{
+	using Auxillary::memlayout::angular_momentum_layout;
+	typedef Auxillary::alignedvector::ZV::value_type CT;
+	const int nR = rgrid.get_num_R();
+	assert(std::pow(lmax+1,2)*nR == dataExpansionRealSH.size());
+
+	Auxillary::alignedvector::ZV dataComplex(dataExpansionRealSH.size(), CT(0.0));
+	for (int l = 0 ; l < lmax; ++l)
+	{
+		// m = 0
+		for (int ir = 0 ; ir < nR ; ++ir)
+			dataComplex[ir + nR*angular_momentum_layout(l,/* m = */0)] =
+					dataExpansionRealSH[ir + nR*angular_momentum_layout(l,/* m = */0)];
+		// m < 0
+		for (int m = -l; m < 0; ++m)
+			for (int ir = 0 ; ir < nR ; ++ir)
+				dataComplex[ir + nR*angular_momentum_layout(l,m)] = 1.0/std::sqrt(2.0)
+						*(CT(dataExpansionRealSH[ir + nR*angular_momentum_layout(l, - m)])+
+								CT(0,1.0)*CT(dataExpansionRealSH[ir + nR*angular_momentum_layout(l,m)]));
+		// m > 0
+		for (int m = 1; m <= l; ++m)
+			for (int ir = 0 ; ir < nR ; ++ir)
+				dataComplex[ir + nR*angular_momentum_layout(l,m)] =	(m%2==0?1.0:-1.0)/std::sqrt(2.0)
+						*(CT(dataExpansionRealSH[ir + nR*angular_momentum_layout(l,m)])
+								-CT(0,1.0)*CT(dataExpansionRealSH[ir + nR*angular_momentum_layout(l,-m)]));
+	}
+
+	this->initialize(lmax,std::move(dataComplex),std::move(rgrid));
+}
+
 inline std::complex<double> &
 SphericalHarmonicExpansion::operator() (int r, int m, int l)
 {

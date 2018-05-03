@@ -90,7 +90,7 @@ PotentialChangeIrredDisplacement::initialize(
 			atomCopy.set_position(pos);
 			int atomIndexSupercell = scPrimMap->find_atom(atomCopy, false);
 			assert(atomIndexSupercell>=0);
-			newData.initialize(std::move(atomCopy), d.get_data());
+			newData.initialize(std::move(atomCopy), d.get_potential_data(), d.get_frozen_core_data());
 			radialGridData[atomIndexSupercell] = std::move(newData);
 		}
 	}
@@ -117,9 +117,9 @@ PotentialChangeIrredDisplacement::initialize(
 			oneMatched = true;
 			continue;
 		}
-		auto itUnperturb = radialGridData[atomIndexSupercell].edit_data().begin();
-		auto itPerturb = perturbedData.get_data().begin();
-		for ( ; itUnperturb != radialGridData[atomIndexSupercell].edit_data().end(); ++itUnperturb, ++itPerturb )
+		auto itUnperturb = radialGridData[atomIndexSupercell].edit_potential_data().begin();
+		auto itPerturb = perturbedData.get_potential_data().begin();
+		for ( ; itUnperturb != radialGridData[atomIndexSupercell].edit_potential_data().end(); ++itUnperturb, ++itPerturb )
 		{
 			*itUnperturb -= (*itPerturb);
 		}
@@ -128,21 +128,21 @@ PotentialChangeIrredDisplacement::initialize(
 
 	// perform the calculation of the displaced site. The formula is given in the documentation of the main class.
 	// copy the grid but then set it back to the original position - this is where we will evaluate the data
-	auto rGridUperturbedPos = dispAtomData_ptr->get_data().get_radial_grid();
+	auto rGridUperturbedPos = dispAtomData_ptr->get_potential_data().get_radial_grid();
 	rGridUperturbedPos.set_center(radialGridData[displacedAtomIndexSupercell].get_atom().get_position());
 
 	AtomicSite::SphericalHarmonicExpansion shiftedBackFit;
 	shiftedBackFit.fit_to_data(
-			dispAtomData_ptr->get_data(),
-			dispAtomData_ptr->get_data().get_l_max(),
+			dispAtomData_ptr->get_potential_data(),
+			dispAtomData_ptr->get_potential_data().get_l_max(),
 			std::move(rGridUperturbedPos));
 	AtomicSite::AtomSiteData newDataDisplacedSite;
-	newDataDisplacedSite.initialize(dispAtomData_ptr->get_atom(), std::move(shiftedBackFit));
+	newDataDisplacedSite.initialize(dispAtomData_ptr->get_atom(), std::move(shiftedBackFit), dispAtomData_ptr->get_frozen_core_data());
 
 	// take the difference also for the displaced atom and the -now- shifted data.
-	auto itUnperturb = radialGridData[displacedAtomIndexSupercell].edit_data().begin();
-	auto itPerturb = newDataDisplacedSite.get_data().begin();
-	for ( ; itUnperturb != radialGridData[displacedAtomIndexSupercell].edit_data().end(); ++itUnperturb, ++itPerturb )
+	auto itUnperturb = radialGridData[displacedAtomIndexSupercell].edit_potential_data().begin();
+	auto itPerturb = newDataDisplacedSite.get_potential_data().begin();
+	for ( ; itUnperturb != radialGridData[displacedAtomIndexSupercell].edit_potential_data().end(); ++itUnperturb, ++itPerturb )
 	{
 		*itUnperturb -= (*itPerturb);
 	}

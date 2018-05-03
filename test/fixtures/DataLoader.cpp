@@ -267,6 +267,44 @@ DataLoader::process_fileName(std::string & fileName ) const
 			fileName = (boost::filesystem::temp_directory_path() / boost::filesystem::unique_path()).string();
 }
 
+DataLoader::RegularGridAtom::RegularGridAtom(int numPtsEachDir, AtomicSite::RadialGrid const & rgrid)
+	: numPtsEachDir_(numPtsEachDir), rgrid_(rgrid)
+{
+	minX_ = rgrid.get_center()[0]-rgrid.get_range_of_definition();
+	minY_ = rgrid.get_center()[1]-rgrid.get_range_of_definition();
+	minZ_ = rgrid.get_center()[2]-rgrid.get_range_of_definition();
+
+	double x, y, z;
+	atomGridCheck_.clear();
+	atomGridCheck_.reserve(std::pow(numPtsEachDir_,3));
+	for (int ix = 0 ; ix < numPtsEachDir_; ++ix)
+		for (int iy = 0 ; iy < numPtsEachDir_; ++iy)
+			for (int iz = 0 ; iz < numPtsEachDir_; ++iz)
+				if ( check_coord_in_atomic_sphere(ix,iy,iz,x,y,z) )
+					atomGridCheck_.insert(atomGridCheck_.end(), {x, y, z});
+	atomGridCheck_.shrink_to_fit();
+}
+
+bool
+DataLoader::RegularGridAtom::check_coord_in_atomic_sphere(int ix, int iy, int iz, double &x, double &y, double &z) const
+{
+	x = minX_ + 2.0*(ix*rgrid_.get_range_of_definition())/numPtsEachDir_;
+	y = minY_ + 2.0*(iy*rgrid_.get_range_of_definition())/numPtsEachDir_;
+	z = minZ_ + 2.0*(iz*rgrid_.get_range_of_definition())/numPtsEachDir_;
+	double r = std::sqrt(	  std::pow(x-rgrid_.get_center()[0],2)
+				+ std::pow(y-rgrid_.get_center()[1],2)
+				+ std::pow(z-rgrid_.get_center()[2],2));
+	if ( (r > cutoffCenter_) && (r < rgrid_.get_range_of_definition()) )
+		return true;
+	return false;
+}
+
+std::vector<double> const &
+DataLoader::RegularGridAtom::get_atom_grid() const
+{
+	return atomGridCheck_;
+}
+
 } /* namespace fixtures */
 } /* namespace test */
 } /* namespace elephon */
