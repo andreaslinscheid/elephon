@@ -2564,26 +2564,16 @@ since the integral does depend on
 )
 \begin_inset Formula 
 \begin{eqnarray}
-V^{{\rm frozen}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\}](\boldsymbol{r}) & = & \sum_{\kappa\boldsymbol{R}}\frac{Z_{\kappa}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert}\\
-\frac{\delta V^{{\rm frozen}}}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\biggr\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}(\boldsymbol{r}) & = & Z_{\kappa}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\frac{\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert^{3}}
+V^{{\rm core}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\}](\boldsymbol{r}) & = & -\frac{Z_{\kappa}}{4\pi\varepsilon_{0}}\sum_{\kappa\boldsymbol{R}}\frac{1}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert}\\
+\frac{\delta V^{{\rm core}}}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\biggr\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}(\boldsymbol{r}) & = & -\frac{Z_{\kappa}}{4\pi\varepsilon_{0}}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\frac{\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert^{3}}\\
+ & = & -\frac{Z_{\kappa}}{4\pi\varepsilon_{0}}\frac{{\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0})]}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert^{2}}\\
+\frac{\delta V^{{\rm core}}}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{z}}\biggr\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}(\boldsymbol{r}) & = & -\frac{1}{4\pi\varepsilon_{0}}\sqrt{\frac{4\pi}{3}}\frac{Z_{\kappa}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert^{2}}Y_{10}(\frac{\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert})
 \end{eqnarray}
 
 \end_inset
 
-On a radial grid with 
-\begin_inset Formula $\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}=0$
-\end_inset
-
-, we have thus
-\begin_inset Formula 
-\begin{equation}
-\frac{\delta V^{{\rm frozen}}}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\biggr\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}(\boldsymbol{r})=\frac{Z_{\kappa}}{\vert\boldsymbol{r}\vert^{2}}{\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r})]
-\end{equation}
-
-\end_inset
-
 Note that 
-\begin_inset Formula $\delta V^{{\rm frozen}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}\}](\boldsymbol{r})/\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}$
+\begin_inset Formula $\delta V^{{\rm core}}[\{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}\}](\boldsymbol{r})/\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}$
 \end_inset
 
  must only be applied to the core region, since it is implicitely already
@@ -2595,17 +2585,16 @@ Note that
  instantaniously, this means 
 \begin_inset Formula 
 \begin{eqnarray}
-\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \lim_{\Delta\rightarrow0}\int{\rm d}\boldsymbol{r}^{\prime}[\frac{n_{c}(\boldsymbol{r}^{\prime}+\boldsymbol{v}_{\kappa\boldsymbol{R}}\Delta)}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}-\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}]\\
- & = & \lim_{\Delta\rightarrow0}\int{\rm d}\boldsymbol{r}^{\prime}[\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}+\boldsymbol{v}_{\kappa\boldsymbol{R}}\Delta)\vert}-\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}]\\
- & = & \boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert}
+\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert(\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}})-\boldsymbol{r}^{\prime}\vert}\biggl\vert_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}} & = & \lim_{\Delta\rightarrow0}\int{\rm d}\boldsymbol{r}^{\prime}[\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}-\boldsymbol{r}^{\prime}-\boldsymbol{v}_{\kappa\boldsymbol{R}}\Delta)\vert}-\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}-\boldsymbol{r}^{\prime}\vert}]\\
+ & = & -\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}-\boldsymbol{r}^{\prime}\vert}
 \end{eqnarray}
 
 \end_inset
 
-using the Laplace expansion
+For the following using the Laplace expansion
 \begin_inset Formula 
 \begin{eqnarray}
-\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\sum_{l=0}^{\infty}\int{\rm d}\vert\boldsymbol{r}^{\prime}\vert^{2}\bigl(\frac{{r^{\prime}}^{l}}{r^{l+1}}\uptheta(r-r^{\prime})+\frac{r^{l}}{{r^{\prime}}^{l+1}}\uptheta(r^{\prime}-r)\bigr)\times\nonumber \\
+\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon}\sum_{l=0}^{\infty}\int{\rm d}\vert\boldsymbol{r}^{\prime}\vert^{2}\bigl(\frac{{r^{\prime}}^{l}}{r^{l+1}}\uptheta(r-r^{\prime})+\frac{r^{l}}{{r^{\prime}}^{l+1}}\uptheta(r^{\prime}-r)\bigr)\times\nonumber \\
  &  & \times\int_{0}^{\pi}{\rm d}\theta^{\prime}\int_{0}^{2\pi}{\rm d}\phi^{\prime}{\rm sin}(\theta^{\prime})\sum_{m=-l}^{l}\frac{Y_{lm}(\theta,\phi)Y_{lm}^{\ast}(\theta^{\prime},\phi^{\prime})}{\sqrt{2l+1}}n_{c}(r^{\prime},\theta^{\prime},\phi^{\prime})
 \end{eqnarray}
 
@@ -2625,10 +2614,27 @@ since the frozen core charge is spherical and the integral over the angle
 we find
 \begin_inset Formula 
 \begin{eqnarray}
-\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\bigl(\int_{0}^{r}\frac{1}{r}+\int_{r}^{\infty}\frac{1}{r^{\prime}}\bigr)n_{c}(r^{\prime}){r^{\prime}}^{2}{\rm d}r^{\prime}\\
- & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\int_{0}^{\infty}\bigl(\frac{{r^{\prime}}^{2}}{r}\theta(r-r^{\prime})+r^{\prime}\theta(r^{\prime}-r)\bigr)n_{c}(r^{\prime}){\rm d}r^{\prime}\\
- & = & \frac{1}{\varepsilon}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\bigl(-\frac{\boldsymbol{r}}{r^{3}}\int_{0}^{r}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}+rn_{c}(r)-rn_{c}(r)\bigr)\\
- & = & -\frac{1}{\varepsilon}\frac{{\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r})]}{r^{2}}\int_{0}^{r}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}
+\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon}\bigl(\int_{0}^{r}\frac{1}{r}+\int_{r}^{\infty}\frac{1}{r^{\prime}}\bigr)n_{c}(r^{\prime}){r^{\prime}}^{2}{\rm d}r^{\prime}\\
+ & = & \frac{1}{4\pi\varepsilon_{0}}4\pi\bigl(\int_{0}^{r}\frac{{r^{\prime}}^{2}}{r}n_{c}(r^{\prime}){\rm d}r^{\prime}+\int_{r}^{\infty}r^{\prime}n_{c}(r^{\prime}){\rm d}r^{\prime}\bigr)\\
+ & = & \frac{1}{4\pi\varepsilon_{0}}\int_{0}^{\infty}4\pi\bigl(\frac{{r^{\prime}}^{2}}{r}\theta(r-r^{\prime})+r^{\prime}\theta(r^{\prime}-r)\bigr)n_{c}(r^{\prime}){\rm d}r^{\prime}
+\end{eqnarray}
+
+\end_inset
+
+or the well known result
+\begin_inset Formula 
+\begin{equation}
+v_{{\rm H}}(\boldsymbol{r})=\frac{1}{4\pi\varepsilon}\int_{0}^{\infty}\frac{4\pi{r^{\prime}}^{2}}{r_{>}}n_{c}(r^{\prime}){\rm d}r^{\prime}
+\end{equation}
+
+\end_inset
+
+Now, clearly
+\begin_inset Formula 
+\begin{eqnarray}
+\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon_{0}\vert\boldsymbol{r}-\boldsymbol{r}^{\prime}\vert} & = & \frac{1}{\varepsilon_{0}}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\boldsymbol{\nabla}_{\boldsymbol{r}}\int_{0}^{\infty}\bigl(\frac{{r^{\prime}}^{2}}{r}\theta(r-r^{\prime})+r^{\prime}\theta(r^{\prime}-r)\bigr)n_{c}(r^{\prime}){\rm d}r^{\prime}\\
+ & = & \frac{1}{\varepsilon_{0}}\boldsymbol{v}_{\kappa\boldsymbol{R}}\cdot\bigl(-\frac{\boldsymbol{r}}{r^{3}}\int_{0}^{r}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}+rn_{c}(r)-rn_{c}(r)\bigr)\\
+ & = & -\frac{1}{\varepsilon_{0}}\frac{{\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r})]}{r^{2}}\int_{0}^{r}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}
 \end{eqnarray}
 
 \end_inset
@@ -2660,6 +2666,33 @@ can already be used to represent the cosine.
 \end_inset
 
 .
+ We implement this by computing the displacement for 
+\begin_inset Formula $\boldsymbol{v}_{\kappa\boldsymbol{R}}=(0,0,1)^{{\rm T}}$
+\end_inset
+
+ such that 
+\begin_inset Formula ${\rm cos}[\angle(\boldsymbol{v}_{\kappa\boldsymbol{R}},\boldsymbol{r})]={\rm cos}(\theta)$
+\end_inset
+
+ and then rotating the expansion coefficients using the Wigner matrix.
+ The formula is
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{z}}v_{{\rm H}}^{{\rm c}}(\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}) & = & \frac{\delta}{\delta\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{z}}\int{\rm d}\boldsymbol{r}^{\prime}\frac{n_{c}(\boldsymbol{r}^{\prime})}{4\pi\varepsilon\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}-\boldsymbol{r}^{\prime}\vert}\\
+ & = & v_{1,0}^{{\rm dH}}(\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert)Y_{10}(\frac{\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert})
+\end{eqnarray}
+
+\end_inset
+
+with
+\begin_inset Formula 
+\begin{equation}
+v_{1,0}^{{\rm dH}}(\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert)=\frac{1}{4\pi\varepsilon}\frac{(4\pi)^{\frac{3}{2}}}{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert^{2}\sqrt{3}}\int_{0}^{\vert\boldsymbol{r}-\boldsymbol{\tau}_{\kappa\boldsymbol{R}}^{0}\vert}{r^{\prime}}^{2}n_{c}(r^{\prime}){\rm d}r^{\prime}
+\end{equation}
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Subsubsection

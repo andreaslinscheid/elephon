@@ -18,7 +18,7 @@
  */
 #include <boost/test/unit_test.hpp>
 #include "Algorithms/rotation_matrix_connecting_unit_vectors.h"
-#include <boost/multi_array.hpp>
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 #include <cstdlib>
 #include <ctime>
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE( identity )
 	BOOST_TEST_MESSAGE("Got random vector ("+std::to_string(vec[0])
 				+","+std::to_string(vec[1])+","+std::to_string(vec[2])+")");
 
-	boost::multi_array<double,2> rotationMatrix;
+	elephon::Auxillary::Multi_array<double,2> rotationMatrix;
 	elephon::Algorithms::rotation_matrix_connecting_unit_vectors(
 			vec,
 			vec,
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE( rotate_pi )
 	auto minus_vec = vec;
 	for (auto &ai : minus_vec)
 		ai *= -1;
-	boost::multi_array<double,2> rotationMatrix;
+	elephon::Auxillary::Multi_array<double,2> rotationMatrix;
 	elephon::Algorithms::rotation_matrix_connecting_unit_vectors(
 			vec,
 			minus_vec,
@@ -171,7 +171,7 @@ void rot_check(std::vector<double> const & vec, std::vector<double> const & R)
 	}
 
 	// pass vector and check that we get our rotation matrix back.
-	boost::multi_array<double,2> rotationMatrix;
+	elephon::Auxillary::Multi_array<double,2> rotationMatrix;
 	elephon::Algorithms::rotation_matrix_connecting_unit_vectors(
 			vec,
 			rot_vec,

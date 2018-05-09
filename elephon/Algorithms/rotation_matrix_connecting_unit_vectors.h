@@ -20,7 +20,7 @@
 #ifndef ELEPHON_ALGORITHMS_ROTATION_MATRIX_CONNECTING_UNIT_VECTORS_H_
 #define ELEPHON_ALGORITHMS_ROTATION_MATRIX_CONNECTING_UNIT_VECTORS_H_
 
-#include <boost/multi_array.hpp>
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 
 namespace elephon
@@ -42,7 +42,7 @@ void
 rotation_matrix_connecting_unit_vectors(
 		std::vector<double> const & unitVectorOrig,
 		std::vector<double> const & unitVectorResult,
-		boost::multi_array<double,2> & rotationMatrix);
+		Auxillary::Multi_array<double,2> & rotationMatrix);
 
 } /* namespace Algorithms */
 } /* namespace elephon */

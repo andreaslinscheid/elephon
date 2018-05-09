@@ -15,6 +15,7 @@
 #include "AtomicSite/test_SphericalHarmonicExpansion.cpp"
 #include "AtomicSite/test_WignerDMatrix.cpp"
 #include "AtomicSite/test_EulerAngles.cpp"
+#include "AtomicSite/test_FrozenCore.cpp"
 
 // include all test suits for namespace Auxillary
 #include "Auxillary/test_CubicPolynomial.cpp"

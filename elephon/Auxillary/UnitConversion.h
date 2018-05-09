@@ -51,6 +51,8 @@ const double EV_TO_THZ_CONVERSION_FACTOR = 241.7990504024;
 
 const double SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM = 0.71090013980905870172;
 
+const double HARTREE_TO_EV = 27.21138602;
+
 } /* namespace units */
 } /* namespace Auxillary */
 } /* namespace elephon */

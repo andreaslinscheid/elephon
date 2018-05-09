@@ -305,6 +305,19 @@ DataLoader::RegularGridAtom::get_atom_grid() const
 	return atomGridCheck_;
 }
 
+elephon::AtomicSite::RadialGrid
+DataLoader::radial_sample_rgrid() const
+{
+	MockStartup ms;
+	auto vaspLoader = this->create_vasp_loader("");
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "sc_4x4x4";
+	std::vector<int> fftDims;
+	elephon::Auxillary::alignedvector::DV regularGridPotential;
+	std::vector<elephon::AtomicSite::AtomSiteData> radialPotential;
+	vaspLoader->read_electronic_potential(testd.string(), fftDims, regularGridPotential, radialPotential);
+	return radialPotential[0].get_frozen_core_data().get_radial_grid();
+}
+
 } /* namespace fixtures */
 } /* namespace test */
 } /* namespace elephon */

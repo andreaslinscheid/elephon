@@ -50,7 +50,7 @@ RadialGrid::get_range_of_definition() const
 	return radius_;
 }
 
-double
+double const &
 RadialGrid::get_radius(int iR) const
 {
 	assert((iR >= 0)&&(iR<numR_));

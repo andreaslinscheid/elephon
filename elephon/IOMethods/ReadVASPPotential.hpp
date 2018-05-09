@@ -95,7 +95,8 @@ ReadVASPPotential::read_potential_file(
 		char secondLatter = static_cast<char>(std::floor(buffer[c++]+0.5));
 		namesAtom[atomIndex] = secondLatter == ' '? std::string({firstLatter}) : std::string({firstLatter, secondLatter});
 
-		// radial grid for this atom
+		// radial grid for this atom, read-in is in Bohr radii while in elephon we work in Angstroem
+		const double convertBohrToAngstroem = 0.529177249;
 		int numRadPtsGrid = std::floor(buffer[c++]+0.5);
 		if(c + 2*numRadPtsGrid + 3 >= buffer.size())
 			throw std::runtime_error(std::string("\nError processing file ")+filepath_.c_str()+
@@ -103,7 +104,7 @@ ReadVASPPotential::read_potential_file(
 
 		radialPointsPerAtom[atomIndex].resize(numRadPtsGrid);
 		for (int ir = 0 ; ir < numRadPtsGrid; ++ir)
-			radialPointsPerAtom[atomIndex][ir] = buffer[c++];
+			radialPointsPerAtom[atomIndex][ir] = buffer[c++]*convertBohrToAngstroem;
 		radiusPerAtom[atomIndex] = *radialPointsPerAtom[atomIndex].rbegin();
 
 		// angular moment max
@@ -116,10 +117,15 @@ ReadVASPPotential::read_potential_file(
 					"File shows spin dependence. This functionality is not yet implemented in elephon!");
 
 		// read the core charge, both electronic and core point
+		// NOTE: the data is charge/r^2 but radius is in Bohr. Thus, we have to convert to Angstroem by
+		//       charge_as_read_in/(r_bohr)^2 = (charge_as_read_in/(r_bohr*convertBohrToAngstroem)^2)*convertBohrToAngstroem^2
+		//		 ~ charge_as_kept_in_elephon/(r_Angs)^2
+		//		Also, there is a factor of std::sqrt(4*M_PI) in the VASP data because these are expansion coefficients of the
+		//		l,m=0 spherical harmonic. We remove that factor here.
 		coreChargeZ[atomIndex] = buffer[c++];
 		frozenCoreElectronChg[atomIndex].resize(numRadPtsGrid);
 		for (int ir = 0 ; ir < numRadPtsGrid; ++ir)
-			frozenCoreElectronChg[atomIndex][ir] = buffer[c++];
+			frozenCoreElectronChg[atomIndex][ir] = buffer[c++]*std::pow(convertBohrToAngstroem,2)/std::sqrt(4*M_PI);
 
 		// potential data
 		const int nAngChnls = std::pow(angularLMaxPerAtom[atomIndex]+1,2);

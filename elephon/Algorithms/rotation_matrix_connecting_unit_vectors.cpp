@@ -29,7 +29,7 @@ void
 rotation_matrix_connecting_unit_vectors(
 		std::vector<double> const & unitVectorOrig,
 		std::vector<double> const & unitVectorResult,
-		boost::multi_array<double,2> & rotationMatrix)
+		Auxillary::Multi_array<double,2> & rotationMatrix)
 {
 	// formula according to https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
 	assert(unitVectorOrig.size() == 3);
@@ -48,7 +48,7 @@ rotation_matrix_connecting_unit_vectors(
 	assert(std::abs(dprod(unitVectorResult,unitVectorResult) - 1.0) < 1e-6);
 
 	// set to id
-	std::fill_n(rotationMatrix.data(), rotationMatrix.num_elements(), 0.0);
+	std::fill_n(rotationMatrix.data(), rotationMatrix.size(), 0.0);
 	for (int i = 0 ; i < 3; ++i)
 		rotationMatrix[i][i] = 1.0;
 

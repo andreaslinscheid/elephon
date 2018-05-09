@@ -91,6 +91,12 @@ public:
 		double minX_, minY_, minZ_;
 		const double cutoffCenter_ = 1e-5;
 	};
+
+	/**
+	 * Load the a sample radial grid.
+	 * @return RadialGrid object with the sample grid.
+	 */
+	elephon::AtomicSite::RadialGrid radial_sample_rgrid() const;
 private:
 
 	void process_fileName(std::string & fileName ) const;
