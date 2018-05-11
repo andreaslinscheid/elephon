@@ -33,14 +33,12 @@ FrozenCore::add_core_potential(
 		iterator sphericalPotentialToBeAddedToBegin,
 		iterator sphericalPotentialToBeAddedToEnd) const
 {
-	const int nR = std::distance(sphericalPotentialToBeAddedToBegin,sphericalPotentialToBeAddedToEnd);
-	assert( nR == rgrid_.get_num_R());
-	assert(corePointCharge_ > 0);
-	assert(electronicFrozenCoreCharge_.size() == rgrid_.get_num_R());
+	const int nR = rgrid_.get_num_R();
+	assert(std::distance(sphericalPotentialToBeAddedToBegin,sphericalPotentialToBeAddedToEnd)%rgrid_.get_num_R() == 0);
 	for (int ir = 0 ; ir < nR; ++ir)
 	{
 		// core point charge spherical harmonic expansion coefficients:
-		*sphericalPotentialToBeAddedToBegin += -Auxillary::units::HARTREE_TO_EV
+		*sphericalPotentialToBeAddedToBegin += -Auxillary::units::COULOMB_CONSTANT
 				*corePointCharge_/rgrid_.get_radius(ir)*std::sqrt(4*M_PI);
 		++sphericalPotentialToBeAddedToBegin;
 	}
@@ -52,10 +50,8 @@ FrozenCore::add_core_hartree_potential(
 		iterator sphericalPotentialToBeAddedToBegin,
 		iterator sphericalPotentialToBeAddedToEnd) const
 {
-	const int nR = std::distance(sphericalPotentialToBeAddedToBegin,sphericalPotentialToBeAddedToEnd);
-	assert( nR == rgrid_.get_num_R());
-	assert(corePointCharge_ > 0);
-	assert(electronicFrozenCoreCharge_.size() == rgrid_.get_num_R());
+	const int nR = rgrid_.get_num_R();
+	assert(std::distance(sphericalPotentialToBeAddedToBegin,sphericalPotentialToBeAddedToEnd)%rgrid_.get_num_R() == 0);
 
 	// for the frozen electronic core charge potential, we need the partial integrals from 0 to r and from r to infinity for each r
 	// we pre-calculate it here. The formula is taken from https://github.com/scipy/scipy/blob/v0.14.0/scipy/integrate/quadrature.py#L315
@@ -89,10 +85,9 @@ FrozenCore::add_core_hartree_potential(
 	{
 		const double r = rgrid_.get_radius(ir);
 		// frozen electronic core charge Hartree potential spherical harmonic expansion coefficients:
-		const double lastmod2 = partialInteR[nR-1];
-		const double IntegralRToInfinity = lastmod2 - partialInteR[ir];
+		const double IntegralRToInfinity = partialInteR[nR-1] - partialInteR[ir];
 		const double Integral0ToR = partialInteRSquared[ir];
-		*pit += Auxillary::units::HARTREE_TO_EV*std::pow(4*M_PI,1.5)*(IntegralRToInfinity + Integral0ToR / r);
+		*pit += Auxillary::units::COULOMB_CONSTANT*std::pow(4*M_PI,1.5)*(IntegralRToInfinity + Integral0ToR / r);
 		++pit;
 	}
 }
@@ -104,10 +99,10 @@ FrozenCore::add_core_hartree_analytic_displacement(
 		iterator potentialToBeAddedToBegin,
 		iterator potentialToBeAddedToEnd) const
 {
-	const int l = 1; // Angular momentum channel we are taling is 1
+	const int l = 1; // Angular momentum channel we are talking is 1
 	const int nR = rgrid_.get_num_R();
 	assert(std::distance(potentialToBeAddedToBegin,potentialToBeAddedToEnd) % nR == 0 );
-	assert(electronicFrozenCoreCharge_.size() == rgrid_.get_num_R());
+	assert(std::distance(potentialToBeAddedToBegin,potentialToBeAddedToEnd) >= nR*std::pow(l+1,2) );
 	assert(std::abs(std::pow(direction[0],2)+std::pow(direction[1],2)+std::pow(direction[2],2)-1.0)<1e-3);
 
 	// build the data for the z-direction, then rotate the expansion coefficients to the requested direction

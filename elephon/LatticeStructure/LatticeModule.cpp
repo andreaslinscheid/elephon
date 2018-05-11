@@ -18,6 +18,7 @@
  */
 
 #include "LatticeModule.h"
+#include "Algorithms/helperfunctions.hpp"
 #include <utility>
 #include <assert.h>
 #include <cmath>
@@ -54,9 +55,9 @@ LatticeModule::initialize( std::vector<double> latticeMatrix )
 	auto b2 = a1;
 	auto b3 = a1;
 
-	this->cross_prod(a2,a3,b1);
-	this->cross_prod(a3,a1,b2);
-	this->cross_prod(a1,a2,b3);
+	Algorithms::helperfunctions::cross_prod(a2,a3,b1);
+	Algorithms::helperfunctions::cross_prod(a3,a1,b2);
+	Algorithms::helperfunctions::cross_prod(a1,a2,b3);
 
 	vol_ = a1[0]*b1[0]+a1[1]*b1[1]+a1[2]*b1[2];
 	assert( vol_ > 0 );
@@ -206,18 +207,6 @@ LatticeModule::reci_cartesian_to_direct_matrix(double * mat, int nelem) const
 						b[i*3+j] += latticeMatrix_[k*3+i]*mat[ic*9+k*3+l]*reciLatMatrix_[l*3+j];
 		std::copy(b.data(),b.data()+9,&mat[ic*9]);
 	}
-}
-
-void LatticeModule::cross_prod( std::vector<double> const& v1,
-		std::vector<double> const& v2,
-		std::vector<double> & v1xv2) const
-{
-	if ( v1xv2.size() != 3 )
-		v1xv2 = v1;
-
-	v1xv2[0]=v1[1]*v2[2]-v1[2]*v2[1];
-	v1xv2[1]=v1[2]*v2[0]-v1[0]*v2[2];
-	v1xv2[2]=v1[0]*v2[1]-v1[1]*v2[0];
 }
 
 void

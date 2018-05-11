@@ -53,6 +53,10 @@ const double SQRT_HBAR_BY_2M_THZ_TO_ANGSTROEM = 0.71090013980905870172;
 
 const double HARTREE_TO_EV = 27.21138602;
 
+const double BOHR_TO_ANGSTROEM = 0.529177249;
+
+const double COULOMB_CONSTANT = BOHR_TO_ANGSTROEM*BOHR_TO_ANGSTROEM*HARTREE_TO_EV;
+
 } /* namespace units */
 } /* namespace Auxillary */
 } /* namespace elephon */

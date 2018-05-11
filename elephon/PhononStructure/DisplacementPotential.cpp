@@ -123,43 +123,6 @@ DisplacementPotential::initialize(
 		std::copy_n(pseudoInverseDisplacements.data(), pseudoInverseDisplacements.size(),
 				pseudoInverseDisplacementsCmplx.data());
 		linDVscfRadial.resize(3 * nASC*nAngChnlMax*nRadMax);
-//for (int i = 0 ; i < 3; ++i)
-//{
-//
-//	for (int j = 0 ; j < displCollection->get_num_red_displacements_for_atom(atomIndex); ++j)
-//	{
-//		std::cout << std::fixed << std::setprecision(3) << std::right
-//				<< ' '<<  std::setw(7)<< std::real(pseudoInverseDisplacementsCmplx[i][j])
-//				<< ' '<<  std::setw(7)<< std::imag(pseudoInverseDisplacementsCmplx[i][j]) ;
-//	}
-//	std::cout << '\n';
-//
-//	for (int k = 0 ; k < 1; ++k)
-//		for (int m = 0 ; m < 4; ++m)
-//			for (int l = 0 ; l < nRadMax; ++l)
-//			{
-//			for (int j = 0 ; j < displCollection->get_num_red_displacements_for_atom(atomIndex); ++j)
-//						{
-//							std::cout << std::fixed << std::setprecision(3) << std::right
-//									<< ' '<<  std::setw(7)<< std::real(deltaVRadialSymExpanded[j][k][m][l])
-//									<< ' '<<  std::setw(7)<< std::imag(deltaVRadialSymExpanded[j][k][m][l]);
-//						}
-//			std::cout << '\n';
-//			}
-//	std::cout << '\n';
-//}
-//for (int i = 0 ; i < 3; ++i)
-//{
-//
-//	for (int j = 0 ; j < displCollection->get_num_red_displacements_for_atom(atomIndex); ++j)
-//	{
-//		std::cout << std::fixed << std::setprecision(6) << std::right
-//				<< ' '<<  std::setw(9)<< std::real(pseudoInverseDisplacementsCmplx[i][j]) << ' '
-//				<<  std::setw(9)<< std::imag(pseudoInverseDisplacementsCmplx[i][j]);
-//	}
-//	std::cout << '\n';
-//}
-//std::cout << '\n';
 		linAlg.matrix_matrix_prod( pseudoInverseDisplacementsCmplx, deltaVRadialSymExpanded, linDVscfRadial, 3, nASC*nAngChnlMax*nRadMax );
 
 		// The lambda below has to match the layout of linDVscfRadial as defined by
@@ -174,22 +137,7 @@ DisplacementPotential::initialize(
 			// deltaVRadialSymExpanded. The matrix multiplication effectively replaces the displacement dimension by 3.
 			return iRadial + nRadMax*(iAngChnl + nAngChnlMax*(scAtomIndex+nASC*iDisplDirection));
 		};
-//for (int i = 0 ; i < 3; ++i)
-//{
-//	for (int k = 0 ; k < 1; ++k)
-//		for (int j = 0 ; j < nAngChnlMax; ++j)
-//		{
-//			std::cout << j << ' ' << k << ' '<< i;
-//			for (int l = 0 ; l < nRadMax; ++l)
-//			{
-//				std::cout << std::fixed << std::setprecision(6) << std::right
-//						<< ' '<<  std::setw(9)<< std::real(linDVscfRadial[linRadialDataLayout(l,j,k,i)]) << ' '
-//						<<  std::setw(9)<< std::imag(linDVscfRadial[linRadialDataLayout(l,j,k,i)]);
-//			}
-//			std::cout << '\n';
-//		}
-//	std::cout << '\n';
-//}
+
 		// Here we define a helper lambda that defines the layout as required by symOp.rotate_radial_vector_data
 		// The layout as required by symOp.rotate_radial_vector_data is that 1) any size'd block of data is transformed
 		// for 2) a given l,m channel number as the before slowest and 3) the spatial direction index as the slowest running

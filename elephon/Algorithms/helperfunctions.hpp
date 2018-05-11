@@ -370,6 +370,26 @@ read_binary_file(const char * filename_ctr, VT & data)
 	}
 }
 
+/**
+ * Compute the cross product of two vectors.
+ *
+ * @param[in] v1		First vector. Must be of size 3.
+ * @param[in] v2		Second vector. Must be of size 3.
+ * @param[out] v1xv2	Result vector, resized to 3 if its size is not 3.
+ */
+template<class V>
+void cross_prod( V const& v1, V const& v2, V & v1xv2)
+{
+	assert(v1.size() == 3);
+	assert(v2.size() == 3);
+	if ( v1xv2.size() != 3 )
+		v1xv2 = v1;
+
+	v1xv2[0]=v1[1]*v2[2]-v1[2]*v2[1];
+	v1xv2[1]=v1[2]*v2[0]-v1[0]*v2[2];
+	v1xv2[2]=v1[0]*v2[1]-v1[1]*v2[0];
+}
+
 } /* namespace helperfunctions */
 } /* namespace Algorithms */
 } /* namespace elephon */

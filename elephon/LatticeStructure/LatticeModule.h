@@ -104,10 +104,6 @@ private:
 
 	//units are in 1/alat_
 	std::vector<double> reciLatMatrix_;
-
-	void cross_prod( std::vector<double> const& v1,
-			std::vector<double> const& v2,
-			std::vector<double> & v1xv2) const;
 };
 
 } /* namespace LatticeStructure */

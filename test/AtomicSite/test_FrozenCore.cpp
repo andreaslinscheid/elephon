@@ -20,6 +20,7 @@
 #include "AtomicSite/FrozenCore.h"
 #include "AtomicSite/RadialGrid.h"
 #include "fixtures/DataLoader.h"
+#include "fixtures/MockStartup.h"
 #include <vector>
 #include <memory>
 
@@ -84,7 +85,7 @@ BOOST_AUTO_TEST_CASE( test_potential )
 	double diffAnalytic = 0.0;
 	for (int ir = 0 ; ir < nR; ++ir)
 	{
-		double analytic = -elephon::Auxillary::units::HARTREE_TO_EV*Z/rgrid.get_radius(ir)*std::sqrt(4*M_PI);
+		double analytic = -elephon::Auxillary::units::COULOMB_CONSTANT*Z/rgrid.get_radius(ir)*std::sqrt(4*M_PI);
 		diffAnalytic += std::abs( analytic - potential[ir]);
 	}
 	BOOST_CHECK_SMALL(diffAnalytic,1e-5);
@@ -94,10 +95,10 @@ BOOST_AUTO_TEST_CASE( test_potential )
 	fc->add_core_hartree_potential(potential.begin(), potential.end());
 	for (int ir = 0 ; ir < nR; ++ir)
 	{
-		double forzenElectronChargeLower = elephon::Auxillary::units::HARTREE_TO_EV*eleChg*std::sqrt(4*M_PI)
+		double forzenElectronChargeLower = elephon::Auxillary::units::COULOMB_CONSTANT*eleChg*std::sqrt(4*M_PI)
 										*(3.0*std::pow(radiusCharge,2)-std::pow(rgrid.get_radius(ir),2))
 										/2.0/std::pow(radiusCharge,3);
-		double forzenElectronChargeGreater = elephon::Auxillary::units::HARTREE_TO_EV*eleChg/rgrid.get_radius(ir)*std::sqrt(4*M_PI);
+		double forzenElectronChargeGreater = elephon::Auxillary::units::COULOMB_CONSTANT*eleChg/rgrid.get_radius(ir)*std::sqrt(4*M_PI);
 		double analytic = rgrid.get_radius(ir) <= radiusCharge ? forzenElectronChargeLower:	forzenElectronChargeGreater;
 		double dr = ir < nR-1 ? rgrid.get_radius(ir+1) -rgrid.get_radius(ir) : rgrid.get_radius(ir)-rgrid.get_radius(ir-1);
 		diffAnalytic += std::abs((analytic-potential[ir])/(analytic+potential[ir]))*dr;
@@ -168,7 +169,7 @@ BOOST_AUTO_TEST_CASE( test_potential_displacement )
 	// test for the classical dipole
 	auto dipoleDir = [&] (double x, double y, double z, double dir) {
 		double r = std::sqrt(std::pow(x,2)+std::pow(y,2)+std::pow(z,2));
-		return - elephon::Auxillary::units::HARTREE_TO_EV*Z /(r*r*r) * dir;
+		return - elephon::Auxillary::units::COULOMB_CONSTANT*Z /(r*r*r) * dir;
 	};
 
 	check_analytic_ref_on_grid(fc, fc->get_radial_grid(), dipoleDir, 1e-3); // analytic, thus quite accurate
@@ -184,10 +185,42 @@ BOOST_AUTO_TEST_CASE( test_potential_displacement )
 	auto dipoleFrozenEleChg = [&] (double x, double y, double z, double dir) {
 		double r = std::sqrt(std::pow(x,2)+std::pow(y,2)+std::pow(z,2));
 		if ( r > radiusCharge)
-			return elephon::Auxillary::units::HARTREE_TO_EV*eleChg /(r*r*r) * dir;
-		return elephon::Auxillary::units::HARTREE_TO_EV * dir / 3.0 * (4*M_PI*density);
+			return elephon::Auxillary::units::COULOMB_CONSTANT*eleChg /(r*r*r) * dir;
+		return elephon::Auxillary::units::COULOMB_CONSTANT * dir / 3.0 * (4*M_PI*density);
 	};
 	check_analytic_ref_on_grid(fc, fc->get_radial_grid(), dipoleFrozenEleChg, 0.5); // numeric, hard cutoff, large values => not very accurate
+}
+
+BOOST_AUTO_TEST_CASE( test_Al_potential )
+{
+	elephon::test::fixtures::MockStartup ms;
+	auto testd = ms.get_data_for_testing_dir() / "Al" / "vasp" / "fcc_primitive" / "sc_4x4x4";
+	elephon::test::fixtures::DataLoader dl;
+	auto vaspLoader = dl.create_vasp_loader("");
+
+	std::vector<int> fftDims;
+	elephon::Auxillary::alignedvector::DV regularGridPotential;
+	std::vector<elephon::AtomicSite::AtomSiteData> radialPotential;
+	vaspLoader->read_electronic_potential(testd.string(), fftDims, regularGridPotential, radialPotential);
+	elephon::AtomicSite::FrozenCore const & frozenAlCore =  radialPotential[0].get_frozen_core_data();
+
+	std::vector<double> potPC(frozenAlCore.get_radial_grid().get_num_R());
+	std::vector<double> potHP(frozenAlCore.get_radial_grid().get_num_R());
+	frozenAlCore.add_core_hartree_potential(potHP.begin(), potHP.end());
+	frozenAlCore.add_core_potential(potPC.begin(), potPC.end());
+
+	double diff = 0;
+	std::ifstream file( (testd / "vasp_frozen_core_reference.dat").c_str() );
+	if (! file) throw std::runtime_error("Problem opening file vasp_frozen_core_reference.dat for cross-check");
+	double radius =0, radiusP = 0, corePot, hartreePot;
+	for (int ir = 0 ; ir < frozenAlCore.get_radial_grid().get_num_R(); ++ir)
+	{
+		file >> radius >> corePot >> hartreePot;
+		diff += std::abs(corePot - potPC[ir]/std::sqrt(4*M_PI))*(radius-radiusP);
+		diff += std::abs(hartreePot - potHP[ir]/std::sqrt(4*M_PI))*(radius-radiusP);
+		radiusP = radius;
+	}
+	BOOST_CHECK_SMALL(diff, 5e-2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

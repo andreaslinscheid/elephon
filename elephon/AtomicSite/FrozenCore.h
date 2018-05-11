@@ -54,7 +54,8 @@ public:
 	 * @param[in] sphericalPotentialToBeAddedToBegin	Add the -Z/r potential to the container pointed to by sphericalPotentialToBeAddedToBegin.
 	 * 													The target should be expansion coefficients of the spherical harmonic l=0,m=0 and be measured in units
 	 * 													of eV.
-	 * @param[in] sphericalPotentialToBeAddedToEnd		End of the range of the potential to be added to. The range must be equal to the internal radialGrid.
+	 * @param[in] sphericalPotentialToBeAddedToEnd		End of the range of the potential to be added to. The range must be equal
+	 * 													to a multiple of the internal radialGrid.
 	 */
 	template<class iterator>
 	void add_core_potential(
@@ -69,7 +70,8 @@ public:
 	 * @param[in] sphericalPotentialToBeAddedToBegin	Add the Hartree potential to the container pointed to by sphericalPotentialToBeAddedToBegin.
 	 * 													The target should be expansion coefficients of the spherical harmonic l=0,m=0 and be measured in units
 	 * 													of eV.
-	 * @param[in] sphericalPotentialToBeAddedToEnd		End of the range of the potential to be added to. The range must be equal to the internal radialGrid.
+	 * @param[in] sphericalPotentialToBeAddedToEnd		End of the range of the potential to be added to. The range must be equal
+	 * 													to a multiple of the internal radialGrid.
 	 */
 	template<class iterator>
 	void add_core_hartree_potential(
@@ -89,7 +91,8 @@ public:
 	 * 											layout radial grid as the fasted running index, then the layout specified by
 	 * 											Auxilliary::memlayout::angular_momentum_layout().
 	 * 											The result will be added to the l=1 channels. Input must therefore include those channels.
-	 * @param[in] potentialToBeAddedToEnd		End of the range of the potential to be added to.
+	 * @param[in] potentialToBeAddedToEnd		End of the range of the potential to be added to. The range must be equal
+	 * 											to a multiple of the internal radialGrid.
 	 */
 	template<class iterator>
 	void add_core_hartree_analytic_displacement(

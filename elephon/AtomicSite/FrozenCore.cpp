@@ -33,6 +33,7 @@ FrozenCore::initialize(double corePointCharge,
 	electronicFrozenCoreCharge_= std::move(electronicFrozenCoreCharge);
 	rgrid_ = std::move(radialGrid);
 	coreHartreeZDisplacementDataBuffer_.clear();
+	assert(electronicFrozenCoreCharge_.size() == rgrid_.get_num_R());
 }
 
 void
@@ -40,9 +41,9 @@ FrozenCore::set_hartree_displ(int ir, double radialIntegralCharge) const
 {
 	// Please note that electronicFrozenCoreCharge_ includes a factor r^2
 	coreHartreeZDisplacementDataBuffer_[ir]
-			= - Auxillary::units::HARTREE_TO_EV*corePointCharge_
+			= - Auxillary::units::COULOMB_CONSTANT*corePointCharge_
 					  /rgrid_.get_radius(ir)/rgrid_.get_radius(ir) * std::sqrt(4.0*M_PI/3.0) // core point charge
-			  + Auxillary::units::HARTREE_TO_EV*std::pow(4*M_PI,1.5)/std::sqrt(3.0)*radialIntegralCharge
+			  + Auxillary::units::COULOMB_CONSTANT*std::pow(4*M_PI,1.5)/std::sqrt(3.0)*radialIntegralCharge
 			  	  	  /rgrid_.get_radius(ir)/rgrid_.get_radius(ir); // frozen electronic core charge
 };
 
