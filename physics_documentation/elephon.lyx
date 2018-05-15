@@ -3515,6 +3515,176 @@ The projector
 \end_inset
 
  either in real or reciprocal space.
+ Let us abbriviate the displacement potential with 
+\begin_inset Formula $\delta V$
+\end_inset
+
+ and distinguish the regular grid contribution 
+\begin_inset Formula $\tilde{\delta V}$
+\end_inset
+
+ the all electron radial part 
+\begin_inset Formula $\delta V^{{\rm AE}}$
+\end_inset
+
+ and the 
+\begin_inset Formula $\delta V^{{\rm PS}}$
+\end_inset
+
+, then we can write
+\begin_inset Formula 
+\begin{eqnarray}
+\hat{\mathcal{T}}\delta V\hat{\mathcal{T}} & = & [1+\sum_{j}\vert\tilde{p}_{j}\rangle(\langle\phi_{j}\vert-\langle\tilde{\phi}_{j}\vert)]\delta V[1+\sum_{i}(\vert\phi_{i}\rangle-\vert\tilde{\phi}_{i}\rangle)\langle\tilde{p}_{i}\vert]\\
+ & = & (1+\sum_{j}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert-\sum_{j}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert)\delta V(1+\sum_{i}\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{i}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert)\\
+ & = & (1+\sum_{j}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert-\sum_{j}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert)(\delta V+\sum_{i}\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\delta V\sum_{i}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert)\\
+ & = & \delta V+\sum_{j}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V-\sum_{j}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\nonumber \\
+ &  & +\sum_{i}\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert\nonumber \\
+ &  & -\sum_{i}\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert\\
+ & = & \delta V+\sum_{j}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V-\sum_{j}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\nonumber \\
+ &  & +\sum_{i}\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert\nonumber \\
+ &  & -\sum_{i}\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert
+\end{eqnarray}
+
+\end_inset
+
+using
+\begin_inset Formula 
+\begin{equation}
+\sum_{i}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert=1
+\end{equation}
+
+\end_inset
+
+within each atomic sphere region (outside, the operator 
+\begin_inset Formula $\hat{\mathcal{T}}=1$
+\end_inset
+
+ ) upon insertion, we find
+\begin_inset Formula 
+\begin{eqnarray}
+\hat{\mathcal{T}}\delta V\hat{\mathcal{T}} & = & \delta V+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert
+\end{eqnarray}
+
+\end_inset
+
+Since we represent 
+\begin_inset Formula $\delta V$
+\end_inset
+
+ as a regular grid pseudo contribution plus all electron potential on a
+ radial grid where the pseudo contribtion is subtracted again,
+\begin_inset Formula 
+\begin{equation}
+\delta V=\tilde{\delta V}+\delta V^{{\rm AE}}-\delta V^{{\rm PS}}
+\end{equation}
+
+\end_inset
+
+In the following we will assume that it legitimate to interachange 
+\begin_inset Formula $\tilde{\delta V}$
+\end_inset
+
+ with 
+\begin_inset Formula $\delta V^{{\rm PS}}$
+\end_inset
+
+ within the atomic region and 
+\begin_inset Formula $\delta V^{{\rm AE}}$
+\end_inset
+
+ outside of it.
+ Then, we find
+\begin_inset Formula 
+\begin{eqnarray}
+\hat{\mathcal{T}}\delta V\hat{\mathcal{T}} & = & \tilde{\delta V}+\delta V^{{\rm AE}}-\delta V^{{\rm PS}}+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\tilde{\delta V}+\delta V^{{\rm AE}}-\delta V^{{\rm PS}}\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\tilde{\delta V}+\delta V^{{\rm AE}}-\delta V^{{\rm PS}}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert\\
+ & = & \tilde{\delta V}+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V^{{\rm AE}}-\delta V^{{\rm PS}}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert+\nonumber \\
+ &  & +\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V^{{\rm AE}}\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V^{{\rm AE}}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert\\
+ & = & \tilde{\delta V}+\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\phi_{j}\vert\delta V^{{\rm AE}}\vert\phi_{i}\rangle\langle\tilde{p}_{i}\vert-\sum_{ij}\vert\tilde{p}_{j}\rangle\langle\tilde{\phi}_{j}\vert\delta V^{{\rm PS}}\vert\tilde{\phi}_{i}\rangle\langle\tilde{p}_{i}\vert
+\end{eqnarray}
+
+\end_inset
+
+Now, the matrix elements read
+\begin_inset Formula 
+\begin{eqnarray}
+\langle\psi_{\boldsymbol{k}n}\vert\delta V\vert\psi_{\boldsymbol{k}^{\prime}n^{\prime}}\rangle & = & \langle\tilde{\psi}_{\boldsymbol{k}n}\vert\tilde{\delta V}\vert\tilde{\psi}_{\boldsymbol{k}^{\prime}n^{\prime}}\rangle\nonumber \\
+ &  & +\sum_{ij}\langle\tilde{\psi}_{\boldsymbol{k}n}\vert\tilde{p}_{j}\rangle[\langle\phi_{j}\vert\delta V^{{\rm AE}}\vert\phi_{i}\rangle-\langle\tilde{\phi}_{j}\vert\delta V^{{\rm PS}}\vert\tilde{\phi}_{i}\rangle]\langle\tilde{p}_{i}\vert\tilde{\psi}_{\boldsymbol{k}^{\prime}n^{\prime}}\rangle
+\end{eqnarray}
+
+\end_inset
+
+Note that the sum 
+\begin_inset Formula $\sum_{ij}$
+\end_inset
+
+ is strictly on-site, since potential is local.
+\end_layout
+
+\begin_layout Subsection
+Compensation charges
+\end_layout
+
+\begin_layout Standard
+The compensation charges are introduced so that the pseudo charge density
+ has the same moments as the true all electron density.
+ 
+\begin_inset Formula $\delta V$
+\end_inset
+
+ is the true all electron potential so there is no need to correct for any
+ moments, however, 
+\begin_inset Formula $\tilde{\delta V}$
+\end_inset
+
+ does not include such contributions and, of cause, 
+\begin_inset Formula $\delta V^{{\rm PS}}$
+\end_inset
+
+ does not account for it either.
+ In the PAW approach this is added to by hand via two terms
+\begin_inset Formula 
+\begin{equation}
+\vert\tilde{p}_{j}\rangle V_{ij}^{{\rm CC}}\langle\tilde{p}_{i}\vert=\vert\tilde{p}_{j}\rangle[\sum_{l,m}\int{\rm d}\boldsymbol{r}\tilde{v}_{{\rm PS}}(\boldsymbol{r})Q_{ij}^{lm}(\boldsymbol{r})-\sum_{\alpha}\int_{A_{\alpha}}{\rm d}\boldsymbol{r}\tilde{v}_{{\rm PS}}^{1}(\boldsymbol{r}-\boldsymbol{\tau}_{\alpha})Q_{ij}^{lm}(\boldsymbol{r}-\boldsymbol{\tau}_{\alpha})]\langle\tilde{p}_{i}\vert
+\end{equation}
+
+\end_inset
+
+Note that even though the first terms corrects for a property of pseudo
+ wavefunctions of the regular grid, it leads to an essentially non-local
+ term.
+ If the set projectors were complete and 
+\begin_inset Formula $\tilde{v}_{{\rm PS}}\equiv\tilde{v}_{{\rm PS}}^{1}$
+\end_inset
+
+, exactly, of cause this term would be zero.
+ For conistancy with the PAW method, we have to consider it.
+ Note that 
+\begin_inset Formula $\tilde{v}_{{\rm PS}}(\boldsymbol{r})$
+\end_inset
+
+ and 
+\begin_inset Formula $Q_{ij}^{lm}(\boldsymbol{r})$
+\end_inset
+
+ depend on the nuclear position and thus
+\begin_inset Formula 
+\begin{eqnarray}
+\delta V_{ij}^{{\rm CC}} & = & \sum_{l,m}\int{\rm d}\boldsymbol{r}\tilde{\delta V}(\boldsymbol{r})Q_{ij}^{lm}(\boldsymbol{r})+\sum_{l,m}\int{\rm d}\boldsymbol{r}\tilde{v}_{{\rm PS}}(\boldsymbol{r})\delta Q_{ij}^{lm}(\boldsymbol{r})\nonumber \\
+ &  & -\sum_{\alpha}\int_{A_{\alpha}}{\rm d}\boldsymbol{r}\delta V^{{\rm PS}}(\boldsymbol{r}-\boldsymbol{\tau}_{\alpha})Q_{ij}^{lm}(\boldsymbol{r}-\boldsymbol{\tau}_{\alpha})-\sum_{\alpha}\int_{A_{\alpha}}{\rm d}\boldsymbol{r}\tilde{v}_{{\rm PS}}^{1}(\boldsymbol{r}-\boldsymbol{\tau}_{\alpha})\delta Q_{ij}^{lm}(\boldsymbol{r}-\boldsymbol{\tau}_{\alpha})
+\end{eqnarray}
+
+\end_inset
+
+It is not absolutely straight forward to see if this contribution is needed.
+ In principle they should cancle and these terms are important to account
+ for the fact that all electron- and pseudo wavefunctions can lead to different
+ electric moments in each sphere, thereby correcting the shape of the pseudo
+ wavefunctions 
+\begin_inset Formula $\vert\tilde{\psi}_{\boldsymbol{k}n}\rangle$
+\end_inset
+
+.
+ These, however, are fixed input to our calculations.
 \end_layout
 
 \begin_layout Subsection
