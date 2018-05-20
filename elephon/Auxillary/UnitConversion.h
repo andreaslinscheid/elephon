@@ -57,6 +57,8 @@ const double BOHR_TO_ANGSTROEM = 0.529177249;
 
 const double COULOMB_CONSTANT = BOHR_TO_ANGSTROEM*BOHR_TO_ANGSTROEM*HARTREE_TO_EV;
 
+const double BOLTZMANN_CONSTANT_IN_EV_PER_K = 0.00008617330350;
+
 } /* namespace units */
 } /* namespace Auxillary */
 } /* namespace elephon */

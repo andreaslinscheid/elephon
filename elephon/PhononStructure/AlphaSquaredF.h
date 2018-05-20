@@ -41,15 +41,41 @@ public:
 	void compute_a2F_grid( std::shared_ptr<IOMethods::ResourceHandler> resourceHandler );
 
 	void write_a2F_file(std::string const & filename) const;
+
+	void load_from_file(std::string const & filename);
+
+	Auxillary::alignedvector::DV const & get_a2F_data() const;
+
+	Auxillary::alignedvector::DV const & get_frequencies() const;
+
+	double operator() (int iFrequency, int iBand, int iBandPrime) const;
+
+	int get_num_bands() const;
+
+	Auxillary::alignedvector::DV::const_iterator beginBand(int iband, int ibandPrime) const;
+
+	Auxillary::alignedvector::DV::const_iterator endBand(int iband, int ibandPrime) const;
+
+	int get_num_frequency_samples() const;
+
+	double get_max_frequency_range() const;
+
+	double compute_coupling_lambda() const;
+
+	double compute_omegaLog(double lambda = 0.0) const;
 private:
 
-	std::vector<double> a2F_;
+	Auxillary::alignedvector::DV a2F_;
 
 	double freqMin_ = 0;
 
 	double freqMax_ = 0;
 
+	Auxillary::alignedvector::DV frequencies_;
+
 	int freqNPts_ = 0;
+
+	int numBands_ = 0;
 
 	void setup_internal_freq_grid(
 			std::shared_ptr<const PhononStructure::PhononGrid> phgrid,

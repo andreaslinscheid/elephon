@@ -70,3 +70,6 @@
 
 // include all test suits for namespace symmetry
 #include "symmetry/test_SymmetryOperation.cpp"
+
+// include all test suits for namespace EliashbergEquations
+#include "EliashbergEquations/test_EliashbergModule.cpp"

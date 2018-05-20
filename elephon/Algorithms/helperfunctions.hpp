@@ -21,6 +21,7 @@
 #define ELEPHON_ALGORITHMS_HELPERFUNCTIONS_HPP_
 
 #include "Auxillary/AlignedVector.h"
+#include "Auxillary/UnitConversion.h"
 #include <complex>
 #include <vector>
 #include <algorithm>
@@ -388,6 +389,13 @@ void cross_prod( V const& v1, V const& v2, V & v1xv2)
 	v1xv2[0]=v1[1]*v2[2]-v1[2]*v2[1];
 	v1xv2[1]=v1[2]*v2[0]-v1[0]*v2[2];
 	v1xv2[2]=v1[0]*v2[1]-v1[1]*v2[0];
+}
+
+template<typename T>
+T inverse_temperature_eV(T temperature)
+{
+	assert(temperature > T(0));
+	return T(1.0)/Auxillary::units::BOLTZMANN_CONSTANT_IN_EV_PER_K/temperature;
 }
 
 } /* namespace helperfunctions */

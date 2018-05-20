@@ -29,38 +29,45 @@ namespace EliashbergEquations
 
 void
 MatsubaraBaseBoson::initialize(
-		double temperature,
-		double energyCutoffMats,
+		int nMatsBoson,
+		int nMatsFermi,
 		int numDataPerIndex)
 {
 	assert(numDataPerIndex > 0);
-	nMatsBoson_ = this->compute_n_mats_cutoff(temperature, energyCutoffMats);
-//	nMatsFermi_ = Algorithms::helperfunctions::num_Mats_Fermi_cutoff(temperature, energyCutoffMats);
+	nMatsBoson_ = nMatsBoson;
+	nMatsFermi_ = nMatsFermi;
+	assert(nMatsBoson_ == nMatsFermi_*2+1);
 	nDataPerMats_ = numDataPerIndex;
-	data_.assign( nMatsBoson_*nDataPerMats_ , 0.0);
+	data_.assign( nMatsBoson_*nDataPerMats_ , T(0.0));
 }
 
 void
 MatsubaraBaseBoson::set_data(
-		int mazubaraIndex,
-		int dataIndex,
+		int matsubaraIndex,
+		int bandIndex,
+		int bandPrimeIndex,
 		double data)
 {
-	assert( (mazubaraIndex >= this->min_mats_freq()) and (mazubaraIndex <= this->max_mats_freq()));
-	assert( (dataIndex >= 0) and (dataIndex < nDataPerMats_));
-	assert( (this->matsubara_to_data_index(mazubaraIndex, dataIndex) >= 0)
-			and (this->matsubara_to_data_index(mazubaraIndex, dataIndex) < data_.size()));
-	data_[this->matsubara_to_data_index(mazubaraIndex, dataIndex)] = data;
+	assert( (matsubaraIndex >= 0) and (nMatsBoson_));
+	assert( (bandIndex >= 0) and (bandIndex < nDataPerMats_));
+	assert( (bandPrimeIndex >= 0) and (bandPrimeIndex < nDataPerMats_));
+	assert( (this->matsubara_to_data_index(matsubaraIndex, bandIndex, bandPrimeIndex) >= 0)
+			and (this->matsubara_to_data_index(matsubaraIndex, bandIndex, bandPrimeIndex) < data_.size()));
+	data_[this->matsubara_to_data_index(matsubaraIndex, bandIndex, bandPrimeIndex)] = data;
 }
 
 void
 MatsubaraBaseBoson::get_row_Matsubara_fermi(
-		int mazubaraIndex,
-		int dataIndex,
-		std::vector<double>::const_iterator & begin,
-		std::vector<double>::const_iterator & end) const
+		int matsubaraFermiIndex,
+		int bandIndex,
+		int bandPrimeIndex,
+		T const * __restrict & begin,
+		T const * __restrict & end) const
 {
-	begin = data_.begin() + this->matsubara_to_data_index(mazubaraIndex, dataIndex);
+	// matsubaraFermiIndex = 0 corresponds to the matsubara frequency -nMatsFermi_/2
+	// we return the range n' = [-nMatsFermi_/2,nMatsFermi_/2[
+	// the data layout is (n'-n)
+	begin = data_.data() + (nMatsFermi_ - matsubaraFermiIndex)+nMatsBoson_*(bandPrimeIndex + nDataPerMats_*bandIndex);
 	end = begin + nMatsFermi_;
 }
 
@@ -77,48 +84,14 @@ MatsubaraBaseBoson::max_mats_freq() const
 }
 
 int
-MatsubaraBaseBoson::compute_n_mats_cutoff(
-		double temperature,
-		double energyCutoffMats ) const
+MatsubaraBaseBoson::matsubara_to_data_index(
+		int n,
+		int bandIndex,
+		int bandPrimeIndex) const
 {
-//	return Algorithms::helperfunctions::num_Mats_Fermi_cutoff(temperature, energyCutoffMats)*2 + 1;
-	return 0;
+	int idata = nDataPerMats_*bandIndex + bandPrimeIndex;
+	return idata*nMatsBoson_ + n;
 }
 
-int
-MatsubaraBaseBoson::matsubara_to_data_index(int n, int idata) const
-{
-	return idata*nMatsBoson_ + n + nMatsBoson_/2;
-}
-
-namespace detail
-{
-
-MatsubaraFreq::MatsubaraFreq(double temperature)
-	: inverseTemperature_( 0.0)// Algorithms::helperfunctions::inverse_temperature_eV(temperature) )
-{
-}
-
-double
-MatsubaraFreq::operator() (int index) const
-{
-	return 2.0 * M_PI / inverseTemperature_ * index;
-}
-
-std::vector<double>
-MatsubaraFreq::range(int istart, int iend) const
-{
-	if ( iend <= istart )
-		return std::vector<double>();
-
-	std::vector<double> result;
-	result.reserve(iend-istart);
-	for ( int n = istart; n < iend ; ++n)
-		result.push_back( (*this)(n) );
-	return result;
-
-}
-
-} /* namespace detail */
 } /* namespace EliashbergEquations */
 } /* namespace elephon */

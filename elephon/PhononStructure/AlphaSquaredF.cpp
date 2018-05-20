@@ -26,6 +26,7 @@
 #include "Algorithms/LocalDerivatives.h"
 #include "Auxillary/UnitConversion.h"
 #include "PhononStructure/PhononGrid.h"
+#include "Algorithms/SimpsonIntegrator.h"
 #include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
@@ -199,9 +200,11 @@ AlphaSquaredF::setup_internal_freq_grid(
 		int npts)
 {
 	freqNPts_ = npts;
-	auto frequencies =  phgrid->setup_frequency_grid(phrange, freqNPts_);
-	freqMin_ = frequencies.front();
-	freqMax_ = frequencies.back();
+	frequencies_.resize(npts);
+	auto frequencies = phgrid->setup_frequency_grid(phrange, freqNPts_);
+	std::copy(frequencies.begin(),frequencies.end(), frequencies_.begin());
+	freqMin_ = frequencies_.front();
+	freqMax_ = frequencies_.back();
 	a2F_.assign(freqNPts_ , 0.0);
 }
 
@@ -238,6 +241,56 @@ AlphaSquaredF::write_a2F_file(std::string const & filename) const
 		double w = freqMin_ + (iw + 0.5)*(freqMax_ - freqMin_)/freqNPts_;
 		file << w << '\t' << a2F_[iw] << '\n';
 	}
+}
+
+void
+AlphaSquaredF::load_from_file(std::string const & filename)
+{
+	std::ifstream file( filename.c_str() );
+	if ( not file.good() )
+		throw std::runtime_error(std::string("Problem opening file ")+filename+" for reading the a2F data");
+
+	frequencies_.clear();
+	a2F_.clear();
+
+	std::string s;
+	std::getline(file,s); // comment line
+	numBands_ = -1;
+	std::vector<double> data;
+	while( std::getline(file,s) )
+	{
+		std::stringstream ss(s);
+		std::vector<double> values;
+		double element;
+		while ( ss >> element ){
+			values.push_back(element);
+		}
+		if ( values.empty())
+			continue;
+
+		if ( numBands_ < 0 )
+			numBands_ = sqrt(values.size()-1);
+
+		if ( (numBands_*numBands_ != values.size()-1) && (values.size() < 2))
+			throw std::runtime_error(std::string("Problem reading file ")+filename+" for reading the a2F data\n"
+					"Each non-empty line must have the same number of values, frequency + list of bands data");
+		frequencies_.push_back(*values.begin());
+		if ( (frequencies_.size() > 1) && (*frequencies_.rbegin() <= *(++frequencies_.rbegin())) )
+				throw std::runtime_error(std::string("Problem reading file ")+filename+" for reading the a2F data\n"
+						"The frequencies are not in increasing order.");
+		data.insert(data.end(), values.begin()+1, values.end());
+	}
+	frequencies_.shrink_to_fit();
+	freqNPts_ = frequencies_.size();
+	a2F_.resize(freqNPts_*numBands_*numBands_);
+
+	for (int iband = 0 ; iband < numBands_; ++iband)
+		for (int ibandPrime = 0 ; ibandPrime < numBands_; ++ibandPrime)
+			for (int ifreq = 0 ; ifreq < freqNPts_; ++ifreq)
+				a2F_[ifreq + freqNPts_*(iband + numBands_*ibandPrime)] = data[iband + numBands_*(ibandPrime+numBands_*ifreq)];
+
+	freqMin_ = *frequencies_.begin();
+	freqMax_ = *frequencies_.rbegin();
 }
 
 void
@@ -352,6 +405,84 @@ AlphaSquaredF::query_q(
 			iqAndKKPListPair.second.push_back(q_index_to_k_and_kp_map[iq]);
 		q_to_k_and_kp_map.push_back(std::move(iqAndKKPListPair));
 	}
+}
+
+double
+AlphaSquaredF::operator() (int iFrequency, int iBand, int iBandPrime) const
+{
+	assert((iFrequency >=0)&&(iFrequency<freqNPts_));
+	assert((iBand >=0)&&(iBand<numBands_));
+	assert((iBandPrime >=0)&&(iBandPrime<numBands_));
+	return a2F_[iFrequency + freqNPts_*(iBand+numBands_*iBandPrime)];
+}
+
+int
+AlphaSquaredF::get_num_bands() const
+{
+	return numBands_;
+}
+
+Auxillary::alignedvector::DV::const_iterator
+AlphaSquaredF::beginBand(int iband, int ibandPrime) const
+{
+	return a2F_.begin()+freqNPts_*(iband+numBands_*ibandPrime);
+}
+
+Auxillary::alignedvector::DV::const_iterator
+AlphaSquaredF::endBand(int iband, int ibandPrime) const
+{
+	return a2F_.begin()+freqNPts_*(iband+numBands_*ibandPrime) + freqNPts_;
+}
+
+int
+AlphaSquaredF::get_num_frequency_samples() const
+{
+	return freqNPts_;
+}
+
+Auxillary::alignedvector::DV const &
+AlphaSquaredF::get_frequencies() const
+{
+	return frequencies_;
+}
+
+double AlphaSquaredF::get_max_frequency_range() const
+{
+	return freqMax_;
+}
+
+double
+AlphaSquaredF::compute_coupling_lambda() const
+{
+	Algorithms::SimpsonIntegrator<decltype(frequencies_)> si;
+	double lambda = 0.0;
+	Auxillary::alignedvector::DV buffer(freqNPts_);
+	for (int iband = 0; iband < numBands_; ++iband)
+		for (int ibandPrime = 0; ibandPrime < numBands_; ++ibandPrime)
+		{
+			for (int ifreq = 0; ifreq < freqNPts_; ++ifreq)
+				buffer[ifreq] = 2.0 * (*this)(ifreq, iband, ibandPrime)	/ frequencies_[ifreq];
+			lambda = std::max(lambda, si.integrate(buffer.begin(), buffer.end(), frequencies_.begin(), frequencies_.end()));
+		}
+	return lambda;
+}
+
+double
+AlphaSquaredF::compute_omegaLog(double lambda) const
+{
+	if ( lambda == 0.0 )
+		lambda = this->compute_coupling_lambda ();
+	Algorithms::SimpsonIntegrator<decltype(frequencies_)> si;
+	double omega_log = 0.0;
+	Auxillary::alignedvector::DV buffer(freqNPts_);
+	for (int iband = 0; iband < numBands_; ++iband)
+		for (int ibandPrime = 0; ibandPrime < numBands_; ++ibandPrime)
+		{
+			for (int ifreq = 0; ifreq < freqNPts_; ++ifreq)
+				buffer[ifreq] = 2.0/lambda *std::log(frequencies_[ifreq]) * (*this)(ifreq, iband, ibandPrime)	/ frequencies_[ifreq];
+			omega_log = std::max(omega_log, std::exp(si.integrate(buffer.begin(), buffer.end(), frequencies_.begin(), frequencies_.end())));
+		}
+	return omega_log;
 }
 
 } /* namespace PhononStructure */

@@ -1,4 +1,4 @@
-/*	This file IsotropicElectronPhononCoupling.h is part of elephon.
+/*	This file EliashbergSingleRun.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,34 +13,38 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Oct 25, 2017
+ *  Created on: May 16, 2018
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_ELIASHBERGEQUATIONS_ISOTROPICELECTRONPHONONCOUPLING_H_
-#define ELEPHON_ELIASHBERGEQUATIONS_ISOTROPICELECTRONPHONONCOUPLING_H_
+#ifndef ELEPHON_ELIASHBERGEQUATIONS_ELIASHBERGSINGLERUN_H_
+#define ELEPHON_ELIASHBERGEQUATIONS_ELIASHBERGSINGLERUN_H_
 
-#include "EliashbergEquations/MatsubaraBaseBoson.h"
-#include "PhononStructure/AlphaSquaredF.h"
-#include <string>
-#include <vector>
+#include "EliashbergEquations/EliashbergModule.h"
+#include <memory>
 
-namespace elephon
-{
-namespace EliashbergEquations
-{
+namespace elephon {
+namespace EliashbergEquations {
 
-class IsotropicElectronPhononCoupling : public MatsubaraBaseBoson
+class EliashbergSingleRunData;
+
+class EliashbergSingleRun
 {
+	typedef EliashbergModule::EliashbergDataType T;
 public:
+	EliashbergSingleRun(std::shared_ptr<EliashbergSingleRunData> runData_ptr);
 
-	void initialize(PhononStructure::AlphaSquaredF const & a2F,
-			double temperature,
-			double energyCutoff);
+	bool solve_Eliashberg();
 
+	T get_maximal_gap_magnitude() const;
+
+	void rescale_gap_function(T newMaxGapValue);
+
+private:
+	std::shared_ptr<EliashbergSingleRunData> runData_;
 };
 
 } /* namespace EliashbergEquations */
 } /* namespace elephon */
 
-#endif /* ELEPHON_ELIASHBERGEQUATIONS_ISOTROPICELECTRONPHONONCOUPLING_H_ */
+#endif /* ELEPHON_ELIASHBERGEQUATIONS_ELIASHBERGSINGLERUN_H_ */

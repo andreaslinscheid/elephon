@@ -179,6 +179,37 @@ Input::Input( int argc, char* argv[] )
 		if (off)
 			opts_.set_dvscfc({});
 	}
+
+	// Handle the Eliashberg defaults
+	bool ElishbergRunRequest = ! opts_.get_EliT().empty();
+	std::string eli_f_a2F = opts_.get_Eli_f_a2F();
+	if ( eli_f_a2F.empty() ) // default : chose the calculated a2F file!
+		eli_f_a2F = opts_.get_f_a2F();
+
+	// If the user wants an Eliashberg calculation he has to specify the a2F file
+	if ( ElishbergRunRequest && eli_f_a2F.empty() )
+	{
+		std::cout << "Error: EliT was set, but no file with the coupling data was specified. Please see manual." <<std::endl;
+		std::exit(0);
+	}
+
+	// default: run Eliashberg Tc if not otherwise specified and the a2F data is there.
+	if ( (not ElishbergRunRequest) && (not eli_f_a2F.empty()) ){
+		opts_.set_EliT("findTc");
+	}
+	opts_.set_Eli_f_a2F(eli_f_a2F);
+
+	if ( (opts_.get_EliMix() < 0) || (opts_.get_EliMix()>=1.0))
+	{
+		std::cout << "Error: EliMix was set to a value outside of a meaningful range ([0,1[). Please see manual." <<std::endl;
+		std::exit(0);
+	}
+
+	if (opts_.get_muStar().empty())
+	{
+		std::cout << "Error: muStar was set be empty, this is not allowed. For running without coulomb, set it to muStar = 0.0. Please see manual." <<std::endl;
+		std::exit(0);
+	}
 }
 
 InputOptions const & Input::get_opts() const

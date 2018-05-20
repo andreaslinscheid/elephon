@@ -24,6 +24,7 @@
 #include "IOMethods/ResourceHandler.h"
 #include "IOMethods/BuildFolderStructure.h"
 #include "PhononStructure/AlphaSquaredF.h"
+#include "EliashbergEquations/EliashbergModule.h"
 #include <memory>
 
 using namespace elephon;
@@ -114,6 +115,9 @@ main(int argc, char* argv[])
 			folderStructureBuilder.build(resources);
 		}
 	}
+
+	EliashbergEquations::EliashbergModule eli(options);
+	eli.do_work();
 
     return 0;
 }

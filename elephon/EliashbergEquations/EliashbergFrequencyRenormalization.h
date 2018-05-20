@@ -1,4 +1,4 @@
-/*	This file IsotropicElectronPhononCoupling.h is part of elephon.
+/*	This file EliashbergFrequencyRenormalization.h is part of elephon.
  *
  *  elephon is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -13,34 +13,26 @@
  *  You should have received a copy of the GNU General Public License
  *  along with elephon.  If not, see <http://www.gnu.org/licenses/>.
  *
- *  Created on: Oct 25, 2017
+ *  Created on: May 16, 2018
  *      Author: A. Linscheid
  */
 
-#ifndef ELEPHON_ELIASHBERGEQUATIONS_ISOTROPICELECTRONPHONONCOUPLING_H_
-#define ELEPHON_ELIASHBERGEQUATIONS_ISOTROPICELECTRONPHONONCOUPLING_H_
+#ifndef ELEPHON_ELIASHBERGEQUATIONS_ELIASHBERGFREQUENCYRENORMALIZATION_H_
+#define ELEPHON_ELIASHBERGEQUATIONS_ELIASHBERGFREQUENCYRENORMALIZATION_H_
 
-#include "EliashbergEquations/MatsubaraBaseBoson.h"
-#include "PhononStructure/AlphaSquaredF.h"
-#include <string>
-#include <vector>
+#include "EliashbergEquations/MatsubaraBaseFermion.h"
+#include "EliashbergEquations/EliashbergModule.h"
 
-namespace elephon
-{
-namespace EliashbergEquations
-{
+namespace elephon {
+namespace EliashbergEquations {
 
-class IsotropicElectronPhononCoupling : public MatsubaraBaseBoson
+class EliashbergFrequencyRenormalization : public MatsubaraBaseFermion
 {
 public:
-
-	void initialize(PhononStructure::AlphaSquaredF const & a2F,
-			double temperature,
-			double energyCutoff);
-
+	void initialize(int nMats, int nBand, EliashbergModule::EliashbergDataType  value);
 };
 
 } /* namespace EliashbergEquations */
 } /* namespace elephon */
 
-#endif /* ELEPHON_ELIASHBERGEQUATIONS_ISOTROPICELECTRONPHONONCOUPLING_H_ */
+#endif /* ELEPHON_ELIASHBERGEQUATIONS_ELIASHBERGFREQUENCYRENORMALIZATION_H_ */

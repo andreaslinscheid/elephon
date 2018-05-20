@@ -18,6 +18,8 @@
  */
 
 #include "EliashbergEquations/IsotropicElectronPhononCoupling.h"
+#include "Algorithms/SimpsonIntegrator.h"
+#include "EliashbergEquations/Eliashberg_helperfunction.hpp"
 #include <assert.h>
 
 namespace elephon
@@ -27,44 +29,37 @@ namespace EliashbergEquations
 
 void
 IsotropicElectronPhononCoupling::initialize(
-		std::string const & filename,
+		PhononStructure::AlphaSquaredF const & a2F,
 		double temperature,
 		double energyCutoff)
 {
-//	std::ifstream
-}
+	const int nB = a2F.get_num_bands();
+	const int nF = a2F.get_num_frequency_samples();
+	const int nMats = fermi_number_matsubara_frequencies(temperature, energyCutoff);
+	MatsubaraBaseBoson::initialize(nMats*2+1 , nMats, nB);
 
-void
-IsotropicElectronPhononCoupling::initialize(
-		std::vector<double> const & frequencies,
-		std::vector<double> const & a2F,
-		double temperature,
-		double energyCutoff)
-{
-	assert( a2F.size() == frequencies.size());
-	assert( a2F.size() >= 2);
-	MatsubaraBaseBoson::initialize(temperature, energyCutoff, 1);
-	auto m = MatsubaraBaseBoson::MatsubaraFreq(temperature);
+	auto const & omega = a2F.get_frequencies();
+	Algorithms::SimpsonIntegrator<std::remove_reference<decltype(omega)>::type> si;
+	Auxillary::alignedvector::DV buffer(nF);
 
-	double step = m(1) - m(0);
+	double step = 2.0 * M_PI / Algorithms::helperfunctions::inverse_temperature_eV(temperature);
 	for ( int nv = this->min_mats_freq() ; nv <= this->max_mats_freq(); ++nv)
 	{
+		const int MatsubaraIndex = nv - this->min_mats_freq();
 		double mnnp = step*nv*step*nv;
 		if ( mnnp == 0 )
 			mnnp = 1e-8;
 
-		double integral = 0;
-		int nF = static_cast<int>(frequencies.size());
-		for ( int o = 1; o < nF-1 ; o++ )
-		{
-			integral += 2*a2F[o]*frequencies[o]/( frequencies[o]*frequencies[o] + mnnp)
-					*(frequencies[o+1]-frequencies[o-1])/2.0;
-		}
-		integral += 2*a2F[0]*frequencies[0]/( frequencies[0]*frequencies[0] + mnnp)
-				*(frequencies[1]-frequencies[0])/2.0;
-		integral += 2*a2F[nF-1]*frequencies[nF-1]/( frequencies[nF-1]*frequencies[nF-1] + mnnp)
-				*(frequencies[nF-1]-frequencies[nF-2])/2.0;
-		this->set_data(nv, 0, integral);
+		for (int iband = 0 ;iband < nB; ++iband )
+			for (int ibandPrime = 0 ;ibandPrime < nB; ++ibandPrime )
+			{
+				for ( int ifreq = 0 ; ifreq < nF; ++ifreq )
+				{
+					buffer[ifreq] = 2.0 * a2F(ifreq, iband, ibandPrime) * omega[ifreq]
+										/ (std::pow(omega[ifreq],2)+mnnp*std::pow(Auxillary::units::EV_TO_THZ_CONVERSION_FACTOR,2));
+				}
+				this->set_data(MatsubaraIndex, iband, ibandPrime, si.integrate(buffer.begin(), buffer.end(), omega.begin(), omega.end()));
+			}
 	}
 }
 

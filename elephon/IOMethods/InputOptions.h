@@ -330,6 +330,114 @@ class InputOptions : public InputBase<InputOptions>
 			"( -1 <normal k grid> )",
 			{ -1 },
 			std::vector<int>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliT,
+			"Mode for the isotropic Elishberg equations.\n"
+			"The following to options are available:\n"
+			"\t'' empty, means do not perform an Elishberg calculation.\n"
+			"\t'findTc' where the problem determines the temperature in K where the gap vanishes\n"
+			"\t<some list of real numbers> for example '0.1 0.2 0.6 1.5' where the program runs exactly the temperatures specified.\n"
+			"The default is 'findTc' if the option f_a2F or Eli_f_a2F has a file path set , and '' otherwise, i.e. if you \n"
+			"are running an electron-phonon coupling calculation, elephon will automatically find the Eliashberg Tc for you unless told otherwise.\n",
+			"",
+			"",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliTcThr,
+			"Accuracy for the Tc calculation if Tc is searched.\n"
+			"The code predicts the Tc from a previous set of runs. It then compares the accuracy\n"
+			"of this prediction as it is approaching the critical temperature. \n"
+			"If the next prediction is within this window, the code returns the most recent value for Tc\n",
+			"0.01",
+			0.01,
+			double);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			matsC,
+			"Cutoff in eV for the Matsubara frequency in an Eliashberg calculation\n"
+			"The default is chosen to be conservative for moderate Tc Superconductors.",
+			"2.0",
+			2.0,
+			double);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			muStar,
+			"Renormalized isotropic Coulomb interaction at the Fermi level.\n"
+			"The default is chosen to be realistic for bulk Superconductors.\n"
+			"For multiband systems, this must be of size 1 (taken to be the same among every band)\n"
+			"or be of the size of the band matrix. The elements are taken in the order\n"
+			"(band 1, band1) (band 1, band2) ... (band 2, band1) ... (band N, bandN)",
+			"0.12",
+			{ 0.12 },
+			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			muStarC,
+			"Matsubara frequency cutoff in eV for the renormalization term\n"
+			"A sensible value is 10 times the boson coupling energy, i.e. the Debye frequency.\n"
+			"We except no or one number. If not specified, the program takes 10 times the phonon energy range.",
+			"( empty <automatic> )",
+			{ },
+			std::vector<double>);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliCTh,
+			"Convergence threshold for the Eliashberg equations.\n"
+			"Specify the percentage up to which the gap is allowed to differ when it reproduces itself through the Eliashberg equations\n"
+			"before we consider it converged.\n",
+			"1e-5",
+			1e-5,
+			double);
+
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliCImp,
+			"Convergence threshold starting an heuristic convergence acceleration strategy.\n"
+			"It appears that especially close to the critical temperature, the shape of the gap function\n"
+			"converges much more quickly than its magnitude. We use that to scale by a power of the ratio, to mimic\n"
+			"several iterations. The value specifies the sqrt of the square deviations from the previous iteration relative to the gap value. \n",
+			"1e-2",
+			1e-2,
+			double);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			Eli_f_a2F,
+			"The file with the isotropic electron-phonon coupling Eliashberg function a2F(w).\n"
+			"Format is for each data point frequency w_i [in THz] and then a2F(w_i)\n"
+			"the default is f_a2F, if that was set. If it is empty, this value must be specified.\n",
+			"( value of f_a2F )",
+			"",
+			std::string);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliMix,
+			"Mixing parameter for the Eliashberg equations.\n"
+			"Range is from 0 to 1 (excluded) where 0 means an iteration is not averaged with the previous one.\n",
+			"0.3",
+			0.3,
+			double);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliThrZero,
+			"Threshold what number is considered zero.\n"
+			"If the absolute value of any number is below this value, it will not impact convergence\n"
+			"If all values of a function, in particular the gap, it is considered zero. Units depend on the context.\n"
+			"Thus, the system is considered to be a non-superconductor if every value of the gap drops below this number.\n"
+			"For this comparison with the gap, we measure in eV.\n",
+			"1e-6",
+			1e-6,
+			double);
+
+	INPUTBASE_INPUT_OPTION_MACRO_WITH_DEFAULT(
+			EliNMax,
+			"Maximal number of iterations before the iteration of the Eliashberg equations is aborted.\n"
+			"NOTE: Exactly at Tc, the Eliashberg equations become 'margial', i.e. the gap changes at an infinitesimaly small rate.\n"
+			"Close to Tc, this number may have to be increased.",
+			"10000",
+			10000,
+			int);
 };
 
 } /* namespace IOMethods */

@@ -20,6 +20,8 @@
 #ifndef ELEPHON_ELIASHBERGEQUATIONS_MATSUBARABASEBOSON_H_
 #define ELEPHON_ELIASHBERGEQUATIONS_MATSUBARABASEBOSON_H_
 
+#include "EliashbergEquations/EliashbergModule.h"
+#include "Auxillary/AlignedVector.h"
 #include <vector>
 
 namespace elephon
@@ -27,30 +29,28 @@ namespace elephon
 namespace EliashbergEquations
 {
 
-//forward declare
-namespace detail{ class MatsubaraFreq; };
-
 class MatsubaraBaseBoson
 {
+	typedef EliashbergModule::EliashbergDataType T;
 public:
 
-	typedef detail::MatsubaraFreq MatsubaraFreq;
-
 	void initialize(
-			double temperature,
-			double energyCutoffMats,
+			int nMatsBoson,
+			int nMatsFermi,
 			int numDataPerIndex = 1);
 
 	void set_data(
-			int mazubaraIndex,
-			int dataIndex,
+			int matsubaraIndex,
+			int bandIndex,
+			int bandPrimeIndex,
 			double data);
 
 	void get_row_Matsubara_fermi(
-			int mazubaraIndex,
-			int dataIndex,
-			std::vector<double>::const_iterator & begin,
-			std::vector<double>::const_iterator & end) const;
+			int matsubaraFermiIndex,
+			int bandIndex,
+			int bandPrimeIndex,
+			T const * __restrict & begin,
+			T const * __restrict & end) const;
 
 	int min_mats_freq() const;
 
@@ -64,13 +64,12 @@ private:
 
 	int nDataPerMats_ = 1;
 
-	std::vector<double> data_;
+	Auxillary::alignedvector::aligned_vector<T> data_;
 
-	int compute_n_mats_cutoff(
-			double temperature,
-			double energyCutoffMats ) const;
-
-	int matsubara_to_data_index(int n, int idata) const;
+	int matsubara_to_data_index(
+			int n,
+			int bandIndex,
+			int bandPrimeIndex) const;
 };
 
 namespace detail
@@ -79,15 +78,7 @@ class MatsubaraFreq
 {
 public:
 
-	MatsubaraFreq(double temperature);
 
-	double operator() (int index) const;
-
-	std::vector<double> range(int istart, int iend) const;
-
-private:
-
-	double inverseTemperature_;
 };
 }; /* namespace detail */
 
